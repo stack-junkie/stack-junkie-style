@@ -126,8 +126,7 @@
       min-height: 58px;
       padding: 10px 24px;
       border-bottom: 1px solid var(--border);
-      background: color-mix(in srgb, var(--bg-primary) 92%, transparent);
-      backdrop-filter: blur(10px);
+      background: var(--bg-primary);
     }
 
     .brand {
@@ -318,7 +317,7 @@
     .type-stack { display: grid; gap: 18px; }
     .type-row { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 16px; align-items: baseline; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     .type-row:last-child { padding-bottom: 0; border-bottom: 0; }
-    .type-meta { color: var(--text-secondary); font-size: 11px; }
+    .type-meta { color: var(--text-secondary); font-size: 12px; }
     .type-serif { font-family: "Lora", Georgia, serif; font-size: 26px; font-weight: 700; line-height: 1.25; }
     .type-sans { font-size: 16px; }
     .type-control { font-size: 14px; font-weight: 600; }
@@ -356,7 +355,7 @@
     .label-row { position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; }
     .field label,
     .field-label { min-width: 0; font-size: 12px; font-weight: 600; }
-    .field-help { color: var(--text-secondary); font-size: 11px; }
+    .field-help { color: var(--text-secondary); font-size: 12px; }
     .input,
     .select,
     .textarea {
@@ -374,7 +373,7 @@
     .input::placeholder,
     .textarea::placeholder { color: var(--text-faint); }
     .input[aria-invalid="true"] { border-color: var(--danger); }
-    .error-text { color: var(--danger); font-size: 11px; }
+    .error-text { color: var(--danger); font-size: 12px; }
 
     .help-wrap { position: static; display: inline-grid; }
     .help-button {
@@ -428,15 +427,17 @@
     .choice { display: flex; align-items: center; gap: 10px; min-height: 28px; font-size: 13px; }
     .choice input { width: 16px; height: 16px; accent-color: var(--accent); }
     .switch { position: relative; width: 38px; height: 22px; flex: 0 0 auto; }
-    .switch input { position: absolute; opacity: 0; pointer-events: none; }
-    .switch-track { position: absolute; inset: 0; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-secondary); transition: background 160ms ease; }
+    .switch input { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+    .switch-track { position: absolute; inset: 0; border: 1px solid var(--border); border-radius: 11px; background: var(--bg-secondary); pointer-events: none; transition: background 160ms ease; }
     .switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-secondary); transition: transform 160ms ease, background 160ms ease; }
     .switch input:checked + .switch-track { border-color: var(--accent); background: var(--accent); }
     .switch input:checked + .switch-track::after { background: #ffffff; transform: translateX(16px); }
+    .switch input:focus-visible + .switch-track { outline: 2px solid var(--accent); outline-offset: 2px; }
 
     .tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--border); }
     .tab { min-height: 38px; padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--text-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; }
     .tab.active { border-bottom-color: var(--accent); color: var(--accent-hover); font-weight: 600; }
+    .tab-panel { min-height: 42px; padding-top: 14px; }
 
     .tag-row { display: flex; flex-wrap: wrap; gap: 8px; }
     .tag { padding: 4px 9px; border-radius: 4px; background: var(--tag-bg); color: var(--tag-text); font-size: 11px; font-weight: 600; letter-spacing: 0.035em; }
@@ -454,7 +455,7 @@
     .notice.error { border-color: color-mix(in srgb, var(--danger) 42%, var(--border)); background: var(--danger-bg); color: var(--danger); }
 
     .progress-group { display: grid; gap: 16px; }
-    .progress-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; color: var(--text-secondary); font-size: 11px; }
+    .progress-label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; }
     .progress-track { height: 6px; overflow: hidden; border-radius: 3px; background: var(--border); }
     .progress-fill { width: 64%; height: 100%; background: var(--accent); }
     .progress-fill.indeterminate { width: 34%; animation: indeterminate 1.4s ease-in-out infinite; }
@@ -465,14 +466,15 @@
     .state-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .state-card { min-height: 150px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary); }
     .state-card h4 { margin: 0 0 6px; font-size: 13px; }
-    .state-card p { margin: 0 0 14px; color: var(--text-secondary); font-size: 11px; }
+    .state-card p { margin: 0 0 14px; color: var(--text-secondary); font-size: 12px; }
     .skeleton { display: grid; gap: 8px; }
     .skeleton span { display: block; height: 10px; border-radius: 4px; background: var(--border); animation: pulse 1.6s ease-in-out infinite; }
     .skeleton span:nth-child(2) { width: 72%; }
     .skeleton span:nth-child(3) { width: 48%; }
     @keyframes pulse { 50% { opacity: 0.5; } }
 
-    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; scrollbar-gutter: stable; }
+    .table-scroll-hint { display: none; margin: 6px 0 0; color: var(--text-secondary); font-size: 12px; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th,
     td { padding: 9px 11px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
@@ -504,7 +506,7 @@
     .frontload-tier { padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary); }
     .frontload-tier.primary { border-color: var(--accent); }
     .frontload-tier h4 { margin: 0 0 10px; font-size: 13px; }
-    .frontload-tier ul { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 11px; }
+    .frontload-tier ul { margin: 0; padding-left: 18px; color: var(--text-secondary); font-size: 12px; }
 
     .mini-frame { container-type: inline-size; resize: horizontal; width: 100%; min-width: 280px; max-width: 100%; overflow: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg-primary); }
     .mini-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 46px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
@@ -519,26 +521,45 @@
     .mini-chart { position: relative; min-height: 210px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary); }
     .mini-chart svg { position: absolute; inset: 12px; width: calc(100% - 24px); height: calc(100% - 24px); }
     .mobile-disclosures { display: none; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .mobile-disclosures [aria-expanded="true"] { border-color: var(--accent); background: var(--tag-bg); color: var(--tag-text); }
+    .mini-pane-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .mini-pane-close { display: none; }
 
     @container (max-width: 760px) {
-      .mini-shell { grid-template-columns: 150px minmax(0, 1fr); }
-      .mini-pane.inspector { display: none; }
+      .mini-shell { position: relative; display: block; }
+      .mini-shell.has-open-pane::before { position: absolute; z-index: 2; inset: 0; content: ""; background: var(--overlay); }
+      .mini-pane { display: none; }
+      .mini-pane.is-open {
+        position: absolute;
+        z-index: 3;
+        top: 0;
+        bottom: 0;
+        display: block;
+        width: min(280px, calc(100% - 24px));
+        overflow-y: auto;
+        border: 0;
+        box-shadow: var(--shadow-overlay);
+      }
+      .mini-pane.navigator.is-open { left: 0; border-right: 1px solid var(--border); }
+      .mini-pane.inspector.is-open { right: 0; border-left: 1px solid var(--border); }
       .mobile-disclosures { display: flex; }
+      .mini-pane-close { display: inline-grid; }
     }
     @container (max-width: 520px) {
       .mini-toolbar { align-items: flex-start; }
       .mini-toolbar-actions .button.secondary { display: none; }
-      .mini-shell { display: block; }
-      .mini-pane.navigator { display: none; }
       .mini-canvas { padding: 12px; }
       .mini-canvas h4 { font-size: 16px; }
+    }
+    @media (max-width: 420px) {
+      .table-scroll-hint { display: block; }
     }
 
     .reference-card { overflow: hidden; }
     .reference-card img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; border-bottom: 1px solid var(--border); background: var(--bg-secondary); }
     .reference-card .reference-copy { padding: 14px; }
     .reference-card h3 { margin: 0 0 5px; font-size: 13px; }
-    .reference-card p { margin: 0; color: var(--text-secondary); font-size: 11px; }
+    .reference-card p { margin: 0; color: var(--text-secondary); font-size: 12px; }
     .reference-card.bad { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
     .reference-card.bad img { aspect-ratio: 16 / 9; }
 
@@ -729,17 +750,21 @@
           <h3>Navigation and compact status</h3>
           <p class="caption">Active state is quiet but unmistakable. Tags are not a substitute for ordinary controls.</p>
           <div class="tabs" role="tablist" aria-label="Example sections">
-            <button class="tab active" role="tab" aria-selected="true">Overview</button>
-            <button class="tab" role="tab" aria-selected="false">Signals</button>
-            <button class="tab" role="tab" aria-selected="false">Diagnostics</button>
+            <button class="tab active" id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" tabindex="0">Overview</button>
+            <button class="tab" id="tab-signals" role="tab" aria-selected="false" aria-controls="panel-signals" tabindex="-1">Signals</button>
+            <button class="tab" id="tab-diagnostics" role="tab" aria-selected="false" aria-controls="panel-diagnostics" tabindex="-1">Diagnostics</button>
           </div>
-          <div class="tag-row" style="margin-top:16px">
-            <span class="tag">TECHNICAL</span>
-            <span class="tag">OFFLINE</span>
-            <span class="status-dot success">Connected</span>
-            <span class="status-dot warning">Unsaved</span>
-            <span class="status-dot danger">3 errors</span>
+          <div class="tab-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+            <div class="tag-row">
+              <span class="tag">TECHNICAL</span>
+              <span class="tag">OFFLINE</span>
+              <span class="status-dot success">Connected</span>
+              <span class="status-dot warning">Unsaved</span>
+              <span class="status-dot danger">3 errors</span>
+            </div>
           </div>
+          <div class="tab-panel" id="panel-signals" role="tabpanel" aria-labelledby="tab-signals" hidden><span class="status-dot success">Signal stream connected</span></div>
+          <div class="tab-panel" id="panel-diagnostics" role="tabpanel" aria-labelledby="tab-diagnostics" hidden><span class="status-dot warning">One setting needs attention</span></div>
         </article>
       </div>
 
@@ -800,7 +825,7 @@
         <article class="specimen-card">
           <h3>Table and selected row</h3>
           <p class="caption">Technical data stays dense and scannable. Two-dimensional scrolling remains inside the data surface.</p>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0" aria-label="Signal table, scroll horizontally for all columns">
             <table>
               <thead><tr><th>Signal</th><th>Status</th><th class="number">Samples</th><th class="number">Latency</th></tr></thead>
               <tbody>
@@ -810,6 +835,7 @@
               </tbody>
             </table>
           </div>
+          <p class="table-scroll-hint">Scroll horizontally to see all columns.</p>
         </article>
 
         <article class="specimen-card">
@@ -843,7 +869,7 @@
           <div class="progress-group">
             <div><div class="progress-label"><span>Indexing signals</span><span class="mono">64%</span></div><div class="progress-track"><div class="progress-fill"></div></div></div>
             <div><div class="progress-label"><span>Connecting to device</span><span>Working</span></div><div class="progress-track"><div class="progress-fill indeterminate"></div></div></div>
-            <div class="button-row"><span class="spinner" aria-label="Loading"></span><span class="status-dot success">Export complete</span></div>
+            <div class="button-row"><span class="spinner" aria-label="Loading"></span><span>Exporting capture</span></div>
           </div>
         </article>
 
@@ -872,14 +898,14 @@
         </article>
         <article class="specimen-card">
           <h3>Focused modal</h3>
-          <p class="caption">A modal handles one blocking decision. Long reports and tutorials belong on a dedicated surface.</p>
-          <div class="overlay-demo">
+          <p class="caption">Static appearance specimen only. A modal handles one blocking decision; long reports and tutorials belong on a dedicated surface.</p>
+          <div class="overlay-demo" role="img" aria-label="Static visual example of a focused discard confirmation">
             <div class="overlay-context"><div class="overlay-sidebar"><div class="line"></div><div class="line short"></div></div><div class="overlay-canvas"><div class="line"></div><div class="line"></div><div class="line short"></div></div></div>
             <div class="overlay-backdrop">
-              <div class="dialog" role="dialog" aria-modal="true" aria-label="Discard unsaved changes">
+              <div class="dialog" aria-hidden="true">
                 <h4>Discard unsaved changes?</h4>
                 <p>Your current cursor-pair adjustments will be lost. The underlying data will not be changed.</p>
-                <div class="dialog-actions"><button class="button secondary" type="button">Keep editing</button><button class="button danger" type="button">Discard changes</button></div>
+                <div class="dialog-actions"><span class="button secondary">Keep editing</span><span class="button danger">Discard changes</span></div>
               </div>
             </div>
           </div>
@@ -904,11 +930,11 @@
           <strong>Recovery timeline analysis</strong>
           <div class="mini-toolbar-actions"><button class="button secondary" type="button">Export</button><button class="button primary" type="button">Run analysis</button><button class="icon-button" type="button" aria-label="More workbench actions">⋮</button></div>
         </div>
-        <div class="mobile-disclosures"><button class="button secondary" type="button">Data</button><button class="button secondary" type="button">Inspector</button></div>
+        <div class="mobile-disclosures"><button class="button secondary" type="button" data-pane-toggle="navigator" aria-controls="miniDataPane" aria-expanded="false">Data</button><button class="button secondary" type="button" data-pane-toggle="inspector" aria-controls="miniInspectorPane" aria-expanded="false">Inspector</button></div>
         <div class="mini-shell">
-          <aside class="mini-pane navigator"><span class="contract-label">Data</span><ul class="tree"><li class="active">● Aggregate WKC</li><li>○ Frame 0</li><li>○ Frame 1</li></ul></aside>
+          <aside class="mini-pane navigator" id="miniDataPane"><div class="mini-pane-heading"><span class="contract-label">Data</span><button class="icon-button mini-pane-close" type="button" data-pane-close aria-label="Close Data pane">×</button></div><ul class="tree"><li class="active">● Aggregate WKC</li><li>○ Frame 0</li><li>○ Frame 1</li></ul></aside>
           <section class="mini-canvas"><h4>Aggregate WKC</h4><p>322 transitions across 1,001 source-time rows.</p><div class="mini-chart"><svg viewBox="0 0 600 220" preserveAspectRatio="none" aria-label="Example line plot"><path d="M0 190 L60 176 L120 178 L180 88 L240 96 L300 45 L360 52 L420 138 L480 132 L540 62 L600 68" fill="none" stroke="var(--accent)" stroke-width="3"/><path d="M0 195 H600 M0 140 H600 M0 85 H600 M0 30 H600" stroke="var(--border)" stroke-width="1"/></svg></div></section>
-          <aside class="mini-pane inspector"><span class="contract-label">Inspector</span><div class="field" style="margin-top:12px"><label>Cursor time</label><input class="input mono" value="1004.230 s"></div><div class="field" style="margin-top:12px"><label>Window</label><select class="select"><option>10 seconds</option></select></div></aside>
+          <aside class="mini-pane inspector" id="miniInspectorPane"><div class="mini-pane-heading"><span class="contract-label">Inspector</span><button class="icon-button mini-pane-close" type="button" data-pane-close aria-label="Close Inspector pane">×</button></div><div class="field" style="margin-top:12px"><label>Cursor time</label><input class="input mono" value="1004.230 s"></div><div class="field" style="margin-top:12px"><label>Window</label><select class="select"><option>10 seconds</option></select></div></aside>
         </div>
       </div>
 
@@ -978,13 +1004,111 @@
   <script>
     const root = document.documentElement;
     const themeToggle = document.getElementById('themeToggle');
-    const setTheme = (theme) => {
+    const themeStorageKey = 'sj-theme';
+    const systemTheme = window.matchMedia('(prefers-color-scheme: light)');
+    const storedTheme = (() => {
+      try {
+        const value = localStorage.getItem(themeStorageKey);
+        return value === 'light' || value === 'dark' ? value : null;
+      } catch {
+        return null;
+      }
+    })();
+    let hasExplicitTheme = Boolean(storedTheme);
+    const setTheme = (theme, persist = false) => {
       root.dataset.theme = theme;
       const light = theme === 'light';
       themeToggle.textContent = light ? '☾' : '☼';
       themeToggle.setAttribute('aria-label', light ? 'Switch to dark theme' : 'Switch to light theme');
+      if (persist) {
+        hasExplicitTheme = true;
+        try { localStorage.setItem(themeStorageKey, theme); } catch { /* Storage may be unavailable. */ }
+      }
     };
-    themeToggle.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+    setTheme(storedTheme || (systemTheme.matches ? 'light' : 'dark'));
+    themeToggle.addEventListener('click', () => setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark', true));
+    systemTheme.addEventListener('change', (event) => {
+      if (!hasExplicitTheme) setTheme(event.matches ? 'light' : 'dark');
+    });
+
+    document.querySelectorAll('[role="tablist"]').forEach((tablist) => {
+      const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+      const activateTab = (tab, moveFocus = false) => {
+        tabs.forEach((candidate) => {
+          const selected = candidate === tab;
+          candidate.classList.toggle('active', selected);
+          candidate.setAttribute('aria-selected', String(selected));
+          candidate.tabIndex = selected ? 0 : -1;
+          const panel = document.getElementById(candidate.getAttribute('aria-controls'));
+          if (panel) panel.hidden = !selected;
+        });
+        if (moveFocus) tab.focus();
+      };
+      tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => activateTab(tab));
+        tab.addEventListener('keydown', (event) => {
+          let nextIndex = null;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+          if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+          if (event.key === 'Home') nextIndex = 0;
+          if (event.key === 'End') nextIndex = tabs.length - 1;
+          if (nextIndex !== null) {
+            event.preventDefault();
+            activateTab(tabs[nextIndex], true);
+          }
+        });
+      });
+    });
+
+    const miniFrame = document.querySelector('.mini-frame');
+    const paneButtons = Array.from(document.querySelectorAll('[data-pane-toggle]'));
+    const paneByName = new Map([
+      ['navigator', document.getElementById('miniDataPane')],
+      ['inspector', document.getElementById('miniInspectorPane')],
+    ]);
+    let openPane = null;
+    const panesAreCollapsed = () => miniFrame.clientWidth <= 760;
+    const renderPanes = () => {
+      const collapsed = panesAreCollapsed();
+      if (!collapsed) openPane = null;
+      paneButtons.forEach((button) => {
+        const selected = collapsed && openPane === button.dataset.paneToggle;
+        button.setAttribute('aria-expanded', String(selected));
+      });
+      paneByName.forEach((pane, name) => {
+        const visible = !collapsed || openPane === name;
+        pane.classList.toggle('is-open', collapsed && openPane === name);
+        if (collapsed) pane.setAttribute('aria-hidden', String(!visible));
+        else pane.removeAttribute('aria-hidden');
+      });
+      document.querySelector('.mini-shell').classList.toggle('has-open-pane', collapsed && Boolean(openPane));
+    };
+    paneButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const requested = button.dataset.paneToggle;
+        openPane = openPane === requested ? null : requested;
+        renderPanes();
+      });
+    });
+    document.querySelectorAll('[data-pane-close]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const trigger = paneButtons.find((candidate) => candidate.dataset.paneToggle === openPane);
+        openPane = null;
+        renderPanes();
+        trigger?.focus();
+      });
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && openPane) {
+        const button = paneButtons.find((candidate) => candidate.dataset.paneToggle === openPane);
+        openPane = null;
+        renderPanes();
+        button?.focus();
+      }
+    });
+    new ResizeObserver(renderPanes).observe(miniFrame);
+    renderPanes();
+
     const positionHelpPopover = (wrap) => {
       if (window.innerWidth > 760) return;
       const button = wrap.querySelector('.help-button');

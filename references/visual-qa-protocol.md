@@ -3,18 +3,29 @@
 ## Contents
 
 1. [What this protocol can and cannot prove](#what-this-protocol-can-and-cannot-prove)
-2. [Evidence package](#evidence-package)
-3. [Screenshot matrix](#screenshot-matrix)
-4. [How to inspect](#how-to-inspect)
-5. [Independent verifier](#independent-verifier)
-6. [Fail-closed rules](#fail-closed-rules)
-7. [Completion language](#completion-language)
+2. [Coverage tiers](#coverage-tiers)
+3. [Evidence package](#evidence-package)
+4. [Screenshot matrix](#screenshot-matrix)
+5. [How to inspect](#how-to-inspect)
+6. [Independent verifier](#independent-verifier)
+7. [Fail-closed rules](#fail-closed-rules)
+8. [Completion language](#completion-language)
 
 ## What this protocol can and cannot prove
 
-Screenshots can prove rendered hierarchy, palette, typography, spacing, clipping, wrapping, state presentation, density, and narrow-layout behavior at captured moments. They cannot alone prove keyboard behavior, screen-reader semantics, persistence, animation timing, or every dynamic state. Use runtime inspection and normal tests for those properties, then cite the relevant result in the checklist notes.
+Screenshots can prove rendered hierarchy, palette, typography, spacing, clipping, wrapping, state presentation, density, and narrow-layout behavior at captured moments. They cannot alone prove keyboard behavior, help dismissal and persistence, feedback behavior, input recovery, reduced motion, accessibility semantics, text scaling, theme persistence, animation timing, or every dynamic state. Record those properties as runtime evidence and cite both the screenshot and runtime evidence IDs on the applicable checklist row.
 
 The deterministic validator proves report completeness and evidence linkage. It does not judge visual quality. The independent visual verifier judges the images and may reject an implementer's claims.
+
+## Coverage tiers
+
+Choose the highest applicable tier and record the reason in the report:
+
+- **Full:** use for redesigns, responsive or navigation work, interaction changes, global theme changes, and work spanning multiple surfaces. Cover every changed surface, implemented theme, normal, narrow, and minimum-supported sizes, and every relevant workflow state.
+- **Focused:** use for one bounded surface or component. Cover the changed surface in its surrounding context plus every affected theme, size, and state. Do not capture unrelated application areas.
+- **Token:** use only for color, typography, spacing, border, or a comparable primitive change with no layout, content, behavior, responsive, or semantic changes. Cover affected themes on representative real-product surfaces. Include the exact no-change attestation requested by the report validator.
+
+Complete every checklist row at every tier. Use a specific `N/A` for dimensions that are outside the legitimate scope. The verifier must reject a lower tier when the diff or rendered result exceeds its definition.
 
 ## Evidence package
 
@@ -23,10 +34,12 @@ Create one temporary evidence folder or use the project's existing artifact dire
 - the completed compliance report copied from `assets/templates/compliance-report.md`;
 - before screenshots for each changed surface when modifying an existing interface;
 - after screenshots following the matrix below;
-- a short runtime or build note when behavior cannot be shown in a still image;
+- runtime evidence rows for behavior that cannot be shown in a still image;
 - no unrelated screenshots, generated filler, or duplicate captures.
 
 Use stable evidence IDs such as `E01`, `E02`, and `E03`. Record the exact file, before or after phase, theme, surface, state, size class, viewport or window size, and purpose in the report manifest.
+
+Use runtime IDs such as `R01`, `R02`, and `R03`. Record the inspection method, exact target behavior, `PASS` result, and an inspectable artifact or command. Runtime evidence does not replace screenshots for visible claims, and screenshots do not replace runtime evidence for behavioral claims.
 
 Screenshots must show the real running product or its normal preview. Do not submit a design mockup as implementation evidence. Do not crop away the window edges when the claim concerns responsive fit, clipping, dialogs, or overall hierarchy.
 
@@ -44,7 +57,7 @@ Capture the smallest set that proves all changed behavior:
 | Overlay | Every changed dialog, drawer, popover, tooltip, toast, or menu in an open state |
 | Content stress | Representative long label, long user value, localization expansion, or narrow table content when the surface accepts variable text |
 
-Use `N/A` only when the product or scoped surface genuinely lacks the dimension. Example: a fixed-size kiosk can mark narrow resize evidence `N/A` with the fixed-size platform constraint. “Did not have time,” “not requested,” and “looks fine in the main screenshot” are not legitimate reasons when the skill requires the state.
+Apply this full matrix to `full` coverage. For `focused`, include only affected dimensions plus surrounding context. For `token`, include affected themes and representative surfaces. Use `N/A` only when the product or scoped surface genuinely lacks the dimension. Example: a fixed-size kiosk can mark narrow resize evidence `N/A` with the fixed-size platform constraint. “Did not have time,” “not requested,” and “looks fine in the main screenshot” are not legitimate reasons when the selected tier requires the state.
 
 ## How to inspect
 
@@ -73,7 +86,7 @@ The verifier receives only:
 - this skill folder, including the specimen page and references;
 - the before and after screenshots;
 - a blank compliance checklist;
-- necessary runtime notes that describe facts, not conclusions.
+- runtime evidence artifacts or commands that describe facts, not conclusions.
 
 Do not show the verifier the implementer's filled checklist, final summary, intended verdict, or suspected failures before its first pass. This prevents conclusion leakage.
 
@@ -99,7 +112,10 @@ The result is not visually verified when any of these conditions is true:
 - a checklist item remains `TODO` or `FAIL`;
 - a required checklist ID is missing or duplicated;
 - a `PASS` lacks screenshot evidence that visibly supports it;
+- a behavioral `PASS` lacks required runtime evidence;
+- runtime evidence is malformed, missing, or not cited by a checklist row;
 - an `N/A` lacks a narrow and credible reason;
+- the selected coverage tier understates the changed behavior;
 - a changed surface, implemented theme, required state, or required viewport is absent;
 - the deterministic validator fails;
 - the independent verifier reports an unresolved failure;

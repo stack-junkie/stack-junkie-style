@@ -5,6 +5,8 @@ Scope: TODO
 Date: TODO
 Implementer: TODO
 Audit level: TODO
+Coverage tier: TODO
+Coverage tier reason: TODO
 Independent verifier: TODO
 Independent verification: TODO
 Theme source: TODO
@@ -30,9 +32,17 @@ Add one row per evidence image. Paths may be absolute or relative to this report
 |---|---|---|---|---|---|---|---|---|
 | E01 | TODO | TODO | TODO | TODO | TODO | TODO | TODO | TODO |
 
+## Runtime evidence manifest
+
+Add one row for each behavioral claim that screenshots cannot prove. Use an inspectable test, browser trace, accessibility-tree inspection, or command. Remove the example row when runtime evidence is legitimately unnecessary.
+
+| ID | Method | Target behavior | Result | Artifact or command |
+|---|---|---|---|---|
+| R01 | TODO | TODO | TODO | TODO |
+
 ## Checklist
 
-Set every result to `PASS`, `FAIL`, or `N/A`. Mark the checkbox when reviewed. A `PASS` needs one or more evidence IDs. An `N/A` needs a specific reason in Notes and uses `Evidence: N/A`.
+Set every result to `PASS`, `FAIL`, or `N/A`. Mark the checkbox when reviewed. A visual `PASS` cites one or more `E` IDs. Behavioral rows cite both screenshot and `R` IDs when the validator requires runtime proof. An `N/A` needs a specific reason in Notes and uses `Evidence: N/A`.
 
 ### Scope and truthfulness
 
@@ -52,6 +62,7 @@ Set every result to `PASS`, `FAIL`, or `N/A`. Mark the checkbox when reviewed. A
 - [ ] SJ-FOUND-06 Surfaces use flat one-pixel borders, modest radii, and rare restrained elevation. | Result: TODO | Evidence: N/A | Notes: N/A
 - [ ] SJ-FOUND-07 Gradients, glass effects, neon glow, heavy shadows, excessive pills, and random accents are absent. | Result: TODO | Evidence: N/A | Notes: N/A
 - [ ] SJ-FOUND-08 Legacy framework defaults and conflicting visual rules are absent from the changed surfaces. | Result: TODO | Evidence: N/A | Notes: N/A
+- [ ] SJ-FOUND-09 An explicit theme choice persists and system preference is the fallback when no explicit choice exists. | Result: TODO | Evidence: N/A | Notes: N/A
 
 ### Typography and text integrity
 

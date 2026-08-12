@@ -83,13 +83,14 @@ When the user names one surface, change that surface and shared primitives it le
 
 ### 8. Capture evidence and verify independently
 
-- Run the real build or preview and capture the screenshot matrix required by the visual QA protocol.
-- Include every changed surface, both implemented themes, a normal viewport, a narrow or minimum supported viewport, and the relevant workflow states.
-- Complete every checklist row as `PASS`, `FAIL`, or `N/A`. Every `PASS` must cite screenshot evidence. Every `N/A` must contain a specific reason.
-- Run `python scripts/validate_compliance.py <completed-report.md>` from this skill folder when an independent verifier is available. Fix every deterministic failure.
+- Select and justify the highest applicable coverage tier from the visual QA protocol: `full`, `focused`, or `token`. Never use a lower tier merely to reduce evidence work.
+- Run the real build or preview and capture the smallest screenshot matrix that completely proves the selected tier.
+- Complete every checklist row as `PASS`, `FAIL`, or `N/A`. Every visual `PASS` must cite screenshot evidence. Behavioral rows identified by the validator must also cite runtime evidence. Every `N/A` must contain a specific reason.
+- Record runtime evidence for keyboard behavior, help dismissal and persistence, feedback behavior, input recovery, reduced motion, accessibility semantics, text scaling, and theme persistence. Runtime evidence supplements rather than replaces screenshots.
+- Run `python scripts/validate_compliance.py <completed-report.md> --coverage-tier <full|focused|token>` from this skill folder when an independent verifier is available. Fix every deterministic failure.
 - When subagents are available, require a fresh read-only visual verifier that has not seen the implementer's conclusions. Give it the user request, style guide, completed app screenshots, and blank checklist. Do not give it the implementer's filled checklist until its first pass is complete.
 - Fix verifier findings, recapture affected screenshots, and repeat verification. The implementer and verifier must not be the same agent.
-- If independent verification is unavailable, set `Audit level: self`, `Independent verifier: Unavailable`, and `Independent verification: NOT RUN`, then run `python scripts/validate_compliance.py <completed-report.md> --audit-level self`. Report the interface as implemented and self-audited, never as independently verified.
+- If independent verification is unavailable, set `Audit level: self`, `Independent verifier: Unavailable`, and `Independent verification: NOT RUN`, then run `python scripts/validate_compliance.py <completed-report.md> --audit-level self --coverage-tier <full|focused|token>`. Report the interface as implemented and self-audited, never as independently verified.
 
 ## Completion contract
 

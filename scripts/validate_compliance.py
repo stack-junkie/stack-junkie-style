@@ -25,7 +25,21 @@ CHECK_RE = re.compile(
 )
 ID_RE = re.compile(r"^- \[[ xX]\] (SJ-[A-Z0-9]+-\d{2}) ", re.MULTILINE)
 EVIDENCE_ID_RE = re.compile(r"\bE\d{2,}\b")
+RUNTIME_ID_RE = re.compile(r"\bR\d{2,}\b")
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
+RUNTIME_REQUIRED_IDS = {
+    "SJ-FOUND-09",
+    "SJ-COMP-06",
+    "SJ-STATE-01",
+    "SJ-STATE-02",
+    "SJ-STATE-05",
+    "SJ-STATE-07",
+    "SJ-A11Y-01",
+    "SJ-A11Y-03",
+    "SJ-A11Y-04",
+    "SJ-A11Y-05",
+}
+TOKEN_ATTESTATION = "no layout, content, behavior, responsive, or semantic changes"
 
 
 @dataclass(frozen=True)
@@ -41,6 +55,15 @@ class Evidence:
     purpose: str
 
 
+@dataclass(frozen=True)
+class RuntimeEvidence:
+    evidence_id: str
+    method: str
+    target: str
+    result: str
+    artifact: str
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Validate a completed Stack Junkie compliance report."
@@ -51,6 +74,11 @@ def parse_args() -> argparse.Namespace:
         choices=("independent", "self"),
         default="independent",
         help="Claim level to validate. Default: independent.",
+    )
+    parser.add_argument(
+        "--coverage-tier",
+        choices=("full", "focused", "token"),
+        help="Coverage tier to validate. Reports without a tier default to full.",
     )
     return parser.parse_args()
 
@@ -78,6 +106,26 @@ def parse_manifest(text: str) -> tuple[dict[str, Evidence], list[str]]:
         item = Evidence(*cells)
         if item.evidence_id in evidence:
             errors.append(f"line {line_number}: duplicate evidence ID {item.evidence_id}")
+            continue
+        evidence[item.evidence_id] = item
+    return evidence, errors
+
+
+def parse_runtime_manifest(text: str) -> tuple[dict[str, RuntimeEvidence], list[str]]:
+    evidence: dict[str, RuntimeEvidence] = {}
+    errors: list[str] = []
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if not re.match(r"^\| R\d{2,} \|", line):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) != 5:
+            errors.append(
+                f"line {line_number}: runtime evidence row must contain 5 columns, found {len(cells)}"
+            )
+            continue
+        item = RuntimeEvidence(*cells)
+        if item.evidence_id in evidence:
+            errors.append(f"line {line_number}: duplicate runtime evidence ID {item.evidence_id}")
             continue
         evidence[item.evidence_id] = item
     return evidence, errors
@@ -143,10 +191,16 @@ def main() -> int:
 
     checks, check_errors = parse_checks(text)
     evidence, manifest_errors = parse_manifest(text)
+    runtime_evidence, runtime_manifest_errors = parse_runtime_manifest(text)
     errors.extend(check_errors)
     errors.extend(manifest_errors)
+    errors.extend(runtime_manifest_errors)
 
+    coverage_value = metadata_value(text, "Coverage tier")
+    legacy_report = coverage_value is None
     expected_set = set(expected)
+    if legacy_report:
+        expected_set.discard("SJ-FOUND-09")
     actual_set = set(checks)
     missing = sorted(expected_set - actual_set)
     unexpected = sorted(actual_set - expected_set)
@@ -173,6 +227,25 @@ def main() -> int:
             errors.append(f"metadata field '{label}' is missing or incomplete")
         else:
             metadata[label] = value
+
+    if coverage_value is None:
+        coverage_tier = "full"
+    else:
+        coverage_tier = coverage_value.casefold()
+        if coverage_tier not in {"full", "focused", "token"}:
+            errors.append("Coverage tier must be full, focused, or token")
+    if args.coverage_tier and coverage_tier != args.coverage_tier:
+        errors.append(
+            f"report Coverage tier is '{coverage_tier}', but --coverage-tier is '{args.coverage_tier}'"
+        )
+    coverage_reason = metadata_value(text, "Coverage tier reason")
+    if coverage_value is not None:
+        if not coverage_reason or coverage_reason.upper() in {"TODO", "N/A"} or len(coverage_reason) < 20:
+            errors.append("Coverage tier reason must specifically justify the selected tier")
+        elif coverage_tier == "token" and TOKEN_ATTESTATION not in coverage_reason.casefold():
+            errors.append(
+                "Token coverage requires the explicit attestation: " + TOKEN_ATTESTATION
+            )
 
     report_audit_level = metadata.get("Audit level", "").casefold()
     if report_audit_level and report_audit_level != args.audit_level:
@@ -203,6 +276,7 @@ def main() -> int:
     if "TODO" in text:
         errors.append("report still contains TODO placeholders")
 
+    cited_runtime: set[str] = set()
     for check_id in sorted(expected_set & actual_set):
         match = checks[check_id]
         checked = match.group("checked").lower() == "x"
@@ -222,6 +296,13 @@ def main() -> int:
             for evidence_id in cited:
                 if evidence_id not in evidence:
                     errors.append(f"{check_id}: cites missing evidence {evidence_id}")
+            runtime_cited = RUNTIME_ID_RE.findall(evidence_text)
+            cited_runtime.update(runtime_cited)
+            for evidence_id in runtime_cited:
+                if evidence_id not in runtime_evidence:
+                    errors.append(f"{check_id}: cites missing runtime evidence {evidence_id}")
+            if check_id in RUNTIME_REQUIRED_IDS and not runtime_cited:
+                errors.append(f"{check_id}: PASS requires runtime evidence in addition to screenshots")
         elif result == "N/A":
             if evidence_text.upper() != "N/A":
                 errors.append(f"{check_id}: N/A must use 'Evidence: N/A'")
@@ -250,6 +331,21 @@ def main() -> int:
         elif not path.is_file():
             errors.append(f"{evidence_id}: evidence image does not exist: {path}")
 
+    for evidence_id, item in sorted(runtime_evidence.items()):
+        fields = {
+            "method": item.method,
+            "target behavior": item.target,
+            "result": item.result,
+            "artifact or command": item.artifact,
+        }
+        for field_name, value in fields.items():
+            if not value or value.upper() in {"TODO", "N/A"}:
+                errors.append(f"{evidence_id}: runtime manifest field '{field_name}' is incomplete")
+        if item.result.upper() != "PASS":
+            errors.append(f"{evidence_id}: runtime evidence result must be PASS")
+        if evidence_id not in cited_runtime:
+            errors.append(f"{evidence_id}: runtime evidence is not cited by any PASS checklist item")
+
     phases = {item.phase.casefold() for item in evidence.values()}
     if checks.get("SJ-SCOPE-02") and checks["SJ-SCOPE-02"].group("result") == "PASS":
         if "before" not in phases:
@@ -273,6 +369,11 @@ def main() -> int:
                     f"SJ-RESP-01 is PASS but the manifest has no {required_size.title()} After evidence"
                 )
 
+    if coverage_tier in {"focused", "token"}:
+        after_items = [item for item in evidence.values() if item.phase.casefold() == "after"]
+        if not after_items:
+            errors.append(f"{coverage_tier.title()} coverage requires representative After evidence")
+
     if errors:
         print("Stack Junkie compliance validation: FAIL")
         for error in errors:
@@ -281,8 +382,10 @@ def main() -> int:
 
     label = "independent compliance" if args.audit_level == "independent" else "self-audit"
     print(f"Stack Junkie {label} validation: PASS")
-    print(f"- Checklist items: {len(expected)}")
+    print(f"- Checklist items: {len(expected_set)}")
     print(f"- Evidence images: {len(evidence)}")
+    print(f"- Runtime evidence: {len(runtime_evidence)}")
+    print(f"- Coverage tier: {coverage_tier}")
     if args.audit_level == "independent":
         print(f"- Independent verifier: {metadata['Independent verifier']}")
     else:
