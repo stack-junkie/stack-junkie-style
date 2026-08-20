@@ -1,4 +1,4 @@
 interface:
   display_name: "Stack Junkie Style"
-  short_description: "Apply and verify the Stack Junkie UI system"
-  default_prompt: "Use $stack-junkie-style to restyle and visually verify this application's real surfaces in the Stack Junkie design system."
+  short_description: "Apply the Stack Junkie UI system"
+  default_prompt: "Use $stack-junkie-style to restyle this application's real surfaces in the Stack Junkie design system."
