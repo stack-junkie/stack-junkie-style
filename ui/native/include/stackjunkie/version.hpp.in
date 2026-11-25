@@ -1,0 +1,2 @@
+#pragma once
+#define STACKJUNKIE_VERSION "@STACKJUNKIE_VERSION@"

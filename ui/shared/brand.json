@@ -1,0 +1,12 @@
+{
+  "source": "stack-junkie.com/components/Header.tsx and app/globals.css",
+  "name": "Stack-Junkie",
+  "first": "Stack-",
+  "second": "Junkie",
+  "fontFamily": "Manrope",
+  "fontSize": 20,
+  "fontWeight": 800,
+  "letterSpacingEm": -0.04,
+  "darkAccent": "#3b82f6",
+  "lightAccent": "#0369a1"
+}

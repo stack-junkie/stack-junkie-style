@@ -1,0 +1,891 @@
+{
+  "status": "visual-selection-pending",
+  "families": [
+    {
+      "id": "foundations",
+      "label": "Foundations",
+      "components": [
+        {
+          "id": "colors",
+          "label": "Color roles",
+          "variants": [
+            "light",
+            "dark"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Use semantic roles from tokens.json; status includes readable text."
+        },
+        {
+          "id": "typography",
+          "label": "Typography",
+          "variants": [
+            "ui",
+            "editorial",
+            "mono"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "UI labels and values stay distinct; serif belongs to reading content."
+        },
+        {
+          "id": "spacing",
+          "label": "Spacing and geometry",
+          "variants": [
+            "spacing",
+            "radius",
+            "border"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Use the shared spacing rhythm and direction metrics."
+        },
+        {
+          "id": "icons",
+          "label": "Icons",
+          "variants": [
+            "labelled",
+            "icon-only"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Icon-only actions require accessible names."
+        },
+        {
+          "id": "motion",
+          "label": "Motion",
+          "variants": [
+            "standard",
+            "reduced"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Respect reduced motion; motion must not carry essential information."
+        }
+      ],
+      "icon": "grid"
+    },
+    {
+      "id": "actions",
+      "label": "Actions",
+      "components": [
+        {
+          "id": "button",
+          "label": "Button",
+          "variants": [
+            "primary",
+            "secondary",
+            "quiet",
+            "danger"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Choose one dominant action per task."
+        },
+        {
+          "id": "icon-button",
+          "label": "Icon button",
+          "variants": [
+            "default",
+            "toggle"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Use a label when the icon is ambiguous."
+        },
+        {
+          "id": "toolbar",
+          "label": "Toolbar",
+          "variants": [
+            "horizontal",
+            "wrapping"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Group related actions without duplicating page navigation."
+        },
+        {
+          "id": "menu",
+          "label": "Menu",
+          "variants": [
+            "action",
+            "context"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Object commands belong near their object."
+        },
+        {
+          "id": "command-palette",
+          "label": "Command palette",
+          "variants": [
+            "searchable"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Expose commands with names and keyboard access."
+        }
+      ],
+      "icon": "play"
+    },
+    {
+      "id": "inputs",
+      "label": "Inputs",
+      "components": [
+        {
+          "id": "text-input",
+          "label": "Text input",
+          "variants": [
+            "text",
+            "password",
+            "search"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid",
+            "read-only"
+          ],
+          "usage": "Keep the label visible and preserve edits on validation failure."
+        },
+        {
+          "id": "text-area",
+          "label": "Text area",
+          "variants": [
+            "multiline"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid",
+            "read-only"
+          ],
+          "usage": "Allow useful working space for longer input."
+        },
+        {
+          "id": "number-input",
+          "label": "Number input",
+          "variants": [
+            "integer",
+            "decimal"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid",
+            "read-only"
+          ],
+          "usage": "Show units and valid bounds where relevant."
+        },
+        {
+          "id": "select",
+          "label": "Select",
+          "variants": [
+            "single"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Use meaningful option labels."
+        },
+        {
+          "id": "checkbox",
+          "label": "Checkbox",
+          "variants": [
+            "unchecked",
+            "checked",
+            "mixed"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Use for independent choices."
+        },
+        {
+          "id": "radio-group",
+          "label": "Radio group",
+          "variants": [
+            "single-choice"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Use for mutually exclusive visible choices."
+        },
+        {
+          "id": "switch",
+          "label": "Switch",
+          "variants": [
+            "off",
+            "on"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Use for a directly applied on/off setting."
+        },
+        {
+          "id": "slider",
+          "label": "Slider",
+          "variants": [
+            "continuous",
+            "stepped"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Expose the value and allow keyboard adjustment."
+        },
+        {
+          "id": "date-time",
+          "label": "Date and time",
+          "variants": [
+            "date",
+            "time"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid",
+            "read-only"
+          ],
+          "usage": "Use platform input semantics and a readable current value."
+        },
+        {
+          "id": "file-input",
+          "label": "File selection",
+          "variants": [
+            "single",
+            "multiple"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Keep file selection local and display the selected names."
+        },
+        {
+          "id": "color-input",
+          "label": "Color selection",
+          "variants": [
+            "swatch",
+            "value"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "invalid"
+          ],
+          "usage": "Provide a readable color value."
+        }
+      ],
+      "icon": "code"
+    },
+    {
+      "id": "navigation",
+      "label": "Navigation",
+      "components": [
+        {
+          "id": "rail",
+          "label": "Section rail",
+          "variants": [
+            "expanded",
+            "compact"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Selects the top-level section."
+        },
+        {
+          "id": "sidebar",
+          "label": "Sidebar",
+          "variants": [
+            "expanded",
+            "collapsed"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Compose a section rail and contextual sidebar. Preserve each section selection; provide pointer and keyboard width adjustment, collapse and restore."
+        },
+        {
+          "id": "tabs",
+          "label": "Tabs",
+          "variants": [
+            "connected",
+            "underline",
+            "page",
+            "grouped"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Use connected peer-view tabs with a top active edge and shared content surface; keep panels mounted and associate each tab with its panel."
+        },
+        {
+          "id": "breadcrumbs",
+          "label": "Breadcrumbs",
+          "variants": [
+            "hierarchy"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Show an actual hierarchy rather than a second page title."
+        },
+        {
+          "id": "pagination",
+          "label": "Pagination",
+          "variants": [
+            "previous-next",
+            "numbered"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Keep result and page counts consistent."
+        }
+      ],
+      "icon": "menu"
+    },
+    {
+      "id": "containers",
+      "label": "Containers",
+      "components": [
+        {
+          "id": "panel",
+          "label": "Panel",
+          "variants": [
+            "plain",
+            "inset"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Group related work; do not box every sentence."
+        },
+        {
+          "id": "disclosure",
+          "label": "Disclosure",
+          "variants": [
+            "expanded",
+            "collapsed"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Hide optional detail, never required actions or blocking errors."
+        },
+        {
+          "id": "split-pane",
+          "label": "Split pane",
+          "variants": [
+            "horizontal",
+            "collapsible"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Resize by pointer or keyboard; restore the previous width."
+        },
+        {
+          "id": "stack",
+          "label": "Stack and separator",
+          "variants": [
+            "row",
+            "column",
+            "wrapping"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Compose existing controls with shared spacing."
+        },
+        {
+          "id": "settings-row",
+          "label": "Settings row",
+          "variants": [
+            "inline",
+            "stacked"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Keep the setting label, control and consequential explanation together."
+        }
+      ],
+      "icon": "folder"
+    },
+    {
+      "id": "collections",
+      "label": "Collections",
+      "components": [
+        {
+          "id": "list",
+          "label": "List",
+          "variants": [
+            "selectable",
+            "empty"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Use for scanning items without cross-column comparisons."
+        },
+        {
+          "id": "table",
+          "label": "Data table",
+          "variants": [
+            "sortable",
+            "filterable",
+            "selectable"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Preserve sorting, filtering and selected rows across navigation."
+        },
+        {
+          "id": "tree",
+          "label": "Tree",
+          "variants": [
+            "expanded",
+            "collapsed"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Use for real parent-child structure with keyboard navigation."
+        },
+        {
+          "id": "grid",
+          "label": "Item grid",
+          "variants": [
+            "selectable"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled",
+            "active",
+            "selected"
+          ],
+          "usage": "Use when visual identity matters to the task."
+        }
+      ],
+      "icon": "grid"
+    },
+    {
+      "id": "feedback",
+      "label": "Feedback",
+      "components": [
+        {
+          "id": "badge",
+          "label": "Status indicator",
+          "variants": [
+            "neutral",
+            "success",
+            "warning",
+            "danger"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Pair semantic color with readable state."
+        },
+        {
+          "id": "alert",
+          "label": "Inline alert",
+          "variants": [
+            "info",
+            "success",
+            "warning",
+            "danger"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Keep consequences and recovery visible near the action."
+        },
+        {
+          "id": "progress",
+          "label": "Progress",
+          "variants": [
+            "determinate",
+            "indeterminate"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Distinguish running, paused, cancelled and complete."
+        },
+        {
+          "id": "toast",
+          "label": "Notification",
+          "variants": [
+            "dismissible"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Use for nonblocking updates; keep important outcomes available."
+        },
+        {
+          "id": "empty-state",
+          "label": "Empty and unavailable states",
+          "variants": [
+            "empty",
+            "no-results",
+            "unavailable",
+            "error"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Distinguish these conditions and offer a useful action."
+        },
+        {
+          "id": "loading",
+          "label": "Loading",
+          "variants": [
+            "spinner",
+            "skeleton"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Label the operation without inventing progress."
+        }
+      ],
+      "icon": "alert"
+    },
+    {
+      "id": "overlays",
+      "label": "Overlays and help",
+      "components": [
+        {
+          "id": "dialog",
+          "label": "Dialog",
+          "variants": [
+            "confirmation",
+            "form"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Restore focus after dismissal; reserve blocking interactions for decisions."
+        },
+        {
+          "id": "drawer",
+          "label": "Detail drawer",
+          "variants": [
+            "left",
+            "right"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Use when details need more room without replacing the current task."
+        },
+        {
+          "id": "help",
+          "label": "Question-mark help",
+          "variants": [
+            "preview",
+            "pinned"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Hover or focus previews; click pins; Escape or outside click dismisses."
+        },
+        {
+          "id": "tooltip",
+          "label": "Tooltip",
+          "variants": [
+            "pointer",
+            "keyboard"
+          ],
+          "states": [
+            "default",
+            "hover",
+            "focus",
+            "disabled"
+          ],
+          "usage": "Optional brief context, never the only source of essential information."
+        }
+      ],
+      "icon": "help"
+    },
+    {
+      "id": "content",
+      "label": "Content",
+      "components": [
+        {
+          "id": "prose",
+          "label": "Reading surface",
+          "variants": [
+            "article",
+            "reference"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Use a readable line length and editorial hierarchy."
+        },
+        {
+          "id": "code",
+          "label": "Code and log output",
+          "variants": [
+            "code",
+            "log"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Preserve whitespace and provide useful copying."
+        },
+        {
+          "id": "media",
+          "label": "Media frame",
+          "variants": [
+            "image",
+            "caption"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Keep a textual alternative and useful controls."
+        },
+        {
+          "id": "chart",
+          "label": "Chart",
+          "variants": [
+            "line",
+            "bars"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Show units and labels with a readable data alternative."
+        },
+        {
+          "id": "canvas",
+          "label": "Canvas and inspector",
+          "variants": [
+            "select",
+            "zoom"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Keep selection and zoom while the inspector changes details."
+        }
+      ],
+      "icon": "file"
+    },
+    {
+      "id": "layouts",
+      "label": "Product layouts",
+      "components": [
+        {
+          "id": "layout",
+          "label": "Layout composition",
+          "variants": [
+            "focused-utility",
+            "multi-tool",
+            "embedded",
+            "data",
+            "workbench",
+            "publication",
+            "guided",
+            "monitoring"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "Compose the same components for the product task, retaining capabilities."
+        }
+      ],
+      "icon": "settings"
+    }
+  ],
+  "layouts": [
+    {
+      "id": "focused-utility",
+      "label": "Focused utility",
+      "description": "One task with its options and outcome."
+    },
+    {
+      "id": "multi-tool",
+      "label": "Multi-tool utility",
+      "description": "Related tools in distinct pages with shared settings."
+    },
+    {
+      "id": "embedded",
+      "label": "Embedded utility",
+      "description": "A compact task inside a larger surface."
+    },
+    {
+      "id": "data",
+      "label": "Data application",
+      "description": "Filter, compare, select and inspect a collection."
+    },
+    {
+      "id": "workbench",
+      "label": "Editor / workbench",
+      "description": "Section rail, contextual sidebar, peer tabs and inspector."
+    },
+    {
+      "id": "publication",
+      "label": "Publication / reference",
+      "description": "Readable content with useful document navigation."
+    },
+    {
+      "id": "guided",
+      "label": "Guided workflow",
+      "description": "A sequence that preserves input and permits revision."
+    },
+    {
+      "id": "monitoring",
+      "label": "Monitoring / analysis",
+      "description": "Consistent operational state, progress and readable measurements."
+    }
+  ],
+  "systemPages": [
+    {
+      "id": "settings/appearance",
+      "label": "Appearance settings",
+      "component": "SettingsPage",
+      "usage": "Theme belongs in Settings. Showcase comparison controls are local to the showcase and excluded from library exports."
+    },
+    {
+      "id": "settings/about",
+      "label": "About",
+      "component": "AboutPage",
+      "usage": "Product identity is prominent; persistent Stack Junkie Style attribution is compact and reads the imported library version."
+    }
+  ]
+}

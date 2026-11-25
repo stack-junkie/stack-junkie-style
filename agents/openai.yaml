@@ -1,4 +1,4 @@
 interface:
   display_name: "Stack Junkie Style"
-  short_description: "Apply the Stack Junkie UI system"
-  default_prompt: "Use $stack-junkie-style to restyle this application's real surfaces in the Stack Junkie design system."
+  short_description: "Build interfaces with shared Stack Junkie components"
+  default_prompt: "Use $stack-junkie-style to build or improve this interface with shared components and layouts while preserving its real tasks and behavior."

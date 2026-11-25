@@ -1,51 +1,35 @@
 ---
 name: stack-junkie-style
-description: Apply Christopher Kvamme's Stack Junkie design system across web, desktop, mobile, and application interfaces. Use when the user asks for Stack Junkie styling, stack-junkie.com styling, the Stack Junkie light and dark themes, a restrained editorial-technical UI, or a decluttered responsive redesign.
+description: Apply Christopher Kvamme's Stack Junkie UI system by default when building, editing, or reviewing web, desktop, mobile, and application interfaces, unless the user explicitly chooses another design system. Reuse its components and layouts where the toolkit fits; preserve established conventions for narrow edits.
 ---
 
 # Stack Junkie Style
 
-Apply the Stack Junkie identity to the real product while preserving its native interaction model and primary user task.
+Build the requested interface around its real work. Keep existing capabilities, approved compositions and later corrections in their original scope. A clean screen still fails if it loses a required operation or misrepresents what is running.
 
-## Required resources
+## Start with the product
 
-Read these before editing an interface:
+Identify the task, toolkit, shared controls, theme, affected surfaces and state that must survive navigation. Read the original request and material later corrections before changing their result. Briefly explain the primary task, what stays visible, what becomes optional and how a narrow layout behaves. A small change needs only a small explanation.
 
-1. [references/design-system.md](references/design-system.md) for visual tokens and component rules.
-2. [references/product-ux-rules.md](references/product-ux-rules.md) for hierarchy, disclosure, responsive behavior, feedback, accessibility, and anti-slop rules.
+Load the references needed for the change:
 
-Open [assets/style-guide/index.html](assets/style-guide/index.html) in a real browser before implementation. Treat it as the visual specimen, not as a component library to copy blindly.
+- Appearance or theme work: [visual system](references/design-system.md), then the relevant values in [shared tokens](ui/shared/tokens.json).
+- Font hierarchy, reading surfaces or compact application sizing: [typography and density](references/typography-and-density.md).
+- Controls or component reuse: [components](references/components.md), the applicable [catalog](ui/shared/catalog.json) entries and the matching toolkit implementation.
+- Page structure, navigation or responsive work: [layouts](references/layouts.md).
+- Content, disclosure, feedback, help or interaction work: [product UX rules](references/product-ux-rules.md).
+- Repository setup or delivery documentation: [application delivery preferences](references/application-delivery-preferences.md).
 
-## Workflow
+## Use the working system
 
-### Inspect the product
+Consuming products import the shared library rather than copying its components or styling. Use the shared Settings and About composition. Pin Settings at the bottom of the activity rail, or the contextual sidebar when the rail is absent. Theme and About belong in Settings; keep the compact style attribution and library-sourced version beneath the consuming product's own identity. Showcase-only controls and explanatory content remain outside consumer imports.
 
-- Identify the framework, theme source, reusable primitives, screens in scope, real user tasks, and native platform conventions.
-- Launch or render the current product before editing when practical.
-- Preserve functionality, user-authored assets, accessibility semantics, semantic status colors, and unrelated dirty work.
-- Do not invent screens, metrics, cards, copy, settings, examples, or controls merely to make the interface look complete.
+[UI package instructions](ui/README.md) describe the React/TypeScript web and Qt 6 Widgets native libraries and their showcase commands. The showcases import those libraries. Compose named components and layout primitives; do not recreate their styling in each page or maintain a separate showcase theme. Other toolkits reuse the decisions and tokens through an appropriate adapter, not incompatible executable controls.
 
-### State the design intent
+The working showcase uses a section rail, adjustable contextual sidebar and connected peer-view tabs. Clean utility is the owner's closest candidate; its dark surfaces and selection backgrounds are neutral black and gray, without a blue or purple cast. Retained user theme selections still win. Light remains a separate palette, and fonts and accents remain open. Warm and technical remain exploratory comparisons. Catalog entries remain pending owner style selection. A default preview is not an approved design. Follow an explicit product choice when one exists; show a concrete comparison when a new aesthetic choice is needed. The old static specimen is not a second source of truth.
 
-Tell the user concisely what task should dominate, what secondary material will move or disappear, how narrow layouts will reflow, and which surfaces are changing. Ask only when a genuine product decision cannot be inferred safely.
+## Check and hand off
 
-### Apply the system
+Use permitted source, API and command-line checks. Never take control of the owner's PC or use browser or desktop UI automation. The owner operates the GUI for visual and interaction review. Prepare usable launch instructions and report what still needs that review; a successful build does not establish visual acceptance.
 
-- Centralize semantic colors and typography in the product's existing theme system.
-- Use quiet neutral layers, controlled blue accents, thin borders, modest radii, and restrained elevation.
-- Preserve semantic success, warning, danger, and data-series colors.
-- Use Lora for strong editorial identity moments, Manrope for controls and application surfaces, and Fira Code for code or technical data where appropriate.
-- Organize the primary task before decorating. Remove decorative, duplicative, speculative, or low-value material.
-- Preserve readable text, usable targets, focus treatment, reduced-motion preferences, and native interaction behavior.
-- Reflow at narrow sizes instead of shrinking the interface into unreadability.
-- Change only the requested surface and shared primitives it legitimately depends on.
-
-### Inspect the real result
-
-Open the changed product and inspect the affected surfaces at the sizes and themes relevant to the change. Fix visible clipping, overlap, broken wrapping, unreadable density, contradictory legacy styling, or broken interaction introduced by the work. Show the user the rendered result when the environment supports it.
-
-Do not create compliance reports, evidence matrices, checklist artifacts, validator scripts, audit levels, or independent-review loops. Direct product inspection and owner feedback are the acceptance boundary.
-
-## Handoff
-
-Report the changed surfaces, the main hierarchy decision, what was removed or disclosed, and any limitation the owner still needs to judge. Keep the handoff proportional to the design change.
+Fix observed mismatches without adding validators, compliance reports, audit loops or permanent checking machinery. When changing this system, keep the component, its example and affected guidance in the same release, using the package [VERSION](VERSION). Report the changed surfaces, behavior and actual verification. Do not install, publish or change another product merely because this skill was invoked.
