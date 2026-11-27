@@ -241,9 +241,15 @@ public:
 private:
     QVBoxLayout *content_;
 };
+/** Where the About page links: each is optional and hidden when empty. */
+struct AboutLinks { QString website, repository, license, licenseUrl; };
 class STACKJUNKIE_EXPORT AboutPage : public SettingsPage {
 public:
+    /** Without a logo, About shows the interim SJ mark. */
     AboutPage(const QString &productName, const QString &description, const QString &productVersion = {}, QWidget *productLogo = nullptr, QWidget *parent = nullptr);
+    void setLinks(const AboutLinks &links);
+private:
+    QLabel *links_ = nullptr;
 };
 // The thin bottom row of a desktop app: the current item's state on the left, small facts on the right. Never ads or tips.
 class STACKJUNKIE_EXPORT StatusBar : public QFrame {
@@ -295,7 +301,18 @@ public:
     void setSidebarVisible(bool visible);
     bool sidebarVisible() const;
     QWidget *toolbar() const { return toolbar_; }
+    /** The app's name, shown beside the logo in the top-left logo slot and in Help > About. */
     void setHeader(const QString &title);
+    /** The app's own logo in the logo slot. A null pixmap shows the interim SJ mark. Clicking the slot goes Home. */
+    void setLogo(const QPixmap &logo);
+    QPixmap logo() const { return logo_; }
+    /** Shows the app's Home: the home page when one is set, otherwise the first section. */ void goHome();
+    /** The page the logo slot opens, such as a Home page in a hidden section. */ void setHomePage(int page) { homePage_ = page; }
+    /** Zoom the whole app, 50 to 200 percent, as View > Appearance and Control plus, minus and 0 do. */
+    void setZoom(int percent);
+    int zoom() const;
+    /** View > Appearance: the Sidebar, Status bar and Panel toggles and the zoom commands. */
+    QMenu *appearanceMenu() const { return appearanceMenu_; }
     void restoreSettings(const QString &key);
     void saveSettings(const QString &key) const;
     /** Apply App frame choices, usually Preset::resolve(id, overrides). The frame draws the rail, the sidebar as a tree
@@ -306,8 +323,8 @@ public:
     void setChoices(const PresetChoices &choices);
     PresetChoices choices() const { return choices_; }
     /** The Menu bar: File, Edit, View, the app's menus, then Help, shown when choices().menuBar is on. File holds
-        Settings (which calls the settings handler) and Help holds About (the about handler). View holds the sidebar,
-        bottom panel and Status bar toggles. Edit holds only app items and is hidden without them. */
+        Settings (which calls the settings handler) and Help holds About (the about handler). View > Appearance holds the
+        Sidebar, Status bar and Panel toggles and the zoom commands. Edit holds only app items and is hidden without them. */
     QMenuBar *menuBar() const { return menuBar_; }
     QMenu *fileMenu() const { return fileMenu_; }
     QMenu *editMenu() const { return editMenu_; }
@@ -325,7 +342,10 @@ public:
     void setBottomPanelShown(bool shown);
 signals:
     void currentChanged(int index);
-    void choicesChanged(const StackJunkie::PresetChoices &choices);protected:
+    void choicesChanged(const StackJunkie::PresetChoices &choices);
+    void zoomChanged(int percent);
+    void logoChanged();
+protected:
     void resizeEvent(QResizeEvent *event) override;
 private:
     void refreshNavigation();
@@ -338,7 +358,11 @@ private:
     void updateBars();
     bool listedSection(int section) const { return section != settingsSection_; }
     QMenuBar *menuBar_ = nullptr;
-    QMenu *fileMenu_ = nullptr, *editMenu_ = nullptr, *viewMenu_ = nullptr, *helpMenu_ = nullptr;
+    QMenu *fileMenu_ = nullptr, *editMenu_ = nullptr, *viewMenu_ = nullptr, *helpMenu_ = nullptr, *appearanceMenu_ = nullptr;
+    QAction *zoomInAction_ = nullptr, *zoomOutAction_ = nullptr, *zoomResetAction_ = nullptr;
+    QToolButton *home_ = nullptr;
+    int homePage_ = -1;
+    QPixmap logo_;
     /** The first of the frame's own items in each frame menu; app items go above it. */ QHash<QMenu *, QAction *> frameItems_;
     QAction *settingsAction_ = nullptr, *aboutAction_ = nullptr, *sidebarAction_ = nullptr, *panelAction_ = nullptr, *statusAction_ = nullptr;
     StatusBar *statusBar_ = nullptr;
@@ -390,10 +414,13 @@ public:
         device's color scheme until someone picks a theme in Settings. */
     void setPreset(const QString &presetId, const QVariantMap &overrides = {});
     QString preset() const { return preset_; }
+    /** The app's website, repository and license, linked from About. Each is optional. Call before show(). */
+    void setAboutLinks(const AboutLinks &links) { links_ = links; }
 protected:
     void showEvent(QShowEvent *event) override;
 private:
     void finishSettings();
+    AboutLinks links_;
     SettingsWindow *settings_;
     QString name_, description_, version_;
     bool dark_ = true;

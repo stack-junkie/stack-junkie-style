@@ -178,6 +178,7 @@ IconButton::IconButton(const QString &iconName, const QString &accessibleName, Q
     setIcon(StackJunkie::icon(iconName, palette().color(QPalette::ButtonText)));
     setAccessibleName(accessibleName);
     setToolTip(accessibleName);
+    setProperty("sjTarget", true);
     const int target = Theme::density(QStringLiteral("iconTarget"), 28);
     setFixedSize(target, target);
     setFocusPolicy(Qt::StrongFocus);
@@ -390,7 +391,7 @@ void Tabs::tabInserted(int index) {
     if (!tabsClosable()) return;
     QWidget *page = widget(index);
     auto *close = new IconButton(QStringLiteral("close"), QStringLiteral("Close ") + tabText(index));
-    close->setProperty("sjVariant", "quiet"); close->setProperty("sjRole", "tabClose"); close->setFixedSize(18, 18); close->setIconSize(QSize(12, 12));
+    close->setProperty("sjVariant", "quiet"); close->setProperty("sjRole", "tabClose"); close->setProperty("sjTarget", false); close->setFixedSize(18, 18); close->setIconSize(QSize(12, 12));
     close->setFocusPolicy(Qt::NoFocus);
     connect(close, &QToolButton::clicked, this, [this, page] { const int at = indexOf(page); if (at >= 0) emit tabCloseRequested(at); });
     tabBar()->setTabButton(index, QTabBar::RightSide, close);
@@ -420,22 +421,50 @@ SettingsPage::SettingsPage(const QString &title, QWidget *parent) : QScrollArea(
     content_ = new QVBoxLayout; content_->setSpacing(16);
     layout->addLayout(content_); layout->addStretch(); setWidget(body);
 }
+// About gives the app the spotlight: a large logo, the name with a version chip, the description and a links row.
+// The style's credit is small secondary text pinned to the bottom right.
 AboutPage::AboutPage(const QString &productName, const QString &description, const QString &productVersion, QWidget *productLogo, QWidget *parent) : SettingsPage(QStringLiteral("About"), parent) {
-    auto *name = heading(productName); name->setProperty("sjRole", "productTitle");
-    contentLayout()->addWidget(productLogo ? row({productLogo, name}) : name);
-    contentLayout()->addWidget(paragraph(description));
-    if (!productVersion.isEmpty()) contentLayout()->addWidget(paragraph(QStringLiteral("Version %1").arg(productVersion)));
-    auto *separator = new QFrame; separator->setFrameShape(QFrame::HLine); separator->setProperty("sjRole", "separator"); contentLayout()->addWidget(separator);
+    auto *product = new QWidget;
+    auto *productLayout = new QHBoxLayout(product); productLayout->setContentsMargins(0, Theme::spacing(2), 0, 0); productLayout->setSpacing(Theme::spacing(4));
+    auto *logoFrame = new QFrame; logoFrame->setProperty("sjRole", "aboutLogo"); logoFrame->setFixedSize(72, 72);
+    auto *logoLayout = new QVBoxLayout(logoFrame); logoLayout->setContentsMargins(0, 0, 0, 0);
+    if (!productLogo) { auto *mark = new QLabel; mark->setFixedSize(52, 52); mark->setProperty("sjBrandSize", 52); mark->setAccessibleName(productName); productLogo = mark; }
+    logoLayout->addWidget(productLogo, 0, Qt::AlignCenter);
+    productLayout->addWidget(logoFrame, 0, Qt::AlignTop);
+    auto *text = new QVBoxLayout; text->setSpacing(Theme::spacing(2));
+    auto *name = heading(productName); name->setProperty("sjRole", "productTitle"); name->setWordWrap(false);
+    auto *titleRow = new QHBoxLayout; titleRow->setSpacing(Theme::spacing(2)); titleRow->addWidget(name);
+    if (!productVersion.isEmpty()) {
+        auto *chip = new QLabel(QStringLiteral("Version %1").arg(productVersion)); chip->setProperty("sjRole", "versionChip");
+        titleRow->addWidget(chip, 0, Qt::AlignVCenter);
+    }
+    titleRow->addStretch();
+    text->addLayout(titleRow);
+    auto *about = paragraph(description); about->setMaximumWidth(560); text->addWidget(about);
+    links_ = new QLabel; links_->setTextFormat(Qt::RichText); links_->setOpenExternalLinks(true); links_->setProperty("sjRole", "aboutLinks"); links_->hide();
+    text->addWidget(links_);
+    productLayout->addLayout(text, 1);
+    contentLayout()->addWidget(product);
     QFile source(QStringLiteral(":/stackjunkie/attribution.json"));
     if (!source.open(QIODevice::ReadOnly)) throw std::runtime_error("Stack Junkie attribution resource missing");
     const auto info = QJsonDocument::fromJson(source.readAll()).object();
-    auto *creditLogo = new QLabel; creditLogo->setFixedSize(22, 22); creditLogo->setProperty("sjBrandSize", 22);
-    auto *credit = paragraph(QString::fromUtf8("%1 · %2<br><a href=\"%3\">%4</a><br>© %5 %6")
-        .arg(info.value("name").toString().toHtmlEscaped(), QStringLiteral(STACKJUNKIE_VERSION), info.value("website").toString().toHtmlEscaped(), info.value("projectLine").toString().toHtmlEscaped())
+    // The version comes from the release (STACKJUNKIE_VERSION is generated from VERSION), never a literal.
+    auto *credit = new QLabel(QString::fromUtf8("Built with <a href=\"%1\">%2</a> %3 · %4 · © %5 %6")
+        .arg(info.value("website").toString().toHtmlEscaped(), info.value("name").toString().toHtmlEscaped(), QStringLiteral(STACKJUNKIE_VERSION), info.value("projectLine").toString().toHtmlEscaped())
         .arg(QDate::currentDate().year()).arg(info.value("copyrightHolder").toString().toHtmlEscaped()));
     credit->setTextFormat(Qt::RichText); credit->setOpenExternalLinks(true); credit->setProperty("sjRole", "attribution");
-    credit->setProperty("sjAttributionHtml", credit->text());
-    contentLayout()->addWidget(row({creditLogo, credit}));
+    credit->setProperty("sjAttributionHtml", credit->text()); credit->setAlignment(Qt::AlignRight);
+    if (auto *pageLayout = qobject_cast<QVBoxLayout *>(widget()->layout())) pageLayout->addWidget(credit, 0, Qt::AlignRight | Qt::AlignBottom);
+}
+void AboutPage::setLinks(const AboutLinks &links) {
+    QStringList parts;
+    const auto link = [](const QString &href, const QString &label) { return QStringLiteral("<a href=\"%1\">%2</a>").arg(href.toHtmlEscaped(), label.toHtmlEscaped()); };
+    if (!links.website.isEmpty()) parts << link(links.website, QStringLiteral("Website"));
+    if (!links.repository.isEmpty()) parts << link(links.repository, QStringLiteral("Repository"));
+    if (!links.license.isEmpty()) parts << (links.licenseUrl.isEmpty() ? (links.license + QStringLiteral(" license")).toHtmlEscaped() : link(links.licenseUrl, links.license + QStringLiteral(" license")));
+    links_->setText(parts.join(QStringLiteral("&nbsp;&nbsp;&nbsp;&nbsp;")));
+    links_->setProperty("sjAttributionHtml", links_->text());
+    links_->setVisible(!parts.isEmpty());
 }
 StatusBar::StatusBar(QWidget *parent) : QFrame(parent) {
     setProperty("sjRole", "statusBar");
@@ -468,7 +497,7 @@ BottomPanel::BottomPanel(QWidget *parent) : QFrame(parent) {
     tabBar_->setDocumentMode(true); tabBar_->setExpanding(false); tabBar_->setUsesScrollButtons(true); tabBar_->setDrawBase(false);
     rowLayout->addWidget(tabBar_); rowLayout->addStretch();
     close_ = new IconButton(QStringLiteral("close"), QStringLiteral("Hide bottom panel"), row);
-    close_->setProperty("sjVariant", "quiet"); close_->setFixedSize(24, 24); close_->setIconSize(QSize(14, 14)); close_->hide();
+    close_->setProperty("sjVariant", "quiet"); close_->setProperty("sjTarget", false); close_->setFixedSize(24, 24); close_->setIconSize(QSize(14, 14)); close_->hide();
     rowLayout->addWidget(close_, 0, Qt::AlignVCenter);
     layout->addWidget(row);
     views_ = new QStackedWidget(this);
@@ -499,12 +528,18 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     toolbar_->setMinimumHeight(Theme::density(QStringLiteral("headerHeight"), 40));
     auto *toolbarLayout = new QHBoxLayout(toolbar_);
     toolbarLayout->setContentsMargins(Theme::spacing(1), Theme::spacing(0), Theme::spacing(1), Theme::spacing(0));
-    collapse_ = new IconButton(QStringLiteral("menu"), QStringLiteral("Toggle contextual sidebar"), toolbar_);
+    collapse_ = new IconButton(QStringLiteral("sidebar"), QStringLiteral("Toggle contextual sidebar"), toolbar_);
     collapse_->setCheckable(true);
     collapse_->setChecked(true);
+    // The logo slot: the app's logo and name, top left. Clicking it goes Home, the first section.
+    home_ = new QToolButton(toolbar_);
+    home_->setProperty("sjRole", "home"); home_->setProperty("sjBrandIcon", 20);
+    home_->setToolButtonStyle(Qt::ToolButtonTextBesideIcon); home_->setIconSize(QSize(20, 20));
+    home_->setText(QStringLiteral("Workspace")); home_->setToolTip(QStringLiteral("Home")); home_->setAccessibleName(QStringLiteral("Workspace home"));
+    connect(home_, &QToolButton::clicked, this, [this] { goHome(); });
+    toolbarLayout->addWidget(home_);
     heading_ = new QLabel(QStringLiteral("Workspace"), toolbar_);
-    heading_->setProperty("sjRole", "shellTitle");
-    toolbarLayout->addWidget(heading_);
+    heading_->setProperty("sjRole", "shellTitle"); heading_->hide();
     // The Menu bar sits in the header beside the app's name: File, Edit, View, the app's menus, then Help.
     menuBar_ = new QMenuBar(toolbar_);
     menuBar_->setNativeMenuBar(false);
@@ -524,12 +559,23 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
         else if (settingsSection_ >= 0) { setCurrentSection(settingsSection_); setSidebarVisible(true); }
     });
     frameItems_.insert(editMenu_, nullptr);
+    // The top of View is the app's own views; the frame's toggles and zoom sit in View > Appearance.
     frameItems_.insert(viewMenu_, viewMenu_->addSeparator());
-    sidebarAction_ = viewMenu_->addAction(QStringLiteral("Sidebar"));
+    appearanceMenu_ = viewMenu_->addMenu(QStringLiteral("Appearance"));
+    sidebarAction_ = appearanceMenu_->addAction(QStringLiteral("Sidebar"));
     sidebarAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
-    panelAction_ = viewMenu_->addAction(QStringLiteral("Bottom panel"));
+    statusAction_ = appearanceMenu_->addAction(QStringLiteral("Status bar"));
+    panelAction_ = appearanceMenu_->addAction(QStringLiteral("Panel"));
     panelAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_J));
-    statusAction_ = viewMenu_->addAction(QStringLiteral("Status bar"));
+    appearanceMenu_->addSeparator();
+    // Zoom works with or without the Menu bar, so its keys are shortcuts of the frame and the menu shows them as text.
+    zoomInAction_ = appearanceMenu_->addAction(QStringLiteral("Zoom in\tCtrl++"), this, [this] { setZoom(Theme::zoomStep(zoom(), 1)); });
+    zoomOutAction_ = appearanceMenu_->addAction(QStringLiteral("Zoom out\tCtrl+-"), this, [this] { setZoom(Theme::zoomStep(zoom(), -1)); });
+    zoomResetAction_ = appearanceMenu_->addAction(QStringLiteral("Reset zoom\tCtrl+0"), this, [this] { setZoom(100); });
+    for (const auto &[keys, direction] : QList<QPair<QKeySequence, int>>{{QKeySequence(Qt::CTRL | Qt::Key_Plus), 1}, {QKeySequence(Qt::CTRL | Qt::Key_Equal), 1}, {QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_Equal), 1}, {QKeySequence(Qt::CTRL | Qt::Key_Minus), -1}, {QKeySequence(Qt::CTRL | Qt::Key_0), 0}}) {
+        auto *shortcut = new QShortcut(keys, this);
+        connect(shortcut, &QShortcut::activated, this, [this, direction = direction] { setZoom(direction ? Theme::zoomStep(zoom(), direction) : 100); });
+    }
     for (auto *action : {sidebarAction_, panelAction_, statusAction_}) action->setCheckable(true);
     connect(sidebarAction_, &QAction::triggered, this, [this](bool on) { setSidebarVisible(on); });
     connect(panelAction_, &QAction::triggered, this, &Workspace::setBottomPanelShown);
@@ -546,12 +592,14 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     rail_->setAccessibleName(QStringLiteral("Sections"));
     rail_->setFixedWidth(Theme::density(QStringLiteral("railWidth"), 48));
     rail_->setIconSize(QSize(18, 18));
+    rail_->setProperty("sjTipSide", "right");
     rail_->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     railContainer_ = new QWidget(this);
     auto *railLayout = new QVBoxLayout(railContainer_); railLayout->setContentsMargins(0, 0, 0, 0); railLayout->setSpacing(0);
     collapse_->setFixedSize(Theme::density(QStringLiteral("railWidth"), 48) - 8, Theme::density(QStringLiteral("contextHeight"), 36));
     collapse_->setProperty("sjVariant", "quiet");
     collapse_->setProperty("sjRole", "railToggle");
+    collapse_->setProperty("sjTarget", false); collapse_->setProperty("sjTipSide", "right"); collapse_->setIconSize(QSize(18, 18));
     collapse_->setToolTip(QStringLiteral("Hide navigation"));
     collapse_->setAccessibleName(QStringLiteral("Hide navigation"));
     railLayout->addWidget(collapse_, 0, Qt::AlignHCenter);
@@ -560,6 +608,8 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     settingsButton_->setCheckable(true); settingsButton_->hide();
     settingsButton_->setFixedSize(Theme::density(QStringLiteral("railWidth"), 48) - 8, Theme::density(QStringLiteral("contextHeight"), 36));
     settingsButton_->setProperty("sjVariant", "quiet");
+    // The gear matches the Rail icons, and its tooltip sits beside it like theirs.
+    settingsButton_->setProperty("sjTarget", false); settingsButton_->setProperty("sjTipSide", "right"); settingsButton_->setIconSize(QSize(18, 18));
     railLayout->addWidget(settingsButton_, 0, Qt::AlignHCenter);
     connect(settingsButton_, &QToolButton::clicked, this, [this] {
         if (settingsHandler_) { settingsButton_->setChecked(false); settingsHandler_(); return; }
@@ -678,6 +728,7 @@ void Workspace::setSectionVisible(int section, bool visible) {
 }
 void Workspace::setRailVisible(bool visible) {
     railContainer_->setVisible(visible);
+    for (auto *button : {static_cast<QWidget *>(collapse_), static_cast<QWidget *>(settingsButton_)}) button->setProperty("sjTipSide", visible ? "right" : "below");
     if (visible) qobject_cast<QVBoxLayout *>(railContainer_->layout())->insertWidget(0, collapse_, 0, Qt::AlignHCenter);
     else qobject_cast<QHBoxLayout *>(toolbar_->layout())->insertWidget(0, collapse_);
     collapse_->setVisible(collapsible_ && choices_.sidebar != QStringLiteral("off"));
@@ -749,7 +800,31 @@ void Workspace::setSidebarVisible(bool visible) {
     if (sidebarAction_) { QSignalBlocker blocker(sidebarAction_); sidebarAction_->setChecked(visible); }
 }
 bool Workspace::sidebarVisible() const { return !sidebar_->isHidden(); }
-void Workspace::setHeader(const QString &title) { heading_->setText(title); aboutAction_->setText(QStringLiteral("About ") + title); }
+void Workspace::setHeader(const QString &title) {
+    heading_->setText(title); home_->setText(title); home_->setAccessibleName(title + QStringLiteral(" home"));
+    aboutAction_->setText(QStringLiteral("About ") + title);
+}
+void Workspace::setLogo(const QPixmap &logo) {
+    if (logo.isNull()) { home_->setProperty("sjBrandIcon", 20); if (property("sjDirection").isValid()) home_->setIcon(QIcon(brandMark(Theme::load(property("sjDirection").toString(), property("sjDark").toBool()), 40))); }
+    else { home_->setProperty("sjBrandIcon", QVariant()); home_->setIcon(QIcon(logo)); }
+    logo_ = logo;
+    emit logoChanged();
+}
+void Workspace::goHome() {
+    if (homePage_ >= 0 && homePage_ < pageSections_.size()) { setCurrentPage(homePage_); return; }
+    for (int section = 0; section < sectionSelections_.size(); ++section)
+        if (listedSection(section) && !rail_->item(section)->isHidden()) { setCurrentSection(section); return; }
+}
+void Workspace::setZoom(int percent) {
+    const int next = qBound(50, percent, 200);
+    Theme::setZoom(next);
+    zoomInAction_->setEnabled(next < 200); zoomOutAction_->setEnabled(next > 50); zoomResetAction_->setEnabled(next != 100);
+    zoomResetAction_->setText(QStringLiteral("Reset zoom (%1%)\tCtrl+0").arg(next));
+    applyDensity();
+    if (property("sjDirection").isValid()) Theme::load(property("sjDirection").toString(), property("sjDark").toBool()).apply(this);
+    emit zoomChanged(next);
+}
+int Workspace::zoom() const { return Theme::globalZoom(); }
 void Workspace::restoreSettings(const QString &key) {
     QSettings settings;
     savedWidth_ = qMax(0, settings.value(key + QStringLiteral("/sidebarWidth"), 220).toInt());
@@ -840,7 +915,7 @@ void Workspace::refreshTabRow() {
             if (!documents) continue;
             // Closing is immediate, with the library's quiet close icon instead of the platform's button.
             auto *close = new IconButton(QStringLiteral("close"), QStringLiteral("Close ") + pageTitles_[page]);
-            close->setProperty("sjVariant", "quiet"); close->setProperty("sjRole", "tabClose"); close->setFixedSize(18, 18); close->setIconSize(QSize(12, 12));
+            close->setProperty("sjVariant", "quiet"); close->setProperty("sjRole", "tabClose"); close->setProperty("sjTarget", false); close->setFixedSize(18, 18); close->setIconSize(QSize(12, 12));
             close->setFocusPolicy(Qt::NoFocus);
             connect(close, &QToolButton::clicked, this, [this, page] { closeDocument(page); });
             pageTabs_->setTabButton(at, QTabBar::RightSide, close);
@@ -893,6 +968,9 @@ void Workspace::applyDensity() {
     rail_->setFixedWidth(railWidth);
     collapse_->setFixedSize(railWidth - 8, context);
     settingsButton_->setFixedSize(railWidth - 8, context);
+    const int railIcon = Theme::load().scaled(18);
+    rail_->setIconSize(QSize(railIcon, railIcon)); collapse_->setIconSize(QSize(railIcon, railIcon)); settingsButton_->setIconSize(QSize(railIcon, railIcon));
+    home_->setIconSize(QSize(Theme::load().scaled(20), Theme::load().scaled(20)));
     contextHeading_->setMinimumHeight(context);
     for (int i = 0; i < rail_->count(); ++i) rail_->item(i)->setSizeHint(QSize(railWidth - Theme::spacing(1), context));
     // Content areas mark themselves with sjContentPadding so their margins follow the density too.
@@ -948,14 +1026,15 @@ void Workspace::resizeEvent(QResizeEvent *event) {
 }
 AppShell::AppShell(const QString &name, const QString &description, const QString &version, QWidget *parent)
     : Workspace(parent), settings_(new SettingsWindow(this)), name_(name), description_(description), version_(version) {
+    initializeResources();
     setHeader(name);
     setSettingsHandler([this] { finishSettings(); settings_->show(); settings_->raise(); });
     auto *open = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), this);
     connect(open, &QShortcut::activated, this, [this] { finishSettings(); settings_->show(); settings_->raise(); });
     // Help > About opens Settings at About, the last built-in section.
     setAboutHandler([this] { finishSettings(); settings_->showSection(productSections_ + 1); settings_->show(); settings_->raise(); });
-    viewMenu()->addSeparator();
-    darkAction_ = viewMenu()->addAction(QStringLiteral("Dark theme"));
+    appearanceMenu()->addSeparator();
+    darkAction_ = appearanceMenu()->addAction(QStringLiteral("Dark theme"));
     darkAction_->setCheckable(true); darkAction_->setChecked(dark_);
     // Picking a theme here ends following the device's color scheme, as in Settings.
     connect(darkAction_, &QAction::triggered, this, [this](bool on) { disconnect(followSystem_); setDark(on); });
@@ -991,7 +1070,13 @@ void AppShell::finishSettings() {
     connect(mode, &QComboBox::currentIndexChanged, this, [this](int index) { disconnect(followSystem_); setDark(index == 0); });
     appearance->contentLayout()->addWidget(new Field(QStringLiteral("Theme"), mode, QStringLiteral("Choose the light or dark appearance.")));
     settings_->addSection(QStringLiteral("Appearance"), appearance, QStringLiteral("theme dark light mode color"));
-    settings_->addSection(QStringLiteral("About"), new AboutPage(name_, description_, version_), QStringLiteral("version copyright"));
+    QLabel *aboutLogo = nullptr;
+    if (!logo().isNull()) { aboutLogo = new QLabel; aboutLogo->setPixmap(logo().scaled(52, 52, Qt::KeepAspectRatio, Qt::SmoothTransformation)); aboutLogo->setAccessibleName(name_); }
+    auto *about = new AboutPage(name_, description_, version_, aboutLogo);
+    about->setLinks(links_);
+    settings_->addSection(QStringLiteral("About"), about, QStringLiteral("version copyright website repository license"));
+    // These sections are built on first show, after the theme was applied: apply it again so they carry it too.
+    setDark(dark_);
 }
 QLabel *heading(const QString &text, QWidget *parent) {
     auto *label = new QLabel(text, parent);

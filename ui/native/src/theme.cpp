@@ -1,7 +1,14 @@
 #include <stackjunkie/theme.hpp>
 #include <stackjunkie/components.hpp>
 #include <QAbstractButton>
+#include <QAbstractItemView>
 #include <QApplication>
+#include <QHelpEvent>
+#include <QMenuBar>
+#include <QMouseEvent>
+#include <QRegularExpression>
+#include <QTabBar>
+#include <QToolTip>
 #include <QFile>
 #include <QFontDatabase>
 #include <QHash>
@@ -22,22 +29,109 @@ static void registerStackJunkieResources() { Q_INIT_RESOURCE(stackjunkie_resourc
 
 namespace StackJunkie {
 static QHash<QString, QString> registeredFamilies;
+static int currentZoom = 100;
+static constexpr int zoomSteps[] = {50, 67, 75, 80, 90, 100, 110, 125, 150, 175, 200};
+
+// Shared pointer and tooltip behavior for every widget in the app.
+// The pointing hand shows over enabled buttons, tabs, menu triggers and the rows of navigation lists and trees;
+// disabled controls keep the arrow. Tooltips sit against their element: beside Rail items and anything marked
+// sjTipSide "right", below buttons, instead of below the pointer.
+class Interaction : public QObject {
+public:
+    using QObject::QObject;
+protected:
+    bool eventFilter(QObject *object, QEvent *event) override {
+        auto *widget = qobject_cast<QWidget *>(object);
+        if (!widget) return false;
+        switch (event->type()) {
+        case QEvent::Polish: case QEvent::EnabledChange: updateCursor(widget); break;
+        case QEvent::MouseMove: case QEvent::HoverMove: if (auto *view = pointerView(widget)) updateRowCursor(view, static_cast<QMouseEvent *>(event)->position().toPoint()); break;
+        case QEvent::ToolTip: return placeTip(widget, static_cast<QHelpEvent *>(event));
+        default: break;
+        }
+        return false;
+    }
+private:
+    static bool clickable(QWidget *widget) {
+        return qobject_cast<QAbstractButton *>(widget) || qobject_cast<QTabBar *>(widget) || qobject_cast<QMenuBar *>(widget);
+    }
+    // A navigation list or tree whose rows are links: the rail, the sidebar, the Settings sections.
+    static QAbstractItemView *pointerView(QWidget *viewport) {
+        auto *view = qobject_cast<QAbstractItemView *>(viewport->parentWidget());
+        return view && view->viewport() == viewport && !view->property("sjRole").toString().isEmpty()
+            && QStringList{QStringLiteral("rail"), QStringLiteral("navigation"), QStringLiteral("navTree")}.contains(view->property("sjRole").toString()) ? view : nullptr;
+    }
+    static void updateCursor(QWidget *widget) {
+        if (auto *view = pointerView(widget)) { widget->setMouseTracking(true); widget->setAttribute(Qt::WA_Hover); Q_UNUSED(view); return; }
+        if (!clickable(widget)) return;
+        if (widget->isEnabled()) widget->setCursor(Qt::PointingHandCursor); else widget->unsetCursor();
+    }
+    static void updateRowCursor(QAbstractItemView *view, const QPoint &at) {
+        const auto index = view->indexAt(at);
+        if (index.isValid() && (index.flags() & Qt::ItemIsEnabled) && view->isEnabled()) view->viewport()->setCursor(Qt::PointingHandCursor);
+        else view->viewport()->unsetCursor();
+    }
+    static bool placeTip(QWidget *widget, QHelpEvent *help) {
+        // Qt places a tooltip 2 pixels right of and 16 below the point it is given; these subtract that offset.
+        const QPoint offset(2, 16);
+        if (auto *view = pointerView(widget)) {
+            const auto index = view->indexAt(help->pos());
+            const QString text = index.data(Qt::ToolTipRole).toString();
+            if (!index.isValid() || text.isEmpty()) { QToolTip::hideText(); return true; }
+            const QRect rect = view->visualRect(index);
+            if (view->property("sjTipSide").toString() != QStringLiteral("right")) return false;
+            const int tipHeight = QFontMetrics(QToolTip::font()).height() + 10;
+            QToolTip::showText(widget->mapToGlobal(QPoint(rect.right() + 6, rect.center().y() - tipHeight / 2)) - offset, text, widget, rect);
+            return true;
+        }
+        if (!qobject_cast<QAbstractButton *>(widget) || widget->toolTip().isEmpty()) return false;
+        const bool right = widget->property("sjTipSide").toString() == QStringLiteral("right");
+        const int tipHeight = QFontMetrics(QToolTip::font()).height() + 10;
+        const QPoint at = right ? QPoint(widget->width() + 6, widget->height() / 2 - tipHeight / 2) : QPoint(0, widget->height() + 4);
+        QToolTip::showText(widget->mapToGlobal(at) - offset, widget->toolTip(), widget, widget->rect());
+        return true;
+    }
+};
+
 void initializeResources() {
     static bool initialized = false;
-    if (initialized) return;
-    registerStackJunkieResources();
-    for (const auto &font : {"Manrope", "FiraCode"}) {
-        const QString fileName = QString::fromLatin1(font);
-        const int id = QFontDatabase::addApplicationFont(QStringLiteral(":/stackjunkie/fonts/%1.ttf").arg(fileName));
-        const auto families = QFontDatabase::applicationFontFamilies(id);
-        if (families.isEmpty()) throw std::runtime_error("Cannot register an embedded Stack Junkie font");
-        const QString tokenName = fileName == QStringLiteral("FiraCode") ? QStringLiteral("Fira Code") : fileName;
-        // Basic/offscreen and platform font databases can expose different family
-        // names for variable fonts. Use the actual registered family on each host.
-        registeredFamilies.insert(tokenName, families.contains(tokenName) ? tokenName : families.first());
+    if (!initialized) {
+        registerStackJunkieResources();
+        for (const auto &font : {"Manrope", "FiraCode"}) {
+            const QString fileName = QString::fromLatin1(font);
+            const int id = QFontDatabase::addApplicationFont(QStringLiteral(":/stackjunkie/fonts/%1.ttf").arg(fileName));
+            const auto families = QFontDatabase::applicationFontFamilies(id);
+            if (families.isEmpty()) throw std::runtime_error("Cannot register an embedded Stack Junkie font");
+            const QString tokenName = fileName == QStringLiteral("FiraCode") ? QStringLiteral("Fira Code") : fileName;
+            // Basic/offscreen and platform font databases can expose different family
+            // names for variable fonts. Use the actual registered family on each host.
+            registeredFamilies.insert(tokenName, families.contains(tokenName) ? tokenName : families.first());
+        }
+        initialized = true;
     }
-    initialized = true;
+    // Once there is an application: the style's UI font for every window, including menus, dialogs and tooltips,
+    // which do not inherit a font from the window that opens them, and the shared pointer and tooltip behavior.
+    static bool appReady = false;
+    if (!appReady && qobject_cast<QApplication *>(QCoreApplication::instance())) {
+        appReady = true;
+        const Theme theme = Theme::load();
+        QFont font(theme.font(QStringLiteral("ui")));
+        font.setPixelSize(theme.metric(QStringLiteral("fontSize"), 14));
+        QApplication::setFont(font);
+        QToolTip::setFont(font);
+        qApp->installEventFilter(new Interaction(qApp));
+    }
 }
+void Theme::setZoom(int percent) { currentZoom = qBound(zoomSteps[0], percent, zoomSteps[std::size(zoomSteps) - 1]); }
+int Theme::globalZoom() { return currentZoom; }
+int Theme::zoomStep(int current, int direction) {
+    if (direction > 0) { for (int step : zoomSteps) if (step > current) return step; return zoomSteps[std::size(zoomSteps) - 1]; }
+    for (int i = int(std::size(zoomSteps)) - 1; i >= 0; --i) if (zoomSteps[i] < current) return zoomSteps[i];
+    return zoomSteps[0];
+}
+Theme Theme::zoomed(int percent) const { Theme copy = *this; copy.zoom = qBound(zoomSteps[0], percent, zoomSteps[std::size(zoomSteps) - 1]); return copy; }
+int Theme::scaled(int pixels) const { return pixels == 0 ? 0 : qMax(1, (pixels * zoom + 50) / 100); }
+static int globalScaled(int pixels) { return pixels == 0 ? 0 : qMax(1, (pixels * currentZoom + 50) / 100); }
 static QJsonObject document(const QString &file) {
     initializeResources();
     QFile input(QStringLiteral(":/stackjunkie/") + file);
@@ -55,15 +149,18 @@ Theme Theme::load(const QString &direction, bool dark) {
     result.dark = dark;
     result.definition = choices.value(direction).toObject();
     result.colors = result.definition.value(dark ? QStringLiteral("dark") : QStringLiteral("light")).toObject();
+    result.zoom = currentZoom;
     return result;
 }
 QStringList Theme::directions() { return document(QStringLiteral("tokens.json")).value(QStringLiteral("directions")).toObject().keys(); }
 QJsonObject Theme::catalog() { return document(QStringLiteral("catalog.json")); }
-int Theme::spacing(int index) {
+static int rawSpacing(int index) {
     const auto values = document(QStringLiteral("tokens.json")).value(QStringLiteral("spacing")).toArray();
     return index >= 0 && index < values.size() ? values.at(index).toInt(8) : 8;
 }
-int Theme::typeSize(const QString &role, int fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typeScale")).toObject().value(role).toInt(fallback); }
+static int rawTypeSize(const QString &role, int fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typeScale")).toObject().value(role).toInt(fallback); }
+int Theme::spacing(int index) { return globalScaled(rawSpacing(index)); }
+int Theme::typeSize(const QString &role, int fallback) { return globalScaled(rawTypeSize(role, fallback)); }
 static QString currentDensity = QStringLiteral("compact");
 void Theme::setDensityMode(const QString &mode) { currentDensity = mode == QStringLiteral("comfortable") ? mode : QStringLiteral("compact"); }
 QString Theme::densityMode() { return currentDensity; }
@@ -72,11 +169,12 @@ static QJsonValue comfortableValue(const QJsonObject &density, const QString &ro
     if (currentDensity != QStringLiteral("comfortable")) return {};
     return density.value(QStringLiteral("comfortable")).toObject().value(role);
 }
-int Theme::density(const QString &role, int fallback) {
+static int rawDensity(const QString &role, int fallback) {
     const auto values = document(QStringLiteral("tokens.json")).value(QStringLiteral("density")).toObject();
     const auto comfortable = comfortableValue(values, role);
     return comfortable.isDouble() ? comfortable.toInt(fallback) : values.value(role).toInt(fallback);
 }
+int Theme::density(const QString &role, int fallback) { return globalScaled(rawDensity(role, fallback)); }
 qreal Theme::typography(const QString &role, qreal fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typography")).toObject().value(role).toDouble(fallback); }
 int Theme::motionDuration(const QString &role) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("motion")).toObject().value(role).toInt(0); }
 QColor Theme::color(const QString &name) const { return QColor(colors.value(name).toString()); }
@@ -232,40 +330,58 @@ QLabel[sjRole="tag"][sjTone="success"] { color: @success; }
 QLabel[sjRole="tag"][sjTone="warning"] { color: @warning; }
 QLabel[sjRole="tag"][sjTone="danger"] { color: @danger; }
 QFrame[sjRole="separator"] { background: @border; max-height: 1px; border: 0; }
+QFrame[sjRole="aboutLogo"] { background: @canvas; border: @metricBorderWidthpx solid @border; border-radius: 12px; }
+QLabel[sjRole="versionChip"] { background: @raised; color: @muted; border: @metricBorderWidthpx solid @border; border-style: solid; border-radius: 9px; padding: 1px 8px; font-size: @captionpx; min-height: 16px; max-height: 20px; }
+QLabel[sjRole="aboutLinks"] { font-size: @labelSizepx; }
+QToolButton[sjRole="home"] { background: transparent; border: 0; padding: 2px 6px 2px 2px; font-size: @chromepx; font-weight: @mediumWeight; min-height: 0; }
+QToolButton[sjRole="home"]:hover { background: @raised; }
 )CSS");
     // Replace longer token names first so @accent cannot consume @accentHover.
     QStringList keys = colors.keys();
     std::sort(keys.begin(), keys.end(), [](const QString &a, const QString &b) { return a.size() > b.size(); });
     for (const auto &key : keys) css.replace(QStringLiteral("@") + key, colors.value(key).toString());
-    css.replace(QStringLiteral("@caption"), QString::number(typeSize(QStringLiteral("caption"), 12)));
-    css.replace(QStringLiteral("@contextInnerHeight"), QString::number(density(QStringLiteral("contextHeight"), 36) - 2 * metric(QStringLiteral("borderWidth"), 1)));
-    css.replace(QStringLiteral("@heading"), QString::number(typeSize(QStringLiteral("heading"), 22)));
-    css.replace(QStringLiteral("@section"), QString::number(typeSize(QStringLiteral("section"), 16)));
-    css.replace(QStringLiteral("@labelSize"), QString::number(typeSize(QStringLiteral("label"), 14)));
-    css.replace(QStringLiteral("@chrome"), QString::number(typeSize(QStringLiteral("chrome"), 13)));
+    css.replace(QStringLiteral("@caption"), QString::number(rawTypeSize(QStringLiteral("caption"), 12)));
+    css.replace(QStringLiteral("@contextInnerHeight"), QString::number(rawDensity(QStringLiteral("contextHeight"), 36) - 2 * metric(QStringLiteral("borderWidth"), 1)));
+    css.replace(QStringLiteral("@heading"), QString::number(rawTypeSize(QStringLiteral("heading"), 22)));
+    css.replace(QStringLiteral("@section"), QString::number(rawTypeSize(QStringLiteral("section"), 16)));
+    css.replace(QStringLiteral("@labelSize"), QString::number(rawTypeSize(QStringLiteral("label"), 14)));
+    css.replace(QStringLiteral("@chrome"), QString::number(rawTypeSize(QStringLiteral("chrome"), 13)));
     css.replace(QStringLiteral("@regularWeight"), QString::number(typography(QStringLiteral("regularWeight"), 400)));
     css.replace(QStringLiteral("@mediumWeight"), QString::number(typography(QStringLiteral("mediumWeight"), 500)));
     css.replace(QStringLiteral("@strongWeight"), QString::number(typography(QStringLiteral("strongWeight"), 600)));
-    css.replace(QStringLiteral("@innerHeight"), QString::number(qMax(16, metric(QStringLiteral("controlHeight"), 32) - 2 * density(QStringLiteral("controlPaddingY"), 4) - 2 * metric(QStringLiteral("borderWidth"), 1))));
-    css.replace(QStringLiteral("@controlPaddingY"), QString::number(density(QStringLiteral("controlPaddingY"), 4)));
-    css.replace(QStringLiteral("@controlPaddingX"), QString::number(density(QStringLiteral("controlPaddingX"), 10)));
-    css.replace(QStringLiteral("@tabInnerHeight"), QString::number(density(QStringLiteral("tabHeight"), 32) - 3));
-    css.replace(QStringLiteral("@navRowHeight"), QString::number(density(QStringLiteral("navRowHeight"), 28)));
+    css.replace(QStringLiteral("@innerHeight"), QString::number(qMax(16, metric(QStringLiteral("controlHeight"), 32) - 2 * rawDensity(QStringLiteral("controlPaddingY"), 4) - 2 * metric(QStringLiteral("borderWidth"), 1))));
+    css.replace(QStringLiteral("@controlPaddingY"), QString::number(rawDensity(QStringLiteral("controlPaddingY"), 4)));
+    css.replace(QStringLiteral("@controlPaddingX"), QString::number(rawDensity(QStringLiteral("controlPaddingX"), 10)));
+    css.replace(QStringLiteral("@tabInnerHeight"), QString::number(rawDensity(QStringLiteral("tabHeight"), 32) - 3));
+    css.replace(QStringLiteral("@navRowHeight"), QString::number(rawDensity(QStringLiteral("navRowHeight"), 28)));
     css.replace(QStringLiteral("@controlHeight"), QString::number(metric(QStringLiteral("controlHeight"), 36)));
     css.replace(QStringLiteral("@halfControl"), QString::number(metric(QStringLiteral("controlHeight"), 36) / 2));
     css.replace(QStringLiteral("@metricBorderWidth"), QString::number(metric(QStringLiteral("borderWidth"), 1)));
     css.replace(QStringLiteral("@radius"), QString::number(metric(QStringLiteral("radius"), 6)));
     css.replace(QStringLiteral("@glyphTone"), direction + (dark ? QStringLiteral("-dark") : QStringLiteral("-light")));
     css.replace(QStringLiteral("@baseFont"), QString::number(metric(QStringLiteral("fontSize"), 14)));
-    css.replace(QStringLiteral("@reading"), QString::number(typeSize(QStringLiteral("reading"), 16)));
-    css.replace(QStringLiteral("@codeSize"), QString::number(typeSize(QStringLiteral("code"), 12)));
+    css.replace(QStringLiteral("@reading"), QString::number(rawTypeSize(QStringLiteral("reading"), 16)));
+    css.replace(QStringLiteral("@codeSize"), QString::number(rawTypeSize(QStringLiteral("code"), 12)));
     css.replace(QStringLiteral("@ui"), font(QStringLiteral("ui")));
     css.replace(QStringLiteral("@editorial"), font(QStringLiteral("editorial")));
     css.replace(QStringLiteral("@mono"), font(QStringLiteral("mono")));
+    // Every size in the sheet follows this theme's zoom; a border never drops below one pixel.
+    if (zoom != 100) {
+        static const QRegularExpression pixels(QStringLiteral("(\\d+)px"));
+        QString zoomedCss; qsizetype at = 0;
+        for (auto match = pixels.globalMatch(css); match.hasNext();) {
+            const auto found = match.next();
+            zoomedCss += css.mid(at, found.capturedStart() - at) + QString::number(scaled(found.captured(1).toInt())) + QStringLiteral("px");
+            at = found.capturedEnd();
+        }
+        css = zoomedCss + css.mid(at);
+    }
     return css;
 }
 void Theme::apply(QWidget *root) const {
+    initializeResources();
     root->setProperty("sjRoot", true);
+    root->setProperty("sjZoom", zoom);
     root->setProperty("sjDirection", direction);
     root->setProperty("sjDark", dark);
     root->setAutoFillBackground(true);
@@ -285,7 +401,7 @@ void Theme::apply(QWidget *root) const {
     p.setColor(QPalette::Disabled, QPalette::Text, color(QStringLiteral("muted")));
     root->setPalette(p);
     QFont f(font(QStringLiteral("ui")));
-    f.setPixelSize(metric(QStringLiteral("fontSize"), 14));
+    f.setPixelSize(scaled(metric(QStringLiteral("fontSize"), 14)));
     f.setWeight(static_cast<QFont::Weight>(typography(QStringLiteral("regularWeight"), 400)));
     root->setFont(f);
     root->setStyleSheet(styleSheet());
@@ -293,6 +409,12 @@ void Theme::apply(QWidget *root) const {
     for (auto *button : root->findChildren<QAbstractButton *>()) {
         const auto name = button->property("sjIcon").toString();
         if (!name.isEmpty()) button->setIcon(icon(name, color(QStringLiteral("text"))));
+        // Icon buttons keep the density's target size at this zoom, unless they were given their own size.
+        if (button->property("sjTarget").toBool()) {
+            const int target = scaled(rawDensity(QStringLiteral("iconTarget"), 28));
+            button->setFixedSize(target, target);
+            button->setIconSize(QSize(scaled(16), scaled(16)));
+        }
     }
     for (auto *list : root->findChildren<QListWidget *>()) {
         for (int i = 0; i < list->count(); ++i) {
@@ -303,8 +425,12 @@ void Theme::apply(QWidget *root) const {
     }
     for (auto *widget : root->findChildren<QWidget *>()) {
         if (auto *label = qobject_cast<QLabel *>(widget); label && label->property("sjBrandSize").isValid()) label->setPixmap(brandMark(*this, label->property("sjBrandSize").toInt()));
+        // A logo button without the app's own logo shows the interim SJ mark in this theme's colors.
+        if (auto *button = qobject_cast<QAbstractButton *>(widget); button && button->property("sjBrandIcon").isValid()) button->setIcon(QIcon(brandMark(*this, button->property("sjBrandIcon").toInt() * 2)));
         if (auto *label = qobject_cast<QLabel *>(widget); label && label->property("sjAttributionHtml").isValid()) {
-            label->setText(label->property("sjAttributionHtml").toString().replace(QStringLiteral("<a "), QStringLiteral("<a style=\"color:%1\" ").arg(color(QStringLiteral("accent")).name())));
+            // The style's credit keeps its links in the secondary text color; other links use the accent.
+            const bool credit = label->property("sjRole").toString() == QStringLiteral("attribution");
+            label->setText(label->property("sjAttributionHtml").toString().replace(QStringLiteral("<a "), QStringLiteral("<a style=\"color:%1\" ").arg(color(credit ? QStringLiteral("muted") : QStringLiteral("accent")).name())));
         }
         if (dynamic_cast<Drawer *>(widget) || widget->property("sjRole").toString() == QStringLiteral("help")) apply(widget);
         if (auto *canvas = dynamic_cast<Canvas *>(widget)) canvas->applyTheme(*this);
@@ -312,7 +438,7 @@ void Theme::apply(QWidget *root) const {
         const auto role = widget->property("sjFontRole").toString();
         if (!role.isEmpty()) {
             QFont roleFont(font(role));
-            roleFont.setPixelSize(typeSize(role == QStringLiteral("mono") ? QStringLiteral("code") : QStringLiteral("reading"), 14));
+            roleFont.setPixelSize(scaled(rawTypeSize(role == QStringLiteral("mono") ? QStringLiteral("code") : QStringLiteral("reading"), 14)));
             widget->setFont(roleFont);
         }
         widget->style()->unpolish(widget);

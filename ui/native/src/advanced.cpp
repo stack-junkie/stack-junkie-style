@@ -75,7 +75,7 @@ TabBoundary::TabBoundary(QWidget *content, QWidget *parent): QFrame(parent) {
 }
 NavTree::NavTree(const QString &label, QWidget *parent): QTreeWidget(parent) {
     setProperty("sjRole", "navTree"); setAccessibleName(label);
-    setHeaderHidden(true); setRootIsDecorated(true); setIndentation(14); setUniformRowHeights(true);
+    setHeaderHidden(true); setRootIsDecorated(true); setIndentation(10); setUniformRowHeights(true);
     setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     connect(this, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
         if (item && item->parent()) emit pageChosen(item->data(0, Qt::UserRole).toString());
@@ -83,7 +83,8 @@ NavTree::NavTree(const QString &label, QWidget *parent): QTreeWidget(parent) {
     connect(this, &QTreeWidget::itemClicked, this, [](QTreeWidgetItem *item) { if (!item->parent()) item->setExpanded(!item->isExpanded()); });
 }
 void NavTree::addGroup(const QString &id, const QString &label, const QList<QPair<QString, QString>> &items) {
-    auto *group = new QTreeWidgetItem(this, {QStringLiteral("%1   %2").arg(label).arg(items.size())});
+    // Group rows show only the name: a count would be a number that tells the user nothing.
+    auto *group = new QTreeWidgetItem(this, {label});
     group->setData(0, Qt::UserRole, id); group->setFlags(Qt::ItemIsEnabled);
     for (const auto &[itemId, itemLabel] : items) { auto *item = new QTreeWidgetItem(group, {itemLabel}); item->setData(0, Qt::UserRole, itemId); }
     group->setExpanded(true);

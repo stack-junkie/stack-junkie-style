@@ -154,16 +154,9 @@ int main(int argc, char *argv[]) {
         mode->setAccessibleName(QStringLiteral("Color theme"));
         mode->addItems({QStringLiteral("Light"), QStringLiteral("Dark")});
         auto *toolbar = qobject_cast<QHBoxLayout *>(window.toolbar()->layout());
-        auto *brandIcon = new QLabel;
-        brandIcon->setAccessibleName(QStringLiteral("Stack Junkie"));
+        // The frame's logo slot shows the interim SJ mark and the name; clicking it opens Home.
         const int brandSize = Theme::density(QStringLiteral("brandMarkSize"), 25);
-        brandIcon->setFixedSize(brandSize, brandSize);
-        brandIcon->setProperty("sjBrandSize", brandSize);
-        auto *homeButton = new Button(QString(), ButtonVariant::Quiet);
-        homeButton->setAccessibleName(QStringLiteral("Home")); homeButton->setToolTip(QStringLiteral("Home"));
-        auto *homeBrandLayout = new QHBoxLayout(homeButton); homeBrandLayout->setContentsMargins(2, 2, 2, 2);
-        brandIcon->setAttribute(Qt::WA_TransparentForMouseEvents); homeBrandLayout->addWidget(brandIcon);
-        toolbar->insertWidget(0, homeButton);
+        Q_UNUSED(toolbar);
 
         QStringList pageIds, pageNames, pageFamilies;
         const auto families = Theme::catalog().value(QStringLiteral("families")).toArray();
@@ -195,8 +188,9 @@ int main(int argc, char *argv[]) {
         keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Control comma opens Settings. In a row of open documents, Control W closes the current tab.")));
         keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("With the Menu bar on, F10 opens the first menu and arrow keys move through the menus. Control B shows or hides the sidebar and Control J the bottom panel.")));
         settingsWindow->addSection(QStringLiteral("Keyboard"), keyboardPage, QStringLiteral("shortcuts keys resize"));
-        auto *aboutLogo = new QLabel; aboutLogo->setFixedSize(44, 44); aboutLogo->setProperty("sjBrandSize", 44); aboutLogo->setAccessibleName(QStringLiteral("Stack Junkie"));
-        settingsWindow->addSection(QStringLiteral("About"), new AboutPage(QStringLiteral("Stack Junkie UI"), QStringLiteral("A living collection of reusable interface components, layouts and interactions."), QStringLiteral(STACKJUNKIE_VERSION), aboutLogo), QStringLiteral("version copyright"));
+        auto *aboutPage = new AboutPage(QStringLiteral("Stack Junkie UI"), QStringLiteral("A living collection of reusable interface components, layouts and interactions."), QStringLiteral(STACKJUNKIE_VERSION));
+        aboutPage->setLinks({QStringLiteral("https://style.stack-junkie.com"), QStringLiteral("https://github.com/stack-junkie/stack-junkie-style"), QStringLiteral("MIT"), QStringLiteral("https://github.com/stack-junkie/stack-junkie-style/blob/main/ui/LICENSE")});
+        settingsWindow->addSection(QStringLiteral("About"), aboutPage, QStringLiteral("version copyright website repository license"));
         auto openSettings = [settingsWindow] { settingsWindow->show(); settingsWindow->raise(); settingsWindow->activateWindow(); };
         window.setSettingsHandler(openSettings);
         // Help > About opens Settings at About; Help > Keyboard shortcuts at Keyboard.
@@ -213,15 +207,15 @@ int main(int argc, char *argv[]) {
         }
         const int homeIndex = window.addPage(QStringLiteral("Overview"), homePage, QStringLiteral("grid"), homeSection);
         pageIds << QStringLiteral("home"); pageNames << QStringLiteral("Home"); pageFamilies << QStringLiteral("Stack Junkie UI");
-        QObject::connect(homeButton, &QPushButton::clicked, &window, [&window, homeIndex] { window.setCurrentPage(homeIndex); });
+        window.setHomePage(homeIndex);
         // Menu bar items the showcase adds: the frame already owns Settings, About and the View toggles.
         window.addMenuItem(window.editMenu(), QStringLiteral("Copy component name"), [&window, &pageNames] { QGuiApplication::clipboard()->setText(pageNames.value(window.currentPage())); });
         auto *libraryMenu = window.addMenu(QStringLiteral("Library"));
         for (int familyIndex = 0; familyIndex < families.size(); ++familyIndex)
             window.addMenuItem(libraryMenu, families[familyIndex].toObject().value(QStringLiteral("label")).toString(), [&window, familyIndex] { window.setCurrentSection(familyIndex); });
         window.addMenuItem(window.helpMenu(), QStringLiteral("Keyboard shortcuts"), [settingsWindow, openSettings] { settingsWindow->showSection(2); openSettings(); });
-        window.viewMenu()->addSeparator();
-        auto *darkTheme = window.viewMenu()->addAction(QStringLiteral("Dark theme")); darkTheme->setCheckable(true);
+        window.appearanceMenu()->addSeparator();
+        auto *darkTheme = window.appearanceMenu()->addAction(QStringLiteral("Dark theme")); darkTheme->setCheckable(true);
         QObject::connect(darkTheme, &QAction::triggered, mode, [mode](bool on) { mode->setCurrentIndex(on ? 1 : 0); });
         QObject::connect(mode, &QComboBox::currentIndexChanged, darkTheme, [darkTheme](int index) { darkTheme->setChecked(index == 1); });
         // Status bar: the current component on the left, its family and the library version on the right.
