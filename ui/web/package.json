@@ -34,7 +34,8 @@
     "test:starters": "node ../scripts/test-starters.mjs",
     "pack:release": "npm run build:library && node ../scripts/pack-web.mjs",
     "test:presets": "node ../scripts/test-presets.mjs",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "test:new": "node ../scripts/test-new.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

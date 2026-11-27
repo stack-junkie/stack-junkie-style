@@ -32,8 +32,11 @@ const work = path.join(os.tmpdir(), `sjst-${Date.now().toString(36)}`);
 mkdirSync(work, { recursive: true });
 
 const custom = { sidebar: 'tree', statusBar: false, theme: 'light', density: 'comfortable' };
+const logoPath = path.join(ui, 'shared/brand/sj-selected.png');
+const logo = { name: path.basename(logoPath), data: readFileSync(logoPath) };
 const cases = [
   ...presets.presets.map(p => ({ name: p.id, preset: p.id, overrides: {} })),
+  { name: 'web-app logo', preset: 'web-app', overrides: {}, logo },
   { name: 'desktop-app custom', preset: 'desktop-app', overrides: custom, expect: { web: "{ sidebar: 'tree', statusBar: false, theme: 'light', density: 'comfortable' }", native: '{{QStringLiteral("sidebar"), QStringLiteral("tree")}, {QStringLiteral("statusBar"), false}, {QStringLiteral("theme"), QStringLiteral("light")}, {QStringLiteral("density"), QStringLiteral("comfortable")}}' } },
 ];
 
@@ -45,7 +48,7 @@ function run(command, commandArgs, options = {}) {
 }
 const tail = text => text.trim().split(/\r?\n/).slice(-15).join('\n');
 function writeFiles(dir, files) {
-  for (const file of files) { const to = path.join(dir, file.path); mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, file.text); }
+  for (const file of files) { const to = path.join(dir, file.path); mkdirSync(path.dirname(to), { recursive: true }); writeFileSync(to, file.data ?? file.text); }
 }
 const slug = name => name.replace(/[^a-z0-9]+/gi, '-');
 
@@ -56,11 +59,11 @@ function compareWithShowcase(label, platform, testCase, files) {
   if (!showcase) return;
   const out = path.join(work, `c-${platform[0]}-${slug(testCase.name)}`);
   const choiceArgs = Object.entries(testCase.overrides).flatMap(([k, v]) => ['--choice', `${k}=${v}`]);
-  const r = run(showcase, ['--export-starter', out, '--starter', platform, '--preset', testCase.preset, ...choiceArgs], { env: qtEnv });
+  const r = run(showcase, ['--export-starter', out, '--starter', platform, '--preset', testCase.preset, ...choiceArgs, ...(testCase.logo ? ['--logo', logoPath] : [])], { env: qtEnv });
   if (!r.ok) { result(false, `${label}: native showcase export`, tail(r.output)); return; }
   const written = readdirSync(out, { recursive: true, withFileTypes: true }).filter(e => e.isFile()).map(e => path.relative(out, path.join(e.parentPath, e.name)).replace(/\\/g, '/')).sort();
   const expected = files.map(f => f.path).sort();
-  const differing = expected.filter(p => !written.includes(p) || readFileSync(path.join(out, p), 'utf8') !== files.find(f => f.path === p).text);
+  const differing = expected.filter(p => { const f = files.find(x => x.path === p); return !written.includes(p) || !readFileSync(path.join(out, p)).equals(Buffer.from(f.data ?? f.text)); });
   result(JSON.stringify(written) === JSON.stringify(expected) && !differing.length, `${label}: native showcase writes the same files`, differing.length ? `differs in ${differing.join(', ')}` : '');
 }
 
@@ -75,7 +78,7 @@ function replaceStubs(dir, files) {
 // ---------- web ----------
 function webCase(testCase) {
   const label = `web ${testCase.name}`;
-  const generated = generateStarter({ platform: 'web', preset: testCase.preset, overrides: testCase.overrides, version }, source);
+  const generated = generateStarter({ platform: 'web', preset: testCase.preset, overrides: testCase.overrides, version, logo: testCase.logo }, source);
   if (!generated.files) return result(false, label, generated.unsupported);
   compareWithShowcase(label, 'web', testCase, generated.files);
   const dir = path.join(work, `w-${slug(testCase.name)}`);
@@ -87,6 +90,7 @@ function webCase(testCase) {
   const layout = testCase.preset === 'website' ? 'WebsiteLayout' : 'AppShell';
   if (!app.includes(`<${layout} `)) return result(false, label, `App.tsx does not use ${layout}`);
   if (testCase.expect && !app.includes(`choices: Partial<PresetChoices> = ${testCase.expect.web};`)) return result(false, label, 'App.tsx does not carry the custom choices');
+  if (testCase.logo && (!app.includes("import logo from './logo.png';") || !app.includes('logo={<img src={logo}'))) return result(false, label, 'App.tsx does not show the logo file in the logo slot');
   // Use the local library in place of the release tag: the package.json points at ui/web, and node_modules
   // links each installed package the way npm links a file: dependency.
   pkg.dependencies['@stack-junkie/ui-web'] = `file:${web}`;
@@ -101,7 +105,7 @@ function webCase(testCase) {
   if (!tsc.ok) return result(false, label, `typecheck failed\n${tail(tsc.output)}`);
   const vite = () => run(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), 'build', '--logLevel', 'error'], { cwd: dir });
   // Every Stub in the starter's source files must be named by the release guard.
-  const stubs = generated.files.filter(f => /\.tsx?$/.test(f.path)).flatMap(f => f.text.split('\n').flatMap((line, i) => [...line.matchAll(/<Stub[\s>]|\bstub\(/g)].map(m => `${f.path}:${i + 1}:${m.index + 1}`)));
+  const stubs = generated.files.filter(f => /\.tsx?$/.test(f.path)).flatMap(f => f.text.split('\n').flatMap((line, i) => [...line.matchAll(/(?<=<)Stub(?=[\s>])|\bstub(?=\()/g)].map(m => `${f.path}:${i + 1}:${m.index + 1}`)));
   const guarded = vite();
   if (stubs.length) {
     if (guarded.ok) return result(false, label, 'the release build finished with Stubs in the starter');
@@ -112,7 +116,7 @@ function webCase(testCase) {
     if (!clean.ok) return result(false, label, `build with the Stubs replaced failed\n${tail(clean.output)}`);
   } else if (!guarded.ok) return result(false, label, `build failed\n${tail(guarded.output)}`);
   if (!existsSync(path.join(dir, 'dist/index.html'))) return result(false, label, 'build wrote no dist/index.html');
-  return result(true, label, `typecheck passed, ${stubs.length ? `release build stopped at all ${stubs.length} Stubs, build passed with them replaced` : 'build passed'}${testCase.expect ? ', custom choices carried' : ''}`);
+  return result(true, label, `typecheck passed, ${stubs.length ? `release build stopped at all ${stubs.length} Stubs, build passed with them replaced` : 'build passed'}${testCase.expect ? ', custom choices carried' : ''}${testCase.logo ? ', logo carried' : ''}`);
 }
 
 // ---------- native ----------
@@ -143,7 +147,7 @@ const programIn = dir => [path.join(dir, 'build/Debug/MyApp.exe'), path.join(dir
 
 async function nativeCase(testCase, cmake, prefix, qt, { fetch = false } = {}) {
   const label = `native ${testCase.name}${fetch ? ' (FetchContent fallback)' : ''}`;
-  const generated = generateStarter({ platform: 'native', preset: testCase.preset, overrides: testCase.overrides, version }, source);
+  const generated = generateStarter({ platform: 'native', preset: testCase.preset, overrides: testCase.overrides, version, logo: testCase.logo }, source);
   if (!generated.files) return result(false, label, generated.unsupported);
   if (!fetch) compareWithShowcase(label, 'native', testCase, generated.files);
   const dir = path.join(work, `${fetch ? 'f' : 'n'}-${slug(testCase.name)}`);
@@ -151,6 +155,7 @@ async function nativeCase(testCase, cmake, prefix, qt, { fetch = false } = {}) {
   const main = readFileSync(path.join(dir, 'main.cpp'), 'utf8');
   if (!main.includes(`shell.setPreset(QStringLiteral("${testCase.preset}"), choices);`)) return result(false, label, 'main.cpp does not call AppShell::setPreset with the preset');
   if (testCase.expect && !main.includes(`const QVariantMap choices = ${testCase.expect.native};`)) return result(false, label, 'main.cpp does not carry the custom choices');
+  if (testCase.logo && !main.includes('shell.setLogo(QPixmap(QStringLiteral(":/logo.png")));')) return result(false, label, 'main.cpp does not show the logo file in the logo slot');
   const cmakeLists = readFileSync(path.join(dir, 'CMakeLists.txt'), 'utf8');
   if (!cmakeLists.includes('find_package(StackJunkie') || !cmakeLists.includes(`GIT_TAG v${version}`) || !cmakeLists.includes(`GIT_REPOSITORY ${manifest.repository}.git`)) return result(false, label, 'CMakeLists.txt is not pinned to the release tag');
   // The installed case must find the package: with fetching disconnected, a miss fails configure.
@@ -169,7 +174,7 @@ async function nativeCase(testCase, cmake, prefix, qt, { fetch = false } = {}) {
   if (!releaseConfigure.ok) return result(false, label, `Release configure failed\n${tail(releaseConfigure.output)}`);
   const releaseBuild = run(cmake, ['--build', release, '--config', 'Release', ...buildTail]);
   if (releaseBuild.ok || !/Stub remains at .*main\.cpp/.test(releaseBuild.output)) return result(false, label, `the Release build did not stop at the Stubs\n${tail(releaseBuild.output)}`);
-  return result(true, label, `CMake Debug build passed, starts offscreen, Release build stopped at the Stubs${testCase.expect ? ', custom choices carried' : ''}`);
+  return result(true, label, `CMake Debug build passed, starts offscreen, Release build stopped at the Stubs${testCase.expect ? ', custom choices carried' : ''}${testCase.logo ? ', logo carried' : ''}`);
 }
 
 async function nativeTests() {

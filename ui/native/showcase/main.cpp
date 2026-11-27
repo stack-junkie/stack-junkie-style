@@ -97,6 +97,7 @@ int main(int argc, char *argv[]) {
     parser.addOption({QStringLiteral("export-preview"), QStringLiteral("Render a PNG using the offscreen platform, then exit."), QStringLiteral("file")});
     parser.addOption({QStringLiteral("export-starter"), QStringLiteral("Write the starter project for the preset and choices into a folder, then exit."), QStringLiteral("folder")});
     parser.addOption({QStringLiteral("starter"), QStringLiteral("Starter for --export-starter: web or native."), QStringLiteral("platform"), QStringLiteral("web")});
+    parser.addOption({QStringLiteral("logo"), QStringLiteral("Image for the starter's logo slot, for --export-starter: png, jpg, jpeg, svg or webp."), QStringLiteral("file")});
     parser.addOption({QStringLiteral("theme"), QStringLiteral("light or dark"), QStringLiteral("theme")});
     parser.addOption({QStringLiteral("page"), QStringLiteral("Family ID, family/component ID, home, settings or settings/<section>"), QStringLiteral("page")});
     parser.addOption({QStringLiteral("menu"), QStringLiteral("Show one Menu bar menu open in the export: file, edit, view, library or help."), QStringLiteral("menu")});
@@ -136,7 +137,7 @@ int main(int argc, char *argv[]) {
                 std::printf("Wrote preset file %s\n", qPrintable(QDir::toNativeSeparators(QFileInfo(path).absoluteFilePath())));
                 if (!parser.isSet(QStringLiteral("export-starter"))) return 0;
             }
-            const auto starter = generateStarter(parser.value(QStringLiteral("starter")), id, Preset::overrides(id, choices));
+            const auto starter = generateStarter(parser.value(QStringLiteral("starter")), id, Preset::overrides(id, choices), parser.value(QStringLiteral("logo")));
             if (!starter.error.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(starter.error)); return 2; }
             if (!starter.unsupported.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(starter.unsupported)); return 2; }
             const QString error = writeStarter(starter, parser.value(QStringLiteral("export-starter")));

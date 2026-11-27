@@ -1,0 +1,22 @@
+{
+  "name": "stack-junkie-style",
+  "version": "3.0.1",
+  "description": "Creates a project from a Stack Junkie Style Preset: npx github:stack-junkie/stack-junkie-style new <folder>",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "stack-junkie-style": "bin/stack-junkie-style.mjs"
+  },
+  "files": [
+    "VERSION",
+    "bin",
+    "ui/shared/presets.json",
+    "ui/shared/preset-file.mjs",
+    "ui/shared/starters",
+    "ui/LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -15,7 +15,7 @@ if(NOT StackJunkie_FOUND)
   FetchContent_MakeAvailable(stackjunkie)
 endif()
 
-qt_add_executable(my_app main.cpp)
+qt_add_executable(my_app main.cpp){{logoResources}}
 target_link_libraries(my_app PRIVATE StackJunkie::Widgets Qt6::Widgets)
 set_target_properties(my_app PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME MyApp)
 if(MSVC)

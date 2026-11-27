@@ -46,8 +46,24 @@ static QString sectionsCode(bool web, const QJsonObject &structure) {
 QString starterLabel(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("label")).toString(); }
 QString starterDescription(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("description")).toString(); }
 
-Starter generateStarter(const QString &platform, const QString &presetId, const QVariantMap &overrides) {
+QString logoFileName(const QString &name, QString *error) {
+    const QString extension = QFileInfo(name).suffix().toLower();
+    static const QStringList types{QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("svg"), QStringLiteral("webp")};
+    if (!types.contains(extension)) { if (error) *error = QStringLiteral("The logo must be a png, jpg, jpeg, svg or webp file."); return {}; }
+    return QStringLiteral("logo.") + extension;
+}
+
+Starter generateStarter(const QString &platform, const QString &presetId, const QVariantMap &overrides, const QString &logoPath) {
     Starter result;
+    // The app's own logo, copied into the starter and wired to the logo slot, exactly as starters.mjs does.
+    QString logoFile; QByteArray logoData;
+    if (!logoPath.isEmpty()) {
+        logoFile = logoFileName(logoPath, &result.error);
+        if (!result.error.isEmpty()) return result;
+        QFile image(logoPath);
+        if (!image.open(QIODevice::ReadOnly)) { result.error = QStringLiteral("Cannot read the logo ") + logoPath; return result; }
+        logoData = image.readAll();
+    }
     const auto doc = manifest();
     const auto kind = doc.value(platform).toObject();
     if (kind.isEmpty()) { result.error = QStringLiteral("Unknown starter platform: ") + platform; return result; }
@@ -80,7 +96,11 @@ Starter generateStarter(const QString &platform, const QString &presetId, const 
         {QStringLiteral("repository"), doc.value(QStringLiteral("repository")).toString()},
         {QStringLiteral("preset"), preset.id}, {QStringLiteral("presetLabel"), preset.label},
         {QStringLiteral("overrides"), literal}, {QStringLiteral("theme"), choices.theme}, {QStringLiteral("density"), choices.density},
-        {QStringLiteral("sections"), sectionsCode(web, doc.value(QStringLiteral("structure")).toObject())}};
+        {QStringLiteral("sections"), sectionsCode(web, doc.value(QStringLiteral("structure")).toObject())},
+        {QStringLiteral("logoImport"), logoFile.isEmpty() ? QString() : QStringLiteral("\nimport logo from './%1';").arg(logoFile)},
+        {QStringLiteral("logo"), logoFile.isEmpty() ? QStringLiteral("<BrandMark size={20} />") : QStringLiteral("<img src={logo} alt=\"\" width={20} height={20} />")},
+        {QStringLiteral("logoResources"), logoFile.isEmpty() ? QString() : QStringLiteral("\nqt_add_resources(my_app logo PREFIX / FILES %1)").arg(logoFile)},
+        {QStringLiteral("logoSetup"), logoFile.isEmpty() ? QString() : QStringLiteral("\n    shell.setLogo(QPixmap(QStringLiteral(\":/%1\")));").arg(logoFile)}};
 
     QJsonObject files = kind.value(QStringLiteral("files")).toObject();
     const auto presetFiles = kind.value(QStringLiteral("presetFiles")).toObject().value(presetId).toObject();
@@ -99,8 +119,9 @@ Starter generateStarter(const QString &platform, const QString &presetId, const 
             at = found.capturedEnd();
         }
         filled += text.mid(at);
-        result.files.append({it.key(), filled});
+        result.files.append({it.key(), filled, {}});
     }
+    if (!logoFile.isEmpty()) result.files.append({web ? QStringLiteral("src/") + logoFile : logoFile, {}, logoData});
     return result;
 }
 
@@ -110,7 +131,7 @@ QString writeStarter(const Starter &starter, const QString &directory) {
         const QString path = root.filePath(file.path);
         if (!QDir().mkpath(QFileInfo(path).absolutePath())) return QStringLiteral("Cannot create the folder for ") + file.path;
         QFile out(path);
-        if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate) || out.write(file.text.toUtf8()) < 0) return QStringLiteral("Cannot write ") + file.path;
+        if (!out.open(QIODevice::WriteOnly | QIODevice::Truncate) || out.write(file.data.isEmpty() ? file.text.toUtf8() : file.data) < 0) return QStringLiteral("Cannot write ") + file.path;
     }
     return {};
 }

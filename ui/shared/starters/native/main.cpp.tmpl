@@ -4,6 +4,7 @@
 #include <stackjunkie/presets.hpp>
 #include <stackjunkie/theme.hpp>
 #include <QApplication>
+#include <QPixmap>
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
@@ -19,6 +20,7 @@ int main(int argc, char *argv[]) {
     // The preset sets the App frame. Choices list only what was changed from it; delete one to go back to the preset.
     const QVariantMap choices = {{overrides}};
     shell.setPreset(QStringLiteral("{{preset}}"), choices);
+    // The logo slot, top left, shows the interim SJ mark until setLogo gives it the app's own. Clicking it goes Home.{{logoSetup}}
     shell.resize(1280, 800);
     shell.show();
     return app.exec();
