@@ -1,0 +1,10 @@
+{
+  "roots": ["../../../../../.."],
+  "skip": ["_backups", "threads-archive", "InactiveOrArchive", "Large archived", "3rd Party"],
+  "skipPaths": [],
+  "exempt": ["sj-paint"],
+  "sourceRepos": ["stack-junkie/stack-junkie-agent-skills", "stack-junkie/stack-junkie-style"],
+  "remoteBudget": 120,
+  "includeForks": false,
+  "includeArchived": false
+}
