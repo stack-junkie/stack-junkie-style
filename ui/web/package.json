@@ -31,6 +31,7 @@
     "typecheck": "tsc --noEmit",
     "pretest:stub-guard": "node ../scripts/prepare.mjs",
     "test:stub-guard":"node tests/stub-guard/run.mjs",
+    "test:starters": "node ../scripts/test-starters.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "devDependencies": {

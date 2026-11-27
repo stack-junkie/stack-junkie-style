@@ -1,0 +1,15 @@
+# My app
+
+Started from the Stack Junkie Style showcase with the {{presetLabel}} preset.
+
+Requires a C++17 compiler, CMake 3.21 or later, and Qt 6.4 or later with Widgets and Svg, discoverable through `CMAKE_PREFIX_PATH`.
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+- CMake uses an installed Stack Junkie Style package when `CMAKE_PREFIX_PATH` finds one. Otherwise it fetches the `{{tag}}` release tag of {{repository}}.
+- `main.cpp` holds the preset and the choices changed from it.
+- A Release build fails while any Stub remains and names where each one is.
+- On Windows, run `windeployqt` on the built program to copy the Qt runtime beside it.

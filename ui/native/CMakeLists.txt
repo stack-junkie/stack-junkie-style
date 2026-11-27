@@ -92,7 +92,10 @@ else()
 endif()
 
 if(STACKJUNKIE_BUILD_SHOWCASE)
-  qt_add_executable(stackjunkie_showcase showcase/main.cpp showcase/gallery.cpp showcase/gallery.hpp)
+  qt_add_executable(stackjunkie_showcase showcase/main.cpp showcase/gallery.cpp showcase/gallery.hpp showcase/starter.cpp showcase/starter.hpp)
+  # Export's starter templates and file list, shared with the web showcase.
+  file(GLOB_RECURSE STACKJUNKIE_STARTER_FILES CONFIGURE_DEPENDS "${STACKJUNKIE_SHARED}/starters/*.json" "${STACKJUNKIE_SHARED}/starters/*.tmpl")
+  qt_add_resources(stackjunkie_showcase starters PREFIX /starters BASE "${STACKJUNKIE_SHARED}/starters" FILES ${STACKJUNKIE_STARTER_FILES})
   target_link_libraries(stackjunkie_showcase PRIVATE StackJunkie::Widgets)
   if(MSVC)
     target_compile_options(stackjunkie_showcase PRIVATE /utf-8 /W4)

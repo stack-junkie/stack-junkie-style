@@ -1,0 +1,25 @@
+// main.cpp, exported from the Stack Junkie Style showcase with the {{presetLabel}} preset.
+// It links the shared library instead of copying it, so every app stays on the same components.
+#include <stackjunkie/components.hpp>
+#include <stackjunkie/presets.hpp>
+#include <stackjunkie/theme.hpp>
+#include <QApplication>
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+    // Fusion draws the theme the same way on every platform, as in the showcase.
+    QApplication::setStyle(QStringLiteral("Fusion"));
+    StackJunkie::initializeResources();
+    StackJunkie::AppShell shell(QStringLiteral("My app"), QStringLiteral("What this app does."), QStringLiteral("0.1.0"));
+
+    // Your app's sections (rail icons) and their pages (sidebar entries).
+    const int home = shell.addSection(QStringLiteral("Home"), QStringLiteral("grid"));
+    shell.addPage(QStringLiteral("Overview"), StackJunkie::paragraph(QStringLiteral("Start here.")), QStringLiteral("file"), home);
+
+    // The preset sets the App frame. Choices list only what was changed from it; delete one to go back to the preset.
+    const QVariantMap choices = {{overrides}};
+    shell.setPreset(QStringLiteral("{{preset}}"), choices);
+    shell.resize(1280, 800);
+    shell.show();
+    return app.exec();
+}

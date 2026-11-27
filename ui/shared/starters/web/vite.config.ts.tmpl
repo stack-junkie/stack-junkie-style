@@ -1,0 +1,8 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { stackJunkieStubGuard } from '@stack-junkie/ui-web/vite';
+
+// The Stub guard stops a release build while any Stub remains and names the file and line of each one.
+export default defineConfig({
+  plugins: [react(), stackJunkieStubGuard()],
+});

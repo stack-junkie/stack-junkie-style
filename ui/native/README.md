@@ -101,6 +101,23 @@ What the frame draws today:
 When the frame shows its own tab row, a page that is itself a `QTabWidget` has its tab row hidden, so tab rows never stack.
 
 In the showcase, Settings > Layout holds the preset picker and one control per choice, generated from `presets.json`. Changes apply to the showcase at once and are saved in `QSettings`; "Reset to" the preset appears once a choice differs.
+
+## Export
+
+Settings > Layout > Export picks Web starter or Native starter, and Export starter writes that project into a folder you choose (it asks before replacing files). The starter matches the chosen preset and changed choices.
+
+- Native starter: `CMakeLists.txt`, `main.cpp`, `.gitignore` and a short README. `CMakeLists.txt` uses an installed package through `find_package(StackJunkie)` when `CMAKE_PREFIX_PATH` finds one, and otherwise fetches this version's tag with FetchContent (`https://github.com/stack-junkie/stack-junkie-style.git`, `GIT_TAG v<version>`, `SOURCE_SUBDIR ui/native`, ADR 0003). `main.cpp` builds an `AppShell` and calls `AppShell::setPreset(id, choices)` with only the choices that differ from the preset.
+- Web starter: the same Vite, React and TypeScript project the web showcase exports (see the web README).
+- The Website preset has no native starter, because native has no Website layout; the row says so and Export starter is disabled.
+
+The templates and file list live in `../shared/starters`; `showcase/starter.cpp` fills them exactly as `starters.mjs` does on web. For scripts and tests:
+
+```sh
+StackJunkieShowcase --export-starter my-app --starter native --preset desktop-app --choice sidebar=tree
+```
+
+`--export-starter <folder>` writes the starter and exits without opening a window (it uses the offscreen platform). `--starter` is `web` (the default) or `native`; `--preset` and `--choice` work as for `--export-preview`. Without `--preset` it uses the saved preset and choices. The website preset with `--starter native` exits with code 2 and says why. `npm run test:starters` in `../web` builds every starter (see the web README).
+
 ## Stub
 
 A Stub marks development stand-in content: sample text, fake data, unfinished labels. Create one only with the macro, which records its file and line:

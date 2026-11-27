@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.21)
+project(MyApp LANGUAGES CXX)
+# Exported from the Stack Junkie Style showcase with the {{presetLabel}} preset, library {{version}}.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Widgets Svg)
+
+# Use an installed Stack Junkie Style library when CMAKE_PREFIX_PATH finds one; otherwise fetch the pinned release tag.
+find_package(StackJunkie {{cmakeVersion}} CONFIG QUIET)
+if(NOT StackJunkie_FOUND)
+  include(FetchContent)
+  set(STACKJUNKIE_BUILD_SHOWCASE OFF)
+  FetchContent_Declare(stackjunkie GIT_REPOSITORY {{repository}}.git GIT_TAG {{tag}} GIT_SHALLOW TRUE SOURCE_SUBDIR ui/native)
+  FetchContent_MakeAvailable(stackjunkie)
+endif()
+
+qt_add_executable(my_app main.cpp)
+target_link_libraries(my_app PRIVATE StackJunkie::Widgets Qt6::Widgets)
+set_target_properties(my_app PROPERTIES WIN32_EXECUTABLE TRUE OUTPUT_NAME MyApp)
+if(MSVC)
+  target_compile_options(my_app PRIVATE /utf-8)
+endif()

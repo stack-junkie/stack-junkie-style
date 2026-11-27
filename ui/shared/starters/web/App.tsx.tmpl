@@ -1,0 +1,19 @@
+// App.tsx, exported from the Stack Junkie Style showcase with the {{presetLabel}} preset.
+// It imports the shared library instead of copying it, so every app stays on the same components.
+import { AppShell, BrandMark, type PresetChoices, type PresetId, type ShellSection } from '@stack-junkie/ui-web';
+
+// The preset sets the App frame. Choices list only what was changed from it; delete one to go back to the preset.
+export const preset: PresetId = '{{preset}}';
+export const choices: Partial<PresetChoices> = {{overrides}};
+
+// Your app's sections (rail icons) and their pages (sidebar entries).
+const sections: ShellSection[] = [
+  { id: 'home', label: 'Home', icon: 'grid', pages: [{ id: 'overview', label: 'Overview', content: <p>Start here.</p> }] },
+];
+
+export default function App() {
+  // Replace BrandMark with the app's own logo when it has one.
+  // When the commandPalette choice is on, pass a CommandPalette in overlays, opened with Control K.
+  return <AppShell name="My app" description="What this app does." version="0.1.0" logo={<BrandMark size={20} />}
+    preset={preset} choices={choices} sections={sections} storageKey="my-app" style={{ height: '100dvh' }} />;
+}
