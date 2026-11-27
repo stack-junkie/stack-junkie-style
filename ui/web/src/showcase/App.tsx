@@ -8,7 +8,7 @@ import { SiteWordmark } from './SiteWordmark';
 import { exportApp } from './exportApp';
 
 const demoFamilies: Record<string, React.ComponentType<{ id: string }>> = { foundations: FoundationDemo, actions: ActionDemo, inputs: InputDemo, navigation: NavigationDemo, containers: ContainerDemo, collections: CollectionDemo, feedback: FeedbackDemo, overlays: OverlayDemo, content: ContentDemo };
-const prefix = 'sj-next';
+const prefix = 'sj-v3';
 // The shared catalog gives Product layouts the Settings icon; Settings must have the only gear, so layouts use their own icon here.
 const familyIcon = (f: { icon: string }) => f.icon as UI.IconName;
 function saved<T extends string>(key: string, fallback: T, allowed: readonly string[]): T { try { const value = localStorage.getItem(`${prefix}-${key}`); return value && allowed.includes(value) ? value as T : fallback; } catch { return fallback; } }
