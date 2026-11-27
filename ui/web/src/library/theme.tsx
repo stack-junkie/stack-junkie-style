@@ -1,7 +1,7 @@
 import { createContext, useContext, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import tokens from '../../../shared/tokens.json';
 
-export type Direction = 'clean' | 'warm' | 'technical';
+export type Direction = 'clean';
 export type ThemeMode = 'light' | 'dark';
 export const directions = tokens.directions;
 export const spacing = tokens.spacing;
@@ -10,7 +10,7 @@ export const useTheme = () => useContext(ThemeContext);
 
 export function ThemeProvider({ direction = 'clean', mode = 'light', children, className = '', style, ...props }:
   HTMLAttributes<HTMLDivElement> & { direction?: Direction; mode?: ThemeMode; children: ReactNode }) {
-  const theme = tokens.directions[direction];
+  const theme = tokens.directions[direction] ?? tokens.directions.clean;
   const vars: Record<string, string | number> = {};
   for (const [key, value] of Object.entries(theme[mode])) vars[`--sj-${key}`] = value;
   for (const [key, value] of Object.entries(theme.metrics)) vars[`--sj-${key}`] = key === 'lineHeight' ? value : `${value}px`;

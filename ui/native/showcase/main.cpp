@@ -35,9 +35,8 @@ int main(int argc, char *argv[]) {
     parser.setApplicationDescription(QStringLiteral("Stack Junkie native component library showcase"));
     parser.addHelpOption(); parser.addVersionOption();
     parser.addOption({QStringLiteral("export-preview"), QStringLiteral("Render a PNG using the offscreen platform, then exit."), QStringLiteral("file")});
-    parser.addOption({QStringLiteral("direction"), QStringLiteral("clean, warm or technical"), QStringLiteral("direction")});
     parser.addOption({QStringLiteral("theme"), QStringLiteral("light or dark"), QStringLiteral("theme")});
-    parser.addOption({QStringLiteral("page"), QStringLiteral("Family ID, family/component ID, or compare"), QStringLiteral("page")});
+    parser.addOption({QStringLiteral("page"), QStringLiteral("Family ID, family/component ID, home or settings"), QStringLiteral("page")});
     parser.addOption({QStringLiteral("width"), QStringLiteral("Export width, at least 480 pixels."), QStringLiteral("pixels"), QStringLiteral("1440")});
     parser.addOption({QStringLiteral("height"), QStringLiteral("Export height, at least 460 pixels."), QStringLiteral("pixels"), QStringLiteral("1000")});
     parser.process(app);
@@ -49,13 +48,9 @@ int main(int argc, char *argv[]) {
         window.resize(1280, 900);
         window.setMinimumSize(480, 460);
         QSettings settings;
-        auto *direction = new QComboBox;
-        direction->setAccessibleName(QStringLiteral("Design direction"));
-        for (const auto &key : {QStringLiteral("clean"), QStringLiteral("warm"), QStringLiteral("technical")}) direction->addItem(Theme::load(key).label(), key);
         auto *mode = new QComboBox;
         mode->setAccessibleName(QStringLiteral("Color theme"));
         mode->addItems({QStringLiteral("Light"), QStringLiteral("Dark")});
-        auto *comparisonButton = new Button(QStringLiteral("Compare"));
         auto *toolbar = qobject_cast<QHBoxLayout *>(window.toolbar()->layout());
         auto *brandIcon = new QLabel;
         brandIcon->setAccessibleName(QStringLiteral("Stack Junkie"));
@@ -86,21 +81,11 @@ int main(int argc, char *argv[]) {
                 pageIds << familyId + QStringLiteral("/") + id;
             }
         }
-        QWidget *comparison = makeComparison();
-        const int appearance = window.addSection(QStringLiteral("Appearance"), QStringLiteral("grid"));
-        const int compareIndex = window.addPage(QStringLiteral("Compare directions"), comparison, QStringLiteral("grid"), appearance);
-        window.setSectionVisible(appearance, false); // Reached from Settings, not the rail.
-        pageIds << QStringLiteral("compare");
-        QObject::connect(comparisonButton, &QPushButton::clicked, &window, [&window, compareIndex] { window.setCurrentPage(compareIndex); });
         // Settings is a window over the app, never a page: section list and search, changes apply immediately.
         auto *settingsWindow = new SettingsWindow(&window);
         auto *appearancePage = new SettingsPage(QStringLiteral("Appearance"));
         appearancePage->contentLayout()->addWidget(new Field(QStringLiteral("Theme"), mode, QStringLiteral("Choose the light or dark appearance.")));
-        auto *showcaseNote = paragraph(QStringLiteral("Showcase only. The setting below compares candidates and is not part of the imported UI library."));
-        showcaseNote->setProperty("sjRole", "muted"); appearancePage->contentLayout()->addWidget(showcaseNote);
-        appearancePage->contentLayout()->addWidget(new Field(QStringLiteral("Design direction"), direction));
-        appearancePage->contentLayout()->addWidget(comparisonButton);
-        settingsWindow->addSection(QStringLiteral("Appearance"), appearancePage, QStringLiteral("theme dark light mode color direction"));
+        settingsWindow->addSection(QStringLiteral("Appearance"), appearancePage, QStringLiteral("theme dark light mode color"));
         auto *keyboardPage = new SettingsPage(QStringLiteral("Keyboard"));
         keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Drag a sidebar divider to resize it. Arrow keys adjust a focused divider.")));
         keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Control comma opens Settings. In a row of open documents, Control W closes the current tab.")));
@@ -110,7 +95,6 @@ int main(int argc, char *argv[]) {
         auto openSettings = [settingsWindow] { settingsWindow->show(); settingsWindow->raise(); settingsWindow->activateWindow(); };
         window.setSettingsHandler(openSettings);
         QObject::connect(new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), &window), &QShortcut::activated, &window, openSettings);
-        QObject::connect(comparisonButton, &QPushButton::clicked, settingsWindow, &QDialog::close);
         const int homeSection = window.addSection(QStringLiteral("Home"));
         window.setSectionVisible(homeSection, false);
         auto *homePage = new SettingsPage(QStringLiteral("Stack Junkie UI"));
@@ -128,19 +112,17 @@ int main(int argc, char *argv[]) {
             window.restoreSettings(QStringLiteral("workspace"));
             // The previous preview stored a family index rather than a component index.
             // Retain that family, plus the existing splitter width and collapse preference.
-            if (settings.value(QStringLiteral("workspace/schema"), 1).toInt() < 2) {
+            // Schema 3 removed the comparison page that sat before Home, so older indexes at or past it mean Home.
+            const int schema = settings.value(QStringLiteral("workspace/schema"), 1).toInt();
+            if (schema == 2 && settings.value(QStringLiteral("workspace/page"), 0).toInt() >= homeIndex) window.setCurrentPage(homeIndex);
+            if (schema < 2) {
                 const int oldPage = settings.value(QStringLiteral("workspace/page"), 0).toInt();
-                if (oldPage == families.size()) window.setCurrentPage(compareIndex);
-                else if (oldPage >= 0 && oldPage < families.size()) {
+                if (oldPage >= 0 && oldPage < families.size()) {
                     const QString prefix = families[oldPage].toObject().value(QStringLiteral("id")).toString() + QStringLiteral("/");
                     for (int i = 0; i < pageIds.size(); ++i) if (pageIds[i].startsWith(prefix)) { window.setCurrentPage(i); break; }
                 }
             }
         }
-        const QString chosenDirection = parser.isSet(QStringLiteral("direction")) ? parser.value(QStringLiteral("direction")) : settings.value(QStringLiteral("direction"), QStringLiteral("clean")).toString();
-        int selectedDirection = direction->findData(chosenDirection);
-        if (selectedDirection < 0) { std::fprintf(stderr, "Unknown direction\n"); return 2; }
-        direction->setCurrentIndex(selectedDirection);
         const QString chosenTheme = parser.isSet(QStringLiteral("theme")) ? parser.value(QStringLiteral("theme")) : settings.value(QStringLiteral("theme"), QStringLiteral("dark")).toString();
         if (chosenTheme != QStringLiteral("light") && chosenTheme != QStringLiteral("dark")) { std::fprintf(stderr, "Unknown theme\n"); return 2; }
         mode->setCurrentIndex(chosenTheme == QStringLiteral("dark") ? 1 : 0);
@@ -153,10 +135,9 @@ int main(int argc, char *argv[]) {
             window.setCurrentPage(index);
         }
         auto apply = [&] {
-            const auto theme = Theme::load(direction->currentData().toString(), mode->currentIndex() == 1);
+            const auto theme = Theme::load(QStringLiteral("clean"), mode->currentIndex() == 1);
             theme.apply(&window);
             window.setWindowIcon(QIcon(brandMark(theme, brandSize)));
-            applyComparisonThemes(comparison, theme.dark);
             for (auto *colors : window.findChildren<QListWidget *>(QStringLiteral("semantic-colors"))) {
                 colors->clear();
                 for (const auto &key : theme.colors.keys()) {
@@ -165,10 +146,9 @@ int main(int argc, char *argv[]) {
                 }
             }
         };
-        QObject::connect(direction, &QComboBox::currentIndexChanged, &window, apply);
         QObject::connect(mode, &QComboBox::currentIndexChanged, &window, apply);
         apply();
-        if (!exporting) QObject::connect(&app, &QCoreApplication::aboutToQuit, &window, [&] { window.saveSettings(QStringLiteral("workspace")); settings.setValue(QStringLiteral("workspace/schema"), 2); settings.setValue(QStringLiteral("direction"), direction->currentData()); settings.setValue(QStringLiteral("theme"), mode->currentIndex() ? QStringLiteral("dark") : QStringLiteral("light")); });
+        if (!exporting) QObject::connect(&app, &QCoreApplication::aboutToQuit, &window, [&] { window.saveSettings(QStringLiteral("workspace")); settings.setValue(QStringLiteral("workspace/schema"), 3); settings.setValue(QStringLiteral("theme"), mode->currentIndex() ? QStringLiteral("dark") : QStringLiteral("light")); });
         if (exporting) {
             const QString destination = QFileInfo(parser.value(QStringLiteral("export-preview"))).absoluteFilePath();
             if (!QDir().mkpath(QFileInfo(destination).absolutePath())) { std::fprintf(stderr, "Cannot create output directory\n"); return 3; }

@@ -9,12 +9,12 @@ import { AboutSection, SettingsSection, SettingsWindow, type SettingsWindowSecti
 // The standard application frame every Stack Junkie product imports. Products supply their sections, pages and own settings;
 // the frame owns where navigation, Settings, theme and About go, so those details never drift between apps.
 export type ShellConfig = {
-  direction: Direction; mode: ThemeMode;
+  /** Clean utility is the only direction; kept optional for compatibility. */ direction?: Direction; mode: ThemeMode;
   /** Thin icon rail of sections on the far left. */ rail: boolean;
   /** Sidebar listing the pages of the current section (or every page, grouped, when there is no rail). */ contextualSidebar: boolean;
   resizableSidebar: boolean; collapsibleSidebar: boolean;
 };
-export const defaultShellConfig: ShellConfig = { direction: 'clean', mode: 'dark', rail: true, contextualSidebar: true, resizableSidebar: true, collapsibleSidebar: true };
+export const defaultShellConfig: ShellConfig = { mode: 'dark', rail: true, contextualSidebar: true, resizableSidebar: true, collapsibleSidebar: true };
 
 /** What the frame tells a page about how it is shown. */
 export type ShellPageState = {

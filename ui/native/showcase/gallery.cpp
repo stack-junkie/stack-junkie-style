@@ -231,7 +231,7 @@ QWidget *component(const QString &id) {
         auto *mono = paragraph(QStringLiteral("MONO  0123456789  [] {} <>")); mono->setProperty("sjFontRole", "mono");
         return vertical({ui, editorial, mono});
     }
-    if (id == "spacing") return paragraph(QStringLiteral("Shared spacing: 4, 8, 12, 16, 24, 32, 48 px. Direction tokens set control height, radius and border width. Text remains readable when the window narrows."));
+    if (id == "spacing") return paragraph(QStringLiteral("Shared spacing: 4, 8, 12, 16, 24, 32, 48 px. Theme tokens set control height, radius and border width. Text remains readable when the window narrows."));
     if (id == "icons") return row({new IconButton("search", "Search"), new IconButton("folder", "Open folder"), new IconButton("settings", "Settings"), new IconButton("help", "Help"), new IconButton("copy", "Copy"), new IconButton("check", "Confirm")});
     if (id == "motion") {
         auto *reduced = new QCheckBox(QStringLiteral("Reduce motion"));
@@ -506,40 +506,4 @@ QWidget *makeFamily(const QJsonObject &family, QWidget *parent) {
     referenceLayout->addStretch();
     tabs->addTab(scroll(referenceContent), QStringLiteral("Usage and states"));
     return tabs;
-}
-QWidget *makeComparison(QWidget *parent) {
-    auto *split = new SplitPane(parent);
-    split->setChildrenCollapsible(false);
-    split->setStackBelowWidth(900);
-    for (const auto &direction : {QStringLiteral("clean"), QStringLiteral("warm"), QStringLiteral("technical")}) {
-        auto *name = new QLineEdit(QStringLiteral("Field notes"));
-        auto *save = new Button(QStringLiteral("Save"), ButtonVariant::Primary);
-        auto *cancel = new Button(QStringLiteral("Cancel"));
-        auto *include = new QCheckBox(QStringLiteral("Include notes"));
-        auto *status = new Notice(QStringLiteral("Local preview changes remain in this window."));
-        auto *editor = tabs(); editor->setMaximumHeight(220);
-        auto *settings = new Disclosure(QStringLiteral("Document settings"), new Field(QStringLiteral("Reading mode"), new QComboBox, QStringLiteral("This local setting stays with this direction's preview.")), true);
-        auto *reading = settings->findChild<QComboBox *>(); reading->addItems({QStringLiteral("Comfortable"), QStringLiteral("Compact")});
-        auto *panel = vertical({heading(Theme::load(direction).label()), new Field(QStringLiteral("Document name"), name, QStringLiteral("Hover or focus for help. Click to pin it; Escape dismisses it.")), row({save, cancel}), include, slider(), settings, status, editor});
-        qobject_cast<QVBoxLayout *>(panel->layout())->addStretch();
-        name->setProperty("savedValue", name->text());
-        include->setProperty("savedValue", false);
-        QObject::connect(save, &QPushButton::clicked, panel, [=] {
-            if (name->text().trimmed().isEmpty()) { status->setText(QStringLiteral("Enter a document name.")); name->setFocus(); return; }
-            name->setProperty("savedValue", name->text()); include->setProperty("savedValue", include->isChecked());
-            status->setText(QStringLiteral("Saved locally: ") + name->text());
-        });
-        QObject::connect(cancel, &QPushButton::clicked, panel, [=] { name->setText(name->property("savedValue").toString()); include->setChecked(include->property("savedValue").toBool()); status->setText(QStringLiteral("Unsaved name and option changes discarded.")); });
-        panel->setProperty("comparisonDirection", direction);
-        panel->setMinimumWidth(290);
-        panel->layout()->setContentsMargins(Theme::spacing(3), Theme::spacing(3), Theme::spacing(3), Theme::spacing(3));
-        split->addWidget(scroll(panel));
-    }
-    applyComparisonThemes(split, false);
-    return split;
-}
-void applyComparisonThemes(QWidget *comparison, bool dark) {
-    for (auto *widget : comparison->findChildren<QWidget *>()) {
-        if (widget->property("comparisonDirection").isValid()) Theme::load(widget->property("comparisonDirection").toString(), dark).apply(widget);
-    }
 }

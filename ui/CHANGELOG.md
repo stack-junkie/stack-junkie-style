@@ -9,6 +9,7 @@
 - Clean utility's dark mode is true black with thin borders and near-white text; light mode is one white ground with thin borders. The values now live in the shared tokens.
 - Product layouts use their own `layout` icon. The workbench is the reference for many-page apps: rail, sidebar tree, one row of open documents and a bottom panel.
 - The expanded sidebar always pushes the work area and never becomes an overlay.
+- Remove the Warm editorial and Precise technical directions. Clean utility is the only direction.
 
 ## 3.0.0-preview.9
 

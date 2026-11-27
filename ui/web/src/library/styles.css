@@ -1,5 +1,4 @@
 @font-face{font-family:Manrope;src:url('../../../shared/fonts/Manrope.ttf') format('truetype');font-weight:200 800;font-display:swap}
-@font-face{font-family:Lora;src:url('../../../shared/fonts/Lora.ttf') format('truetype');font-weight:400 700;font-display:swap}
 @font-face{font-family:'Fira Code';src:url('../../../shared/fonts/FiraCode.ttf') format('truetype');font-weight:300 700;font-display:swap}
 .sj-theme{color:var(--sj-text);background:var(--sj-canvas);font-family:var(--sj-font-ui);font-size:var(--sj-fontSize);line-height:var(--sj-lineHeight);accent-color:var(--sj-accent);color-scheme:light;box-sizing:border-box}
 .sj-theme *,.sj-theme *::before,.sj-theme *::after{box-sizing:border-box}

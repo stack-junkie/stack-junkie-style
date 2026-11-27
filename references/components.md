@@ -12,7 +12,7 @@ Qt 5, WPF, mobile and other applications cannot import React or Qt 6 controls un
 
 Compose named primitives with explicit properties, state and events. Pages supply domain content and orchestrate the product. A shell arranges navigation and content; it must not become a giant class implementing every control and workflow. Extract meaningful repeated combinations rather than adding generic components for every wrapper.
 
-Use the library's theme and tokens. Do not copy buttons, fields, tabs or stylesheets into each page to change appearance. Add a legitimate variant to the shared component and demonstrate it. Keep semantic intent, such as destructive action or invalid input, separate from visual direction.
+Use the library's theme and tokens. Do not copy buttons, fields, tabs or stylesheets into each page to change appearance. Add a legitimate variant to the shared component and demonstrate it. Keep semantic intent, such as destructive action or invalid input, separate from visual styling.
 
 ## Coverage by family
 
@@ -39,6 +39,6 @@ Show realistic, clearly labeled demonstration content and applicable states: def
 
 `AppShell` (web and native) is the standard frame. Applications supply sections, pages and their own settings sections; the frame owns the rail, sidebar, Settings window, theme and About. It drops to `Workspace` only for frames `AppShell` cannot express. Web `Tabs` offers connected and underline variants, groups in one row (group chips collapse their tabs), and closable document tabs (`onCloseTab`, immediate, Delete or Control W). `NavTree` gives the sidebar collapsible page groups.
 
-The showcase imports the same component an application uses. Keep sample data and showcase navigation separate from library behavior. Change appearance or behavior in that implementation, not through a private fix in the example. Multiple preview directions do not declare any of them accepted.
+The showcase imports the same component an application uses. Keep sample data and showcase navigation separate from library behavior. Change appearance or behavior in that implementation, not through a private fix in the example.
 
 For a component change, update implementation, relevant catalog entry, example and affected guidance in the same release. Both showcases report the package [VERSION](../VERSION). Use focused CLI checks for changed behavior and prepare owner-operated GUI review. State which interactions remain unreviewed. Do not add validators, test frameworks or review machinery unless explicitly requested.

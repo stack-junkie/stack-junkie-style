@@ -1,6 +1,6 @@
 # Stack Junkie native widgets
 
-A Qt 6 Widgets library and a separate component showcase for Windows and Linux. Three provisional directions, Clean utility, Warm editorial and Precise technical, share the same components and behavior. Each supports light and dark themes. The directions remain alternatives for owner review.
+A Qt 6 Widgets library and a separate component showcase for Windows and Linux. Clean utility is the only design direction. It supports light and dark themes.
 
 `StackJunkie::Widgets` is the reusable library. `StackJunkieShowcase` consumes it. The showcase does not define a second stylesheet. Ordinary Qt widgets retain their keyboard, focus, selection and platform accessibility semantics under the shared theme.
 
@@ -36,11 +36,11 @@ auto theme = StackJunkie::Theme::load(QStringLiteral("clean"), false);
 theme.apply(window);
 ```
 
-Apply the theme after composing a surface, and reapply after adding custom icon buttons or changing direction. Applying a theme preserves widget values and selection. Scope a different theme to a child surface for comparisons. Do not recreate pages merely to switch themes.
+Apply the theme after composing a surface, and reapply after adding custom icon buttons or changing between light and dark. Applying a theme preserves widget values and selection. Scope a different theme to a child surface when needed. Do not recreate pages merely to switch themes.
 
 ## Reusable API
 
-- `Theme`: embedded tokens, catalog, spacing, type sizes, scoped palette/stylesheet application and direction lookup.
+- `Theme`: embedded tokens, catalog, spacing, type sizes, scoped palette/stylesheet application.
 - `Button` and `IconButton`: semantic variants, accessible names, busy state and shared SVG icons.
 - `Field` and `SearchField`: visible labels, native editing, contextual help and inline validation.
 - `SegmentedControl`: exclusive options using native toggle buttons.
@@ -62,26 +62,26 @@ Use the themed native Qt controls for text, passwords, dates, times, numbers, sl
 
 ## Review the showcase
 
-The rail selects families from `../shared/catalog.json`; the contextual list selects components. Each component has Example and Usage and states tabs. Edits remain while switching pages or themes. Use the comparison page to see the same controls in all three directions. The state selector demonstrates disabled, read-only and invalid treatments; pointer hover and keyboard focus are real interactions, not painted screenshots.
+The rail selects families from `../shared/catalog.json`; the contextual list selects components. Each component has Example and Usage and states tabs. Edits remain while switching pages or themes. The state selector demonstrates disabled, read-only and invalid treatments; pointer hover and keyboard focus are real interactions, not painted screenshots.
 
 Eight layout compositions use the same controls: focused utility, multi-tool utility, embedded utility, data application, workbench, publication/reference, guided workflow and monitoring/analysis. Local sample records, chart values and simulated progress are explicitly demonstration content. They are not live project metrics, server state or verification results.
 
-The shared catalog describes the intended component range. Preview labels and style attributes do not establish screen-reader acceptance, native runtime behavior on every platform, or owner approval of a direction. File/color pickers, focus restoration, help behavior and display scaling still deserve review in the target product environment.
+The shared catalog describes the intended component range. Preview labels and style attributes do not establish screen-reader acceptance, native runtime behavior on every platform File/color pickers, focus restoration, help behavior and display scaling still deserve review in the target product environment.
 
 ## Export a native preview
 
 The export option selects Qt's offscreen platform before the application starts, renders the actual showcase and exits. It does not take control of the desktop or operate another program.
 
 ```sh
-StackJunkieShowcase --export-preview compare-dark.png --theme dark --page compare
-StackJunkieShowcase --export-preview inputs-warm.png --direction warm --theme light --page inputs
+StackJunkieShowcase --export-preview home-dark.png --theme dark --page home
+StackJunkieShowcase --export-preview settings-light.png --theme light --page settings
 StackJunkieShowcase --export-preview inputs-narrow.png --page inputs --width 540 --height 900
 ```
 
-Page IDs are the catalog family IDs, `family/component` (for example `navigation/tabs`), or `compare`. Exported previews capture the visible viewport, not every scroll position. Screenshot generation is a product artifact, not proof that all interactions work.
+Page IDs are the catalog family IDs, `family/component` (for example `navigation/tabs`), `home`, or `settings` for the Settings window. Exported previews capture the visible viewport, not every scroll position. Screenshot generation is a product artifact, not proof that all interactions work.
 
 ## Shared source
 
 Visual values originate in `../shared/tokens.json`, including shell density, text sizes and weights. Catalog metadata originates in `../shared/catalog.json`. `StackJunkie::icon` renders symbols directly from `../shared/icons.svg` using QtSvg. Checkbox check glyphs are generated from that sprite at configure time using each theme's `onAccent` token. CMake regenerates them when shared tokens change. Font files are embedded from `../shared/fonts`; their nominal token names resolve to the actual families reported by the active Qt font database, including the offscreen platform. The `system-ui` token resolves to Qt's system general font. The showcase uses the existing SJ favicon images from `../shared/brand` beside a compact title. Toolkit-specific geometry and behavior stay in the native adapter.
 
-The library does not alter global application styles automatically. The host decides which root to theme. The showcase alone uses Fusion for consistent comparison and stores preferences under its own `StackJunkie/ComponentShowcase` settings namespace.
+The library does not alter global application styles automatically. The host decides which root to theme. The showcase alone uses Fusion for consistent rendering and stores preferences under its own `StackJunkie/ComponentShowcase` settings namespace.

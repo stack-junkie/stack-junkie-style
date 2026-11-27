@@ -26,7 +26,7 @@ void initializeResources() {
     static bool initialized = false;
     if (initialized) return;
     registerStackJunkieResources();
-    for (const auto &font : {"Manrope", "Lora", "FiraCode"}) {
+    for (const auto &font : {"Manrope", "FiraCode"}) {
         const QString fileName = QString::fromLatin1(font);
         const int id = QFontDatabase::addApplicationFont(QStringLiteral(":/stackjunkie/fonts/%1.ttf").arg(fileName));
         const auto families = QFontDatabase::applicationFontFamilies(id);

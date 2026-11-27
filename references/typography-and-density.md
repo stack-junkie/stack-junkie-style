@@ -4,7 +4,7 @@ Use a compact application shell around comfortable working content. This referen
 
 ## Font roles
 
-Use one proportional UI family for navigation, tabs, forms and toolbars. Clean utility now starts with the platform UI font: Segoe UI Variable Text or Segoe UI on Windows, then the browser or native platform's system family. This follows Fluent's preference for native platform fonts and makes a useful comparison against the owner's VS Code screenshot. Manrope remains bundled for the other visual candidates and existing branding. It was not rejected as universally unsuitable. Keep Fira Code for code, logs and aligned technical values; use Lora only when an editorial surface actually calls for it.
+Use one proportional UI family for navigation, tabs, forms and toolbars. Clean utility starts with the platform UI font: Segoe UI Variable Text or Segoe UI on Windows, then the browser or native platform's system family. This follows Fluent's preference for native platform fonts and makes a useful comparison against the owner's VS Code screenshot. Manrope remains bundled for existing branding and as the fallback described below. Keep Fira Code for code, logs and aligned values.
 
 The Qt adapter verifies that the requested system family exists and is proportional. Environments without usable system fonts, including this offscreen renderer, fall back to the registered bundled Manrope family instead of an accidental monospace substitution. The exported image therefore does not establish the exact Segoe rendering on a normal desktop.
 

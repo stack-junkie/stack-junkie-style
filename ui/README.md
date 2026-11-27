@@ -2,7 +2,7 @@
 
 One shared design source, reusable web and Qt components, and working examples built from those components. Version comes from the parent `VERSION` file.
 
-This preview starts from a dark neutral workbench with a section rail, adjustable contextual sidebar and connected page tabs. **Clean utility** is the owner's closest candidate, with darker neutral black surfaces and a platform UI font. It preserves stored theme choices and retains **Warm editorial** and **Precise technical** as comparisons in light and dark. Overall appearance, fonts and accents remain under review. Both showcases use the selected SJ letterforms without a background. The shared transparent brand/sj-transparent-mask.png maps S to text and J to accent at render time, following the active theme. The owner accepted the blue J and requested the smaller 25px mark. Shared typography and density values distinguish compact controls from readable content; see [research and decisions](../references/typography-and-density.md). The current catalog is an interactive showcase. The requested feature configurator and configured-project export remain planned work.
+This preview starts from a dark neutral workbench with a section rail, adjustable contextual sidebar and connected page tabs. **Clean utility** is the only design direction, with darker neutral black surfaces and a platform UI font, in light and dark. It preserves stored theme choices. Fonts and accents remain under review. Both showcases use the selected SJ letterforms without a background. The shared transparent brand/sj-transparent-mask.png maps S to text and J to accent at render time, following the active theme. The owner accepted the blue J and requested the smaller 25px mark. Shared typography and density values distinguish compact controls from readable content; see [research and decisions](../references/typography-and-density.md). The current catalog is an interactive showcase. The requested feature configurator and configured-project export remain planned work.
 
 ## Run the web showcase
 
@@ -14,7 +14,7 @@ npm ci
 npm run dev
 ```
 
-Open the printed local URL yourself. The server binds to localhost and does not launch or control a browser. The comparison and catalog use the same library. Inputs and page state remain mounted when changing catalog families, context pages or Example / Usage tabs. Drag or keyboard-resize the context divider; collapse and reopen it without losing its width.
+Open the printed local URL yourself. The server binds to localhost and does not launch or control a browser. The catalog uses the same library. Inputs and page state remain mounted when changing catalog families, context pages or Example / Usage tabs. Drag or keyboard-resize the context divider; collapse and reopen it without losing its width.
 
 To build the showcase and importable library:
 
@@ -42,7 +42,7 @@ The script also recognizes the SDK in this checkout's ignored `.tools/Qt/6.8.3/m
 Native screenshot export uses Qt's offscreen renderer and does not control the desktop:
 
 ```powershell
-./dist/windows/bin/StackJunkieShowcase.exe --export-preview ./dist/comparison-light.png --page compare --theme light
+./dist/windows/bin/StackJunkieShowcase.exe --export-preview ./dist/settings-light.png --page settings --theme light
 ```
 
 ## Build on Linux
@@ -66,7 +66,7 @@ Pages supply content, state and actions. Shared components own repeated behavior
 
 The shared inputs are:
 
-- `shared/tokens.json`: semantic design values and the three candidate directions.
+- `shared/tokens.json`: semantic design values and the Clean utility direction.
 - `shared/catalog.json`: 51 component entries, applicable variants/states and eight product layouts.
 - `shared/fonts` and `shared/icons.svg`: local assets for both implementations, with font licenses.
 - `../VERSION`: the only authored release version.
@@ -91,10 +91,10 @@ The final appearance, owner-operated keyboard/pointer review and Linux runtime a
 
 The header SJ mark opens Home. Foundations is accessible from Home and command search. One fixed hamburger at the top of the activity rail shows or hides contextual navigation. Group names remain in the sidebar; component tabs occupy the top content row. A compact component name appears alongside tabs only while navigation is collapsed. On web, Workspace's contentOwnsHeader option lets page tabs own this row, and its children render function supplies sidebarCollapsed to Tabs.contextLabel. Native Workspace handles the equivalent label for tabbed pages. Page contents remain mounted across navigation.
 
-Settings is the gear at the bottom of the activity rail (or the sidebar without a rail) and opens `SettingsWindow`. Control comma opens it too. Appearance (theme, plus showcase-only direction comparison), Keyboard and About are its sections. The header has no theme or search button.
+Settings is the gear at the bottom of the activity rail (or the sidebar without a rail) and opens `SettingsWindow`. Control comma opens it too. Appearance (theme), Keyboard and About are its sections. The header has no theme or search button.
 
 Apps use `AppShell`: supply `name`, `description`, `version`, `logo`, `sections` (each with pages) and optional `settings`. On web it accepts controlled `location`, `mode` and `settingsState`, plus slots for the brand, sidebar header, sidebar override and overlays. Native `AppShell` derives from `Workspace` and adds the Settings window.
 
 Import `AboutSection` and `ThemeSetting` only when replacing a built-in section. Supply the product name, description, logo and product version from that project's version source. Web exports systemVersion; native exposes STACKJUNKIE_VERSION. Both are generated from the parent VERSION file. Never replace the style version with the consuming application's version.
 
-Showcase-only comparison controls are labeled and implemented under showcase, not exported from the component library. Settings › Layout exports an `App.tsx` that imports the library at the current version and configures `AppShell`.
+Showcase-only controls are labeled and implemented under showcase, not exported from the component library. Settings › Layout exports an `App.tsx` that imports the library at the current version and configures `AppShell`.

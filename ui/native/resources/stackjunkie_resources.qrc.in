@@ -10,6 +10,5 @@
   <file alias="icons.svg">@STACKJUNKIE_SHARED@/icons.svg</file>
 @STACKJUNKIE_INDICATOR_RESOURCES@
   <file alias="fonts/Manrope.ttf">@STACKJUNKIE_SHARED@/fonts/Manrope.ttf</file>
-  <file alias="fonts/Lora.ttf">@STACKJUNKIE_SHARED@/fonts/Lora.ttf</file>
   <file alias="fonts/FiraCode.ttf">@STACKJUNKIE_SHARED@/fonts/FiraCode.ttf</file>
 </qresource></RCC>

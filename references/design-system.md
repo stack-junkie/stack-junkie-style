@@ -4,9 +4,9 @@ Use this reference for appearance, themes and typography. Exact values live in [
 
 ## Current design status
 
-Clean utility is the owner's closest candidate as of 2026-11-20. Its dark theme uses neutral black canvas, surface, raised and selection roles, without a blue or purple background cast. Keep the light palette separate. The overall appearance remains under review, and fonts and accents remain open. Warm and technical are retained comparisons, not equally preferred baselines. The owner selected logo F on 2026-11-22, then clarified that only the SJ letters should remain, without the square background. Both showcases use shared brand/sj-transparent-mask.png, mapping S to the theme text color and J to its accent. The owner accepted the blue-J appearance and requested a smaller 25px mark on 2026-11-22. Logo selection does not establish acceptance of the overall interface.
+Clean utility is the only design direction. Its dark mode is true black with structure from thin borders; light mode is one white ground with thin borders. The accent is blue. The owner selected logo F on 2026-11-22, then clarified that only the SJ letters should remain, without the square background. Both showcases use shared brand/sj-transparent-mask.png, mapping S to the theme text color and J to its accent. The owner accepted the blue-J appearance and requested a smaller 25px mark on 2026-11-22. Logo selection does not establish acceptance of the overall interface.
 
-Compare directions using the same task, content, components and states. Preserve an explicitly selected product identity during narrow edits. Earlier mockup approvals are evidence about their named product and version; they do not select every token for all future products.
+Preserve an explicitly selected product identity during narrow edits. Earlier mockup approvals are evidence about their named product and version; they do not select every token for all future products.
 
 ## Authority and reuse
 
@@ -18,11 +18,11 @@ Adapters turn these roles into each toolkit's theme mechanism. Web components co
 
 ## Typography and density
 
-Clean utility now uses the platform UI font as a candidate, with Segoe UI Variable Text or Segoe UI on Windows. Manrope remains bundled for other candidates, Fira Code serves technical text, and Lora is an editorial option in the warm direction. See the researched [typography and density guidance](typography-and-density.md) for role sizes, weights, compact shell geometry and readable document layout. These are roles to compare, not a rule to put serif headings on every application panel. Honor platform text scaling and accessibility settings.
+Clean utility uses the platform UI font, with Segoe UI Variable Text or Segoe UI on Windows. Manrope remains bundled for branding and as the fallback, and Fira Code serves code and aligned values. See the researched [typography and density guidance](typography-and-density.md) for role sizes, weights, compact shell geometry and readable document layout. Honor platform text scaling and accessibility settings.
 
 Labels, values and controls that do the same job share a text role. Use weight and spacing for emphasis before adding new type sizes. Reading surfaces need a reading scale and line length; inspectors need compact, readable controls. Do not shrink the entire interface or cut off required text to force a fit.
 
-Spacing, borders, radius and elevation come from the active tokens. Group related controls and distinguish interactive states. Decoration needs a purpose. Cards, pills, sidebars, tabs and shadows are not universally prohibited; their use must fit the task and selected direction.
+Spacing, borders, radius and elevation come from the active tokens. Group related controls and distinguish interactive states. Decoration needs a purpose. Cards, pills, sidebars, tabs and shadows are not universally prohibited; their use must fit the task.
 
 ## Shared resources and release
 

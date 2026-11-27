@@ -41,7 +41,7 @@
           "states": [
             "default"
           ],
-          "usage": "Use the shared spacing rhythm and direction metrics."
+          "usage": "Use the shared spacing rhythm and theme metrics."
         },
         {
           "id": "icons",

@@ -4,7 +4,7 @@ import tokens from '../../../shared/tokens.json';
 import specimen from './specimen.svg?url';
 
 export function FoundationDemo({ id }: { id: string }) {
-  const { direction, mode } = UI.useTheme(); const theme = tokens.directions[direction]; const [motion, setMotion] = useState(false);
+  const { direction, mode } = UI.useTheme(); const theme = tokens.directions[direction] ?? tokens.directions.clean; const [motion, setMotion] = useState(false);
   if (id === 'colors') return <div className="demo-swatches">{Object.entries(theme[mode]).map(([name, color]) => <div key={name}><span style={{ background: color }} /><strong>{name}</strong><code>{color}</code></div>)}</div>;
   if (id === 'typography') return <UI.Stack gap={24}><div><span className="demo-label">Interface / {theme.fonts.ui}</span><h3>Make the next action clear</h3><p>Readable controls, labels and everyday content.</p></div><div className="demo-editorial"><span className="demo-label">Editorial / {theme.fonts.editorial}</span><h2>A place to think clearly</h2><p>Type carries the hierarchy without adding more boxes.</p></div><div><span className="demo-label">Technical / {theme.fonts.mono}</span><p className="sj-mono">12.80 ms · 1024 × 768 · 0x2A</p></div></UI.Stack>;
   if (id === 'spacing') return <UI.Stack><div className="demo-spacing">{tokens.spacing.map(n => <div key={n}><span style={{ width: n, height: n }} /><code>{n}px</code></div>)}</div><UI.Toolbar label="Geometry"><UI.Badge>Radius {theme.metrics.radius}px</UI.Badge><UI.Badge>Border {theme.metrics.borderWidth}px</UI.Badge><UI.Badge>Control {theme.metrics.controlHeight}px</UI.Badge></UI.Toolbar></UI.Stack>;
