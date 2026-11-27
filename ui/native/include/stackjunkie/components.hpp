@@ -11,6 +11,9 @@
 #include <QToolButton>
 #include <QTimer>
 #include <QTextBrowser>
+#include <QDialog>
+#include <QTreeWidget>
+#include <functional>
 class QVBoxLayout;
 class QButtonGroup;
 class QListWidget;
@@ -121,17 +124,58 @@ class STACKJUNKIE_EXPORT CodeBlock : public QFrame {
 public:
     explicit CodeBlock(const QString &text, QWidget *parent = nullptr);
 };
+// One row of tabs. A tab row must never sit inside another tab page: debug builds warn when it does.
+// Use the sidebar tree, a toolbar toggle, or a TabBoundary frame instead.
 class STACKJUNKIE_EXPORT Tabs : public QTabWidget {
 public:
     explicit Tabs(QWidget *parent = nullptr);
+    /** Open-document tabs: closing is immediate, with no confirmation. Control W closes the current tab. */
+    void setDocumentTabs(bool closable);
+protected:
+    void showEvent(QShowEvent *event) override;
+    void tabInserted(int index) override;
 };
-class STACKJUNKIE_EXPORT GroupedTabs : public QWidget {
+// Marks a deliberate visual break, such as a framed specimen or an embedded app window, so tab rows inside it are allowed.
+class STACKJUNKIE_EXPORT TabBoundary : public QFrame {
+public:
+    explicit TabBoundary(QWidget *content, QWidget *parent = nullptr);
+};
+// Tab groups in a single row, like browser tab groups: a group chip sits in the row and collapses its tabs.
+class STACKJUNKIE_EXPORT GroupedTabs : public Tabs {
 public:
     explicit GroupedTabs(QWidget *parent = nullptr);
     int addGroup(const QString &name);
     int addTab(int group, const QString &title, QWidget *page);
+    void setGroupCollapsed(int group, bool collapsed);
 private:
-    QTabWidget *groups_;
+    struct Group { QString name; bool collapsed = false; QList<QPair<QString, QWidget *>> tabs; };
+    void rebuild();
+    QList<Group> groups_;
+    bool rebuilding_ = false;
+};
+// Collapsible groups of pages, VS Code style. This is where depth goes in apps with many pages.
+class STACKJUNKIE_EXPORT NavTree : public QTreeWidget {
+    Q_OBJECT
+public:
+    explicit NavTree(const QString &label, QWidget *parent = nullptr);
+    void addGroup(const QString &id, const QString &label, const QList<QPair<QString, QString>> &items);
+    void setCurrentId(const QString &id);
+signals:
+    void pageChosen(const QString &id);
+};
+// Settings open as a window over the app, never as a page. Section list and search on the left;
+// changes apply immediately, so the only action is closing the window.
+class STACKJUNKIE_EXPORT SettingsWindow : public QDialog {
+public:
+    explicit SettingsWindow(QWidget *parent = nullptr);
+    void addSection(const QString &label, QWidget *content, const QString &keywords = {});
+    void showSection(int index);
+private:
+    void filter(const QString &text);
+    QLineEdit *search_;
+    QListWidget *list_;
+    QStackedWidget *pages_;
+    QStringList keywords_;
 };
 class STACKJUNKIE_EXPORT Drawer : public QFrame {
 public:
@@ -200,6 +244,10 @@ public:
     int addPage(const QString &title, QWidget *page, const QString &iconName = QStringLiteral("grid"), int section = -1);
     void setCurrentSection(int section);
     void setSettingsSection(int section);
+    /** The rail's gear calls this instead of switching sections. Use it to open a SettingsWindow. */
+    void setSettingsHandler(std::function<void()> handler);
+    /** Let people drag the sidebar to any width. */ void setResizable(bool resizable);
+    /** Let people hide the sidebar with the menu control. */ void setCollapsible(bool collapsible);
     void setSectionVisible(int section, bool visible);
     void setRailVisible(bool visible);
     void setCurrentPage(int index);
@@ -233,7 +281,27 @@ private:
     QLabel *heading_;
     IconButton *collapse_;
     int savedWidth_ = 220;
+    std::function<void()> settingsHandler_;
 
+};
+// The standard frame every Stack Junkie app uses: rail, sidebar, Settings window with Appearance and About.
+// Apps supply sections, pages, and their own settings sections.
+class STACKJUNKIE_EXPORT AppShell : public Workspace {
+public:
+    AppShell(const QString &name, const QString &description, const QString &version, QWidget *parent = nullptr);
+    SettingsWindow *settingsWindow() const { return settings_; }
+    /** Product settings appear before the built-in Appearance and About sections. Call before show(). */
+    void addSettingsSection(const QString &label, QWidget *content, const QString &keywords = {});
+    void setDark(bool dark);
+    bool isDark() const { return dark_; }
+protected:
+    void showEvent(QShowEvent *event) override;
+private:
+    void finishSettings();
+    SettingsWindow *settings_;
+    QString name_, description_, version_;
+    bool dark_ = true;
+    bool settingsFinished_ = false;
 };
 STACKJUNKIE_EXPORT QLabel *heading(const QString &text, QWidget *parent = nullptr);
 STACKJUNKIE_EXPORT QLabel *paragraph(const QString &text, QWidget *parent = nullptr);

@@ -16,6 +16,7 @@
 #include <QMessageBox>
 #include <QSettings>
 #include <QTimer>
+#include <QShortcut>
 #include <cstdio>
 #include <cstring>
 #include <exception>
@@ -72,7 +73,9 @@ int main(int argc, char *argv[]) {
         for (const auto &value : families) {
             const auto family = value.toObject();
             const auto familyId = family.value(QStringLiteral("id")).toString();
-            const int section = window.addSection(family.value(QStringLiteral("label")).toString(), family.value(QStringLiteral("icon")).toString(QStringLiteral("grid")));
+            // Settings owns the only gear, so Product layouts uses its own icon.
+            const QString iconName = family.value(QStringLiteral("icon")).toString(QStringLiteral("grid"));
+            const int section = window.addSection(family.value(QStringLiteral("label")).toString(), iconName);
             if (familyId == QStringLiteral("foundations")) window.setSectionVisible(section, false);
             for (const auto &entry : family.value(QStringLiteral("components")).toArray()) {
                 const auto spec = entry.toObject();
@@ -86,22 +89,28 @@ int main(int argc, char *argv[]) {
         QWidget *comparison = makeComparison();
         const int appearance = window.addSection(QStringLiteral("Appearance"), QStringLiteral("grid"));
         const int compareIndex = window.addPage(QStringLiteral("Compare directions"), comparison, QStringLiteral("grid"), appearance);
+        window.setSectionVisible(appearance, false); // Reached from Settings, not the rail.
         pageIds << QStringLiteral("compare");
         QObject::connect(comparisonButton, &QPushButton::clicked, &window, [&window, compareIndex] { window.setCurrentPage(compareIndex); });
-        const int settingsSection = window.addSection(QStringLiteral("Settings"), QStringLiteral("settings"));
-        window.setSettingsSection(settingsSection);
+        // Settings is a window over the app, never a page: section list and search, changes apply immediately.
+        auto *settingsWindow = new SettingsWindow(&window);
         auto *appearancePage = new SettingsPage(QStringLiteral("Appearance"));
-        appearancePage->contentLayout()->addWidget(new Field(QStringLiteral("Color theme"), mode));
-        auto *showcaseNote = paragraph(QStringLiteral("Showcase only · these comparison controls are excluded from the imported UI library."));
+        appearancePage->contentLayout()->addWidget(new Field(QStringLiteral("Theme"), mode, QStringLiteral("Choose the light or dark appearance.")));
+        auto *showcaseNote = paragraph(QStringLiteral("Showcase only. The setting below compares candidates and is not part of the imported UI library."));
         showcaseNote->setProperty("sjRole", "muted"); appearancePage->contentLayout()->addWidget(showcaseNote);
         appearancePage->contentLayout()->addWidget(new Field(QStringLiteral("Design direction"), direction));
         appearancePage->contentLayout()->addWidget(comparisonButton);
-        appearancePage->contentLayout()->addWidget(paragraph(QStringLiteral("Drag a sidebar divider to resize it. Arrow keys adjust a focused divider. Collapse and reopen the sidebar to restore its width.")));
-        window.addPage(QStringLiteral("Appearance"), appearancePage, QStringLiteral("settings"), settingsSection);
-        pageIds << QStringLiteral("settings/appearance");
+        settingsWindow->addSection(QStringLiteral("Appearance"), appearancePage, QStringLiteral("theme dark light mode color direction"));
+        auto *keyboardPage = new SettingsPage(QStringLiteral("Keyboard"));
+        keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Drag a sidebar divider to resize it. Arrow keys adjust a focused divider.")));
+        keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Control comma opens Settings. In a row of open documents, Control W closes the current tab.")));
+        settingsWindow->addSection(QStringLiteral("Keyboard"), keyboardPage, QStringLiteral("shortcuts keys resize"));
         auto *aboutLogo = new QLabel; aboutLogo->setFixedSize(44, 44); aboutLogo->setProperty("sjBrandSize", 44); aboutLogo->setAccessibleName(QStringLiteral("Stack Junkie"));
-        window.addPage(QStringLiteral("About"), new AboutPage(QStringLiteral("Stack Junkie UI"), QStringLiteral("A living collection of reusable interface components, layouts and interactions."), QStringLiteral(STACKJUNKIE_VERSION), aboutLogo), QStringLiteral("help"), settingsSection);
-        pageIds << QStringLiteral("settings/about");
+        settingsWindow->addSection(QStringLiteral("About"), new AboutPage(QStringLiteral("Stack Junkie UI"), QStringLiteral("A living collection of reusable interface components, layouts and interactions."), QStringLiteral(STACKJUNKIE_VERSION), aboutLogo), QStringLiteral("version copyright"));
+        auto openSettings = [settingsWindow] { settingsWindow->show(); settingsWindow->raise(); settingsWindow->activateWindow(); };
+        window.setSettingsHandler(openSettings);
+        QObject::connect(new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), &window), &QShortcut::activated, &window, openSettings);
+        QObject::connect(comparisonButton, &QPushButton::clicked, settingsWindow, &QDialog::close);
         const int homeSection = window.addSection(QStringLiteral("Home"));
         window.setSectionVisible(homeSection, false);
         auto *homePage = new SettingsPage(QStringLiteral("Stack Junkie UI"));
@@ -135,7 +144,8 @@ int main(int argc, char *argv[]) {
         const QString chosenTheme = parser.isSet(QStringLiteral("theme")) ? parser.value(QStringLiteral("theme")) : settings.value(QStringLiteral("theme"), QStringLiteral("dark")).toString();
         if (chosenTheme != QStringLiteral("light") && chosenTheme != QStringLiteral("dark")) { std::fprintf(stderr, "Unknown theme\n"); return 2; }
         mode->setCurrentIndex(chosenTheme == QStringLiteral("dark") ? 1 : 0);
-        if (parser.isSet(QStringLiteral("page"))) {
+        const bool exportSettings = parser.value(QStringLiteral("page")) == QStringLiteral("settings");
+        if (parser.isSet(QStringLiteral("page")) && !exportSettings) {
             const QString requested = parser.value(QStringLiteral("page"));
             int index = pageIds.indexOf(requested);
             if (index < 0) for (int i = 0; i < pageIds.size(); ++i) if (pageIds[i].startsWith(requested + QStringLiteral("/"))) { index = i; break; }
@@ -168,8 +178,9 @@ int main(int argc, char *argv[]) {
             if (!widthOk || !heightOk || imageWidth < 480 || imageHeight < 460 || imageWidth > 8192 || imageHeight > 8192) { std::fprintf(stderr, "Invalid export dimensions\n"); return 2; }
             window.resize(imageWidth, imageHeight);
             window.show();
-            QTimer::singleShot(100, &window, [&window, destination, &app] {
-                const bool saved = window.grab().save(destination, "PNG");
+            if (exportSettings) settingsWindow->show();
+            QTimer::singleShot(150, &window, [&window, destination, &app, settingsWindow, exportSettings] {
+                const bool saved = (exportSettings ? settingsWindow->grab() : window.grab()).save(destination, "PNG");
                 if (!saved) std::fprintf(stderr, "Cannot save preview PNG\n");
                 app.exit(saved ? 0 : 3);
             });

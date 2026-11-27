@@ -8,6 +8,9 @@
 #include <QGraphicsView>
 #include <QHBoxLayout>
 #include <QKeyEvent>
+#include <QListWidget>
+#include <QStackedWidget>
+#include <QTabBar>
 #include <QPainter>
 #include <QPainterPath>
 #include <QSignalBlocker>
@@ -22,21 +25,101 @@ static Theme currentTheme(const QWidget *widget) {
         if (scope->property("sjDirection").isValid()) return Theme::load(scope->property("sjDirection").toString(), scope->property("sjDark").toBool());
     return Theme::load();
 }
-GroupedTabs::GroupedTabs(QWidget *parent) : QWidget(parent), groups_(new Tabs(this)) {
-    auto *layout = new QVBoxLayout(this);
-    layout->setContentsMargins(0, 0, 0, 0);
-    groups_->setAccessibleName(QStringLiteral("Document groups"));
-    layout->addWidget(groups_);
+GroupedTabs::GroupedTabs(QWidget *parent): Tabs(parent) {
+    setAccessibleName(QStringLiteral("Document groups"));
+    // A group chip is a tab in the same row. Choosing it collapses or expands the group and keeps the previous tab selected.
+    connect(tabBar(), &QTabBar::tabBarClicked, this, [this](int index) {
+        if (rebuilding_ || index < 0) return;
+        const QVariant group = tabBar()->tabData(index);
+        if (!group.isValid()) return;
+        setGroupCollapsed(group.toInt(), !groups_[group.toInt()].collapsed);
+    });
+    connect(this, &QTabWidget::currentChanged, this, [this](int index) {
+        if (rebuilding_ || index < 0 || !tabBar()->tabData(index).isValid()) return;
+        for (int i = index + 1; i < count(); ++i) if (!tabBar()->tabData(i).isValid()) { setCurrentIndex(i); return; }
+        for (int i = index - 1; i >= 0; --i) if (!tabBar()->tabData(i).isValid()) { setCurrentIndex(i); return; }
+    });
 }
-int GroupedTabs::addGroup(const QString &name) {
-    auto *tabs = new Tabs(groups_);
-    tabs->setMovable(true);
-    tabs->setAccessibleName(name + QStringLiteral(" documents"));
-    return groups_->addTab(tabs, name);
-}
+int GroupedTabs::addGroup(const QString &name) { groups_.append({name, false, {}}); rebuild(); return groups_.size() - 1; }
 int GroupedTabs::addTab(int group, const QString &title, QWidget *page) {
-    auto *tabs = qobject_cast<QTabWidget *>(groups_->widget(group));
-    return tabs ? tabs->addTab(page, title) : -1;
+    if (group < 0 || group >= groups_.size()) return -1;
+    groups_[group].tabs.append({title, page}); rebuild(); return indexOf(page);
+}
+void GroupedTabs::setGroupCollapsed(int group, bool collapsed) {
+    if (group < 0 || group >= groups_.size()) return;
+    groups_[group].collapsed = collapsed; rebuild();
+}
+void GroupedTabs::rebuild() {
+    rebuilding_ = true;
+    QWidget *current = currentWidget();
+    while (count()) { QWidget *page = widget(0); removeTab(0); if (page && page->property("sjGroupChip").toBool()) page->deleteLater(); }
+    const QColor accent = currentTheme(this).color(QStringLiteral("accent"));
+    for (int g = 0; g < groups_.size(); ++g) {
+        auto *chip = new QWidget; chip->setProperty("sjGroupChip", true);
+        const int at = QTabWidget::addTab(chip, groups_[g].name);
+        tabBar()->setTabData(at, g); tabBar()->setTabTextColor(at, accent);
+        tabBar()->setTabIcon(at, icon(groups_[g].collapsed ? QStringLiteral("chevron-right") : QStringLiteral("chevron-down"), accent, 14));
+        tabBar()->setTabToolTip(at, (groups_[g].collapsed ? QStringLiteral("Show ") : QStringLiteral("Collapse ")) + groups_[g].name);
+        for (const auto &[title, page] : groups_[g].tabs) if (!groups_[g].collapsed || page == current) QTabWidget::addTab(page, title);
+    }
+    rebuilding_ = false;
+    const int keep = current ? indexOf(current) : -1;
+    if (keep >= 0) setCurrentIndex(keep);
+    else for (int i = 0; i < count(); ++i) if (!tabBar()->tabData(i).isValid()) { setCurrentIndex(i); break; }
+}
+TabBoundary::TabBoundary(QWidget *content, QWidget *parent): QFrame(parent) {
+    setProperty("sjRole", "panel"); setProperty("sjTabBoundary", true);
+    auto *layout = new QVBoxLayout(this); layout->setContentsMargins(Theme::spacing(2), Theme::spacing(2), Theme::spacing(2), Theme::spacing(2));
+    layout->addWidget(content);
+}
+NavTree::NavTree(const QString &label, QWidget *parent): QTreeWidget(parent) {
+    setProperty("sjRole", "navTree"); setAccessibleName(label);
+    setHeaderHidden(true); setRootIsDecorated(true); setIndentation(14); setUniformRowHeights(true);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    connect(this, &QTreeWidget::currentItemChanged, this, [this](QTreeWidgetItem *item) {
+        if (item && item->parent()) emit pageChosen(item->data(0, Qt::UserRole).toString());
+    });
+    connect(this, &QTreeWidget::itemClicked, this, [](QTreeWidgetItem *item) { if (!item->parent()) item->setExpanded(!item->isExpanded()); });
+}
+void NavTree::addGroup(const QString &id, const QString &label, const QList<QPair<QString, QString>> &items) {
+    auto *group = new QTreeWidgetItem(this, {QStringLiteral("%1   %2").arg(label).arg(items.size())});
+    group->setData(0, Qt::UserRole, id); group->setFlags(Qt::ItemIsEnabled);
+    for (const auto &[itemId, itemLabel] : items) { auto *item = new QTreeWidgetItem(group, {itemLabel}); item->setData(0, Qt::UserRole, itemId); }
+    group->setExpanded(true);
+}
+void NavTree::setCurrentId(const QString &id) {
+    QSignalBlocker blocker(this);
+    for (int g = 0; g < topLevelItemCount(); ++g) for (int i = 0; i < topLevelItem(g)->childCount(); ++i)
+        if (topLevelItem(g)->child(i)->data(0, Qt::UserRole).toString() == id) { setCurrentItem(topLevelItem(g)->child(i)); topLevelItem(g)->setExpanded(true); return; }
+}
+SettingsWindow::SettingsWindow(QWidget *parent): QDialog(parent), search_(new SearchField(QStringLiteral("Search settings"))), list_(new QListWidget), pages_(new QStackedWidget) {
+    setWindowTitle(QStringLiteral("Settings")); setModal(true); resize(760, 520);
+    auto *layout = new QHBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(0);
+    auto *nav = new QFrame; nav->setProperty("sjRole", "settingsNav"); nav->setFixedWidth(200);
+    auto *navLayout = new QVBoxLayout(nav); navLayout->setContentsMargins(Theme::spacing(1), Theme::spacing(1), Theme::spacing(1), Theme::spacing(1));
+    search_->setPlaceholderText(QStringLiteral("Search settings"));
+    list_->setProperty("sjRole", "navigation"); list_->setAccessibleName(QStringLiteral("Settings sections"));
+    navLayout->addWidget(search_); navLayout->addWidget(list_, 1);
+    layout->addWidget(nav); layout->addWidget(pages_, 1);
+    connect(list_, &QListWidget::currentRowChanged, this, [this](int row) { if (auto *item = list_->item(row)) pages_->setCurrentIndex(item->data(Qt::UserRole).toInt()); });
+    connect(search_, &QLineEdit::textChanged, this, &SettingsWindow::filter);
+}
+void SettingsWindow::addSection(const QString &label, QWidget *content, const QString &keywords) {
+    const int index = pages_->addWidget(content);
+    auto *item = new QListWidgetItem(label, list_); item->setData(Qt::UserRole, index);
+    keywords_.append(label + QStringLiteral(" ") + keywords);
+    if (list_->count() == 1) list_->setCurrentRow(0);
+}
+void SettingsWindow::showSection(int index) { if (index >= 0 && index < list_->count()) list_->setCurrentRow(index); }
+void SettingsWindow::filter(const QString &text) {
+    const QString needle = text.trimmed();
+    int first = -1;
+    for (int row = 0; row < list_->count(); ++row) {
+        const bool match = needle.isEmpty() || keywords_[row].contains(needle, Qt::CaseInsensitive);
+        list_->item(row)->setHidden(!match);
+        if (match && first < 0) first = row;
+    }
+    if (list_->currentItem() && list_->currentItem()->isHidden() && first >= 0) list_->setCurrentRow(first);
 }
 Drawer::Drawer(QWidget *host, const QString &title, QWidget *content, Edge edge) : QFrame(host), edge_(edge) {
     setProperty("sjRole", "panel");

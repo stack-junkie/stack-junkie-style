@@ -377,7 +377,7 @@
             "focus",
             "disabled"
           ],
-          "usage": "Compose a section rail and contextual sidebar. Preserve each section selection; provide pointer and keyboard width adjustment, collapse and restore."
+          "usage": "Compose a section rail and a sidebar listing every page of the area, as a collapsible tree (NavTree) when there are many. Preserve each section selection; provide pointer and keyboard width adjustment, collapse and restore. The expanded sidebar pushes the work area and never becomes an overlay."
         },
         {
           "id": "tabs",
@@ -396,7 +396,7 @@
             "active",
             "selected"
           ],
-          "usage": "Use connected peer-view tabs with a top active edge and shared content surface; keep panels mounted and associate each tab with its panel."
+          "usage": "Use one row of connected peer-view or document tabs with a top active edge and shared content surface; keep panels mounted and associate each tab with its panel. Never stack a tab row under or inside another; groups stay in the same row and document tabs close immediately."
         },
         {
           "id": "breadcrumbs",
@@ -829,7 +829,7 @@
           "usage": "Compose the same components for the product task, retaining capabilities."
         }
       ],
-      "icon": "settings"
+      "icon": "layout"
     }
   ],
   "layouts": [
@@ -856,7 +856,7 @@
     {
       "id": "workbench",
       "label": "Editor / workbench",
-      "description": "Section rail, contextual sidebar, peer tabs and inspector."
+      "description": "Section rail, collapsible sidebar tree, one row of open documents and a bottom panel."
     },
     {
       "id": "publication",
@@ -878,14 +878,14 @@
     {
       "id": "settings/appearance",
       "label": "Appearance settings",
-      "component": "SettingsPage",
-      "usage": "Theme belongs in Settings. Showcase comparison controls are local to the showcase and excluded from library exports."
+      "component": "SettingsWindow",
+      "usage": "A section of SettingsWindow, opened from the gear or Control comma. Theme belongs here. Showcase comparison controls are local to the showcase and excluded from library exports."
     },
     {
       "id": "settings/about",
       "label": "About",
-      "component": "AboutPage",
-      "usage": "Product identity is prominent; persistent Stack Junkie Style attribution is compact and reads the imported library version."
+      "component": "SettingsWindow",
+      "usage": "A section of SettingsWindow, filled by AboutSection. Product identity is prominent; persistent Stack Junkie Style attribution is compact and reads the imported library version."
     }
   ]
 }

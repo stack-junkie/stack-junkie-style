@@ -26,6 +26,10 @@
 #include <QTextDocument>
 #include <QAbstractTextDocumentLayout>
 #include <QFontMetrics>
+#include <QComboBox>
+#include <QShortcut>
+#include <QShowEvent>
+#include <QtGlobal>
 
 namespace StackJunkie {
 ReadingView::ReadingView(const QString &html, QWidget *parent) : QTextBrowser(parent), sourceHtml_(html) {
@@ -367,6 +371,38 @@ Tabs::Tabs(QWidget *parent) : QTabWidget(parent) {
     setUsesScrollButtons(true);
     setElideMode(Qt::ElideNone);
 }
+void Tabs::setDocumentTabs(bool closable) {
+    setTabsClosable(closable); setMovable(closable);
+    for (int i = 0; i < count(); ++i) tabInserted(i);
+    if (closable) {
+        connect(this, &QTabWidget::tabCloseRequested, this, [this](int index) { removeTab(index); }, Qt::UniqueConnection);
+        auto *close = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), this, nullptr, nullptr, Qt::WidgetWithChildrenShortcut);
+        connect(close, &QShortcut::activated, this, [this] { if (currentIndex() >= 0) emit tabCloseRequested(currentIndex()); });
+    }
+}
+// Closable tabs use the library's quiet close icon instead of the platform's default button.
+void Tabs::tabInserted(int index) {
+    QTabWidget::tabInserted(index);
+    if (!tabsClosable()) return;
+    QWidget *page = widget(index);
+    auto *close = new IconButton(QStringLiteral("close"), QStringLiteral("Close ") + tabText(index));
+    close->setProperty("sjVariant", "quiet"); close->setProperty("sjRole", "tabClose"); close->setFixedSize(18, 18); close->setIconSize(QSize(12, 12));
+    close->setFocusPolicy(Qt::NoFocus);
+    connect(close, &QToolButton::clicked, this, [this, page] { const int at = indexOf(page); if (at >= 0) emit tabCloseRequested(at); });
+    tabBar()->setTabButton(index, QTabBar::RightSide, close);
+}
+void Tabs::showEvent(QShowEvent *event) {
+    QTabWidget::showEvent(event);
+#ifndef NDEBUG
+    for (QWidget *scope = parentWidget(); scope; scope = scope->parentWidget()) {
+        if (scope->property("sjTabBoundary").toBool()) break;
+        if (qobject_cast<QTabWidget *>(scope)) {
+            qWarning("Stack Junkie UI: tab row \"%s\" sits inside another tab page. Stacked tab rows are not allowed; use the sidebar tree, a toolbar toggle or a TabBoundary frame.", qPrintable(accessibleName()));
+            break;
+        }
+    }
+#endif
+}
 SettingsPage::SettingsPage(const QString &title, QWidget *parent) : QScrollArea(parent) {
     setWidgetResizable(true); setFrameShape(QFrame::NoFrame);
     auto *body = new QWidget;
@@ -435,7 +471,10 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     settingsButton_->setFixedSize(Theme::density(QStringLiteral("railWidth"), 48) - 8, Theme::density(QStringLiteral("contextHeight"), 36));
     settingsButton_->setProperty("sjVariant", "quiet");
     railLayout->addWidget(settingsButton_, 0, Qt::AlignHCenter);
-    connect(settingsButton_, &QToolButton::clicked, this, [this] { if (settingsSection_ >= 0) { setCurrentSection(settingsSection_); setSidebarVisible(true); } });
+    connect(settingsButton_, &QToolButton::clicked, this, [this] {
+        if (settingsHandler_) { settingsButton_->setChecked(false); settingsHandler_(); return; }
+        if (settingsSection_ >= 0) { setCurrentSection(settingsSection_); setSidebarVisible(true); }
+    });
     body->addWidget(railContainer_);
     splitter_ = new SplitPane(this);
     splitter_->setHandleWidth(5);
@@ -483,6 +522,18 @@ void Workspace::setSettingsSection(int section) {
     if (settingsSection_ >= 0) rail_->item(settingsSection_)->setHidden(false);
     settingsSection_ = section; rail_->item(section)->setHidden(true); settingsButton_->show();
 }
+void Workspace::setSettingsHandler(std::function<void()> handler) {
+    settingsHandler_ = std::move(handler);
+    settingsButton_->setCheckable(!settingsHandler_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
+}
+void Workspace::setResizable(bool resizable) {
+    splitter_->setHandleWidth(resizable ? 5 : 1);
+    if (auto *handle = splitter_->handle(1)) { handle->setEnabled(resizable); handle->setCursor(resizable ? Qt::SplitHCursor : Qt::ArrowCursor); }
+}
+void Workspace::setCollapsible(bool collapsible) {
+    collapse_->setVisible(collapsible);
+    if (!collapsible) setSidebarVisible(true);
+}
 void Workspace::setSectionVisible(int section, bool visible) {
     if (section >= 0 && section < rail_->count()) rail_->item(section)->setHidden(!visible);
 }
@@ -492,7 +543,7 @@ void Workspace::setRailVisible(bool visible) {
     else qobject_cast<QHBoxLayout *>(toolbar_->layout())->insertWidget(0, collapse_);
     collapse_->show();
     auto *target = visible ? qobject_cast<QVBoxLayout *>(railContainer_->layout()) : qobject_cast<QVBoxLayout *>(sidebar_->layout());
-    target->addWidget(settingsButton_); settingsButton_->setVisible(settingsSection_ >= 0);
+    target->addWidget(settingsButton_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
     if (!visible) setSidebarVisible(true);
 }
 int Workspace::addPage(const QString &title, QWidget *page, const QString &iconName, int section) {
@@ -552,7 +603,7 @@ void Workspace::setSidebarVisible(bool visible) {
     sidebar_->setVisible(visible);
     if (railContainer_->isHidden()) {
         auto *target = visible ? qobject_cast<QVBoxLayout *>(sidebar_->layout()) : qobject_cast<QVBoxLayout *>(layout());
-        target->addWidget(settingsButton_); settingsButton_->setVisible(settingsSection_ >= 0);
+        target->addWidget(settingsButton_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
     }
     collapse_->setChecked(visible);
     if (visible) splitter_->setSizes({savedWidth_, qMax(0, splitter_->width() - savedWidth_)});
@@ -584,6 +635,31 @@ void Workspace::saveSettings(const QString &key) const {
 }
 void Workspace::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
+}
+AppShell::AppShell(const QString &name, const QString &description, const QString &version, QWidget *parent)
+    : Workspace(parent), settings_(new SettingsWindow(this)), name_(name), description_(description), version_(version) {
+    setHeader(name);
+    setSettingsHandler([this] { finishSettings(); settings_->show(); settings_->raise(); });
+    auto *open = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), this);
+    connect(open, &QShortcut::activated, this, [this] { finishSettings(); settings_->show(); settings_->raise(); });
+}
+void AppShell::addSettingsSection(const QString &label, QWidget *content, const QString &keywords) { settings_->addSection(label, content, keywords); }
+void AppShell::setDark(bool dark) {
+    dark_ = dark;
+    const auto theme = Theme::load(QStringLiteral("clean"), dark);
+    theme.apply(this);
+}
+void AppShell::showEvent(QShowEvent *event) { finishSettings(); Workspace::showEvent(event); }
+void AppShell::finishSettings() {
+    if (settingsFinished_) return;
+    settingsFinished_ = true;
+    auto *appearance = new SettingsPage(QStringLiteral("Appearance"));
+    auto *mode = new QComboBox; mode->setAccessibleName(QStringLiteral("Color theme"));
+    mode->addItems({QStringLiteral("Dark"), QStringLiteral("Light")}); mode->setCurrentIndex(dark_ ? 0 : 1);
+    connect(mode, &QComboBox::currentIndexChanged, this, [this](int index) { setDark(index == 0); });
+    appearance->contentLayout()->addWidget(new Field(QStringLiteral("Theme"), mode, QStringLiteral("Choose the light or dark appearance.")));
+    settings_->addSection(QStringLiteral("Appearance"), appearance, QStringLiteral("theme dark light mode color"));
+    settings_->addSection(QStringLiteral("About"), new AboutPage(name_, description_, version_), QStringLiteral("version copyright"));
 }
 QLabel *heading(const QString &text, QWidget *parent) {
     auto *label = new QLabel(text, parent);

@@ -1,5 +1,15 @@
 # Stack Junkie UI changelog
 
+## 3.0.0-preview.10
+
+- Swap the next web and native versions in. There is one web library and one native library again.
+- Settings is a window (`SettingsWindow`) opened from the gear or Control comma, never a page.
+- No stacked tab rows: groups sit in one row, document tabs close immediately, and debug builds warn about a tab row inside another. `TabBoundary` marks real visual breaks.
+- Add `NavTree` for the sidebar tree and `AppShell` as the standard frame on web and native. The web showcase runs on `AppShell`.
+- Clean utility's dark mode is true black with thin borders and near-white text; light mode is one white ground with thin borders. The values now live in the shared tokens.
+- Product layouts use their own `layout` icon. The workbench is the reference for many-page apps: rail, sidebar tree, one row of open documents and a bottom panel.
+- The expanded sidebar always pushes the work area and never becomes an overlay.
+
 ## 3.0.0-preview.9
 
 - Make the header SJ mark open Home, with Foundations accessible there instead of the top rail icon.

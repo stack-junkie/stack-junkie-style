@@ -150,17 +150,24 @@ QListWidget::item, QTreeView::item, QTableView::item { padding: 6px; min-height:
 QListWidget::item:hover, QTreeView::item:hover { background: @raised; }
 QListWidget[sjRole="navigation"], QListWidget[sjRole="rail"] { background: @canvas; border: 0; outline: 0; }
 QListWidget[sjRole="navigation"] { font-size: @chromepx; }
-QListWidget[sjRole="navigation"]::item { padding: 0 @controlPaddingXpx; min-height: @navRowHeightpx; }
+QListWidget[sjRole="navigation"]::item { padding: 0 @controlPaddingXpx; min-height: @navRowHeightpx; border-left: 3px solid transparent; }
 QListWidget[sjRole="rail"]::item { padding: 0; }
 QListWidget[sjRole="navigation"]::item:selected, QListWidget[sjRole="rail"]::item:selected { background: @selection; border-left: 3px solid @accent; }
+QTreeWidget[sjRole="navTree"] { background: @canvas; border: 0; outline: 0; font-size: @chromepx; }
+QTreeWidget[sjRole="navTree"]::item { min-height: @navRowHeightpx; padding: 0 4px; }
+QTreeWidget[sjRole="navTree"]::item:selected { background: @selection; color: @accent; }
 QHeaderView::section { background: @raised; color: @muted; border: 0; border-bottom: @metricBorderWidthpx solid @border; padding: 8px; text-align: left; }
 QScrollArea { border: 0; background: @surface; }
 QScrollArea > QWidget, QScrollArea > QWidget > QWidget { background: @surface; }
-QScrollBar:vertical { background: @canvas; width: 12px; margin: 0; }
+QDialog { background: @surface; }
+QFrame[sjRole="settingsNav"] { background: @canvas; border: 0; border-right: 1px solid @border; }
+QToolButton[sjRole="tabClose"] { border: 0; padding: 0; min-height: 0; background: transparent; }
+QToolButton[sjRole="tabClose"]:hover { background: @raised; }
+QScrollBar:vertical { background: @canvas; width: 8px; margin: 0; }
 QScrollBar::handle:vertical { background: @border; min-height: 28px; border-radius: 4px; margin: 2px; }
 QScrollBar::handle:vertical:hover { background: @muted; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
-QScrollBar:horizontal { background: @canvas; height: 12px; margin: 0; }
+QScrollBar:horizontal { background: @canvas; height: 8px; margin: 0; }
 QScrollBar::handle:horizontal { background: @border; min-width: 28px; border-radius: 4px; margin: 2px; }
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
 QSlider::groove:horizontal { height: 4px; background: @border; border-radius: 2px; }
@@ -169,7 +176,9 @@ QSlider::sub-page:horizontal { background: @accent; }
 QSlider:focus { border: 1px solid @focus; }
 QProgressBar { border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; background: @raised; text-align: center; min-height: 20px; }
 QProgressBar::chunk { background: @accent; border-radius: @radiuspx; }
-QSplitter::handle { background: @border; }
+QSplitter::handle { background: transparent; }
+QSplitter::handle:horizontal { border-left: 1px solid @border; }
+QSplitter::handle:vertical { border-top: 1px solid @border; }
 QSplitter::handle:hover { background: @accent; }
 QSplitter::handle:focus { background: @focus; border: 1px solid @text; }
 QMenu, QToolTip { background: @surface; color: @text; border: @metricBorderWidthpx solid @border; padding: 4px; }

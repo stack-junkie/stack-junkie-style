@@ -311,8 +311,12 @@ QWidget *component(const QString &id) {
         groups->addTab(work, QStringLiteral("Draft"), new QPlainTextEdit(QStringLiteral("Editable draft in the Workspace group.")));
         groups->addTab(work, QStringLiteral("Notes"), new QPlainTextEdit(QStringLiteral("Notes remain here when another group is selected.")));
         groups->addTab(reference, QStringLiteral("Tokens"), new CodeBlock(QStringLiteral("Shared tokens are embedded from tokens.json.")));
-        groups->addTab(reference, QStringLiteral("Usage"), paragraph(QStringLiteral("Groups organize document sets. Inner tabs switch peer documents.")));
-        return vertical({heading(QStringLiteral("Page tabs")), tabs(), heading(QStringLiteral("Grouped documents")), groups});
+        groups->addTab(reference, QStringLiteral("Usage"), paragraph(QStringLiteral("Group chips sit in the same row. Choose one to collapse its tabs.")));
+        groups->setMinimumHeight(160);
+        auto *open = new Tabs; open->setAccessibleName(QStringLiteral("Open documents")); open->setDocumentTabs(true);
+        for (const auto &name : {QStringLiteral("Spacing study"), QStringLiteral("Control states"), QStringLiteral("Layout notes")}) open->addTab(new QPlainTextEdit(name + QStringLiteral(" stays as you left it while you switch tabs.")), name);
+        open->setMinimumHeight(160);
+        return vertical({heading(QStringLiteral("Page tabs")), tabs(), heading(QStringLiteral("Grouped in one row")), groups, heading(QStringLiteral("Open documents")), open});
     }
     if (id == "breadcrumbs") { auto *home = new Button(QStringLiteral("Library"), ButtonVariant::Quiet); auto *project = new Button(QStringLiteral("Project"), ButtonVariant::Quiet); auto *status = new QLabel(QStringLiteral("Current: Document")); QObject::connect(home, &QPushButton::clicked, status, [status] { status->setText(QStringLiteral("Current: Library")); }); QObject::connect(project, &QPushButton::clicked, status, [status] { status->setText(QStringLiteral("Current: Project")); }); return vertical({row({home, new QLabel(QStringLiteral("/")), project, new QLabel(QStringLiteral("/ Document"))}), status}); }
     if (id == "pagination") { auto *page = new QSpinBox; page->setRange(1, 12); page->setAccessibleName(QStringLiteral("Current page")); auto *previous = new Button(QStringLiteral("Previous")); auto *next = new Button(QStringLiteral("Next")); QObject::connect(previous, &QPushButton::clicked, page, [page] { page->setValue(page->value() - 1); }); QObject::connect(next, &QPushButton::clicked, page, [page] { page->setValue(page->value() + 1); }); auto update = [=](int n) { previous->setEnabled(n > 1); next->setEnabled(n < 12); }; QObject::connect(page, &QSpinBox::valueChanged, page, update); update(1); return row({previous, page, new QLabel(QStringLiteral("of 12")), next}); }
@@ -377,6 +381,36 @@ QWidget *component(const QString &id) {
 }
 }
 
+// The reference organization for apps with many pages: rail for areas, a collapsible tree for every page,
+// one row of open documents, and a bottom panel with its own tabs in a separate region.
+static QWidget *workbench() {
+    auto *frame = new QWidget; auto *outer = new QHBoxLayout(frame); outer->setContentsMargins(0, 0, 0, 0); outer->setSpacing(0);
+    auto *rail = new QWidget; auto *railLayout = new QVBoxLayout(rail); railLayout->setContentsMargins(4, 4, 4, 4);
+    for (const auto &[name, label] : QList<QPair<QString, QString>>{{QStringLiteral("folder"), QStringLiteral("Explorer")}, {QStringLiteral("search"), QStringLiteral("Search")}}) {
+        auto *button = new IconButton(name, label); button->setProperty("sjVariant", "quiet"); railLayout->addWidget(button);
+    }
+    railLayout->addStretch();
+    auto *tree = new NavTree(QStringLiteral("Explorer"));
+    tree->addGroup(QStringLiteral("documents"), QStringLiteral("Documents"), {{QStringLiteral("spacing"), QStringLiteral("Spacing study")}, {QStringLiteral("states"), QStringLiteral("Control states")}, {QStringLiteral("notes"), QStringLiteral("Layout notes")}});
+    tree->addGroup(QStringLiteral("references"), QStringLiteral("References"), {{QStringLiteral("keys"), QStringLiteral("Keyboard map")}, {QStringLiteral("colors"), QStringLiteral("Color roles")}});
+    tree->setMinimumWidth(170);
+    auto *documents = new Tabs; documents->setAccessibleName(QStringLiteral("Open documents")); documents->setDocumentTabs(true);
+    auto *panel = new Tabs; panel->setAccessibleName(QStringLiteral("Panel"));
+    auto *output = new CodeBlock(QStringLiteral("Opened Spacing study, Layout notes")); panel->addTab(output, QStringLiteral("Output"));
+    panel->addTab(paragraph(QStringLiteral("No problems.")), QStringLiteral("Problems"));
+    auto open = [documents](const QString &id, const QString &title) {
+        for (int i = 0; i < documents->count(); ++i) if (documents->widget(i)->objectName() == id) { documents->setCurrentIndex(i); return; }
+        auto *editor = new QPlainTextEdit(title + QStringLiteral("\n\nEdit freely; text stays while you switch documents.")); editor->setObjectName(id);
+        documents->setCurrentIndex(documents->addTab(editor, title));
+    };
+    open(QStringLiteral("spacing"), QStringLiteral("Spacing study")); open(QStringLiteral("notes"), QStringLiteral("Layout notes")); documents->setCurrentIndex(0);
+    QObject::connect(tree, &NavTree::pageChosen, documents, [tree, open](const QString &id) { if (auto *item = tree->currentItem()) open(id, item->text(0)); });
+    auto *editorArea = new SplitPane(Qt::Vertical); editorArea->addWidget(documents); editorArea->addWidget(panel); editorArea->setSizes({300, 120});
+    auto *main = new SplitPane; main->addWidget(tree); main->addWidget(editorArea); main->setStretchFactor(1, 1); main->setSizes({190, 600});
+    outer->addWidget(rail); outer->addWidget(main, 1);
+    frame->setMinimumHeight(420);
+    return frame;
+}
 QWidget *makeLayout(const QString &id, QWidget *parent) {
     QWidget *result = nullptr;
     if (id == "focused-utility" || id == "embedded") {
@@ -386,7 +420,7 @@ QWidget *makeLayout(const QString &id, QWidget *parent) {
     } else if (id == "multi-tool") {
         auto *shell = new Workspace; shell->setHeader(QStringLiteral("Local tools")); shell->addPage(QStringLiteral("Notes"), new QPlainTextEdit, QStringLiteral("file")); shell->addPage(QStringLiteral("Levels"), slider(), QStringLiteral("settings")); shell->setMinimumHeight(300); result = shell;
     } else if (id == "data") result = table();
-    else if (id == "workbench") result = vertical({tabs(), splitPane()});
+    else if (id == "workbench") result = workbench();
     else if (id == "publication") result = component(QStringLiteral("prose"));
     else if (id == "guided") {
         auto *stack = new QStackedWidget;
@@ -413,7 +447,7 @@ QWidget *makeFamily(const QJsonObject &family, QWidget *parent) {
         for (const auto &value : Theme::catalog().value(QStringLiteral("layouts")).toArray()) {
             const auto spec = value.toObject();
             layout->addWidget(heading(spec.value(QStringLiteral("label")).toString()));
-            layout->addWidget(makeLayout(spec.value(QStringLiteral("id")).toString()));
+            layout->addWidget(new TabBoundary(makeLayout(spec.value(QStringLiteral("id")).toString())));
         }
     } else for (const auto &value : family.value(QStringLiteral("components")).toArray()) {
         const auto spec = value.toObject();
@@ -429,7 +463,7 @@ QWidget *makeFamily(const QJsonObject &family, QWidget *parent) {
         state->setVisible(state->count() > 1);
         auto *reference = new HelpButton(QStringLiteral("About ") + spec.value(QStringLiteral("label")).toString(), spec.value(QStringLiteral("usage")).toString());
         layout->addWidget(row({reference, state}));
-        layout->addWidget(sample, readingPage ? 1 : 0);
+        layout->addWidget(new TabBoundary(sample), readingPage ? 1 : 0);
         auto *validation = new QLabel(QStringLiteral("Enter a valid value to continue."));
         validation->setProperty("sjRole", "error");
         validation->setWordWrap(true);

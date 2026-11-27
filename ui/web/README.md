@@ -24,9 +24,9 @@ The showcase is written to `dist`. The library is written to `dist-library`, wit
 
 ## How to use
 
-Choose a family in the section rail, a component in the contextual sidebar, and Example or Usage and states in its connected tab row. Search spans all component families. Compare directions retains the original shared-input comparison. The comparison uses the same working inputs and results in all three columns. The theme and direction controls apply to the entire catalog. Every direction remains a preview pending owner selection.
+Choose a family in the section rail and a component in the sidebar. The page shows the example, with Usage and states below it. The gear at the bottom of the rail, or Control comma, opens the Settings window: theme, layout, keyboard and About. Search spans all component families. Compare directions retains the original shared-input comparison. The comparison uses the same working inputs and results in all three columns. The theme and direction controls apply to the entire catalog. Every direction remains a preview pending owner selection.
 
-Example edits remain when changing sections or tabs. Reloading resets example edits; direction, theme, per-family component selection, sidebar width and collapse preference are saved in local storage. Narrow screens use the same contextual sidebar as a dismissible overlay rather than shrinking the work area. File selection reads names only. The catalog has no backend and sends no specimen data to a service.
+Example edits remain when changing sections or tabs. Reloading resets example edits; direction, theme, per-family component selection, sidebar width and collapse preference are saved in local storage. The expanded sidebar always takes layout space; at narrow widths or high zoom, the work area moves rather than being covered. File selection reads names only. The catalog has no backend and sends no specimen data to a service.
 
 Keyboard: Tab follows the controls, arrow keys move between tabs, and Escape dismisses dialogs and help. Split-pane dividers accept left/right arrows. Control K (Command K on macOS) opens the command palette. Question-mark help previews on hover/focus and pins on click.
 

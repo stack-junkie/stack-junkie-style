@@ -40,25 +40,28 @@ function InputExample({ id, state }: { id: string; state: string }) {
 
 export function NavigationDemo({ id }: { id: string }) {
   const [tab, setTab] = useState('general'); const [page, setPage] = useState(1); const [selected, setSelected] = useState('files'); const [collapsed, setCollapsed] = useState(false); const [crumb, setCrumb] = useState('Details');
-  if (id === 'tabs') return <UI.Stack gap={24}><div><h3>Peer views</h3><UI.Tabs label="Example settings" value={tab} onChange={setTab} tabs={[{ id: 'general', label: 'General', content: <UI.TextInput label="Document name" defaultValue="Component study" /> }, { id: 'appearance', label: 'Appearance', content: <UI.Checkbox label="Show line numbers" defaultChecked /> }, { id: 'unavailable', label: 'Unavailable', content: null, disabled: true }]} /></div><div><h3>Grouped settings</h3><GroupedTabsDemo /></div></UI.Stack>;
+  if (id === 'tabs') return <UI.Stack gap={24}><div><h3>Peer views</h3><UI.Tabs label="Example settings" value={tab} onChange={setTab} tabs={[{ id: 'general', label: 'General', content: <UI.TextInput label="Document name" defaultValue="Component study" /> }, { id: 'appearance', label: 'Appearance', content: <UI.Checkbox label="Show line numbers" defaultChecked /> }, { id: 'unavailable', label: 'Unavailable', content: null, disabled: true }]} /></div><div><h3>Grouped in one row</h3><GroupedTabsDemo /></div><div><h3>Open documents</h3><ClosableTabsDemo /></div></UI.Stack>;
   if (id === 'pagination') return <UI.Pagination page={page} pages={6} onChange={setPage} />;
   if (id === 'breadcrumbs') return <UI.Breadcrumbs items={[{ label: 'Library', onClick: () => setCrumb('Library') }, { label: 'Components', onClick: () => setCrumb('Components') }, { label: crumb }]} />;
   return <UI.Stack><UI.Button onClick={() => setCollapsed(!collapsed)} aria-expanded={!collapsed}>{collapsed ? 'Expand navigation' : 'Collapse navigation'}</UI.Button><UI.SideNavigation collapsed={collapsed} value={selected} onChange={setSelected} label="Example pages" items={[{ id: 'files', label: 'Files', icon: 'folder' }, { id: 'editor', label: 'Editor', icon: 'code' }, { id: 'settings', label: 'Settings', icon: 'settings' }]} /><p className="sj-muted" role="status">Selected: {selected}</p></UI.Stack>;
 }
 
+// Groups live inside one tab row (like browser tab groups). A second tab row under the first is not allowed.
 function GroupedTabsDemo() {
-  const [group, setGroup] = useState('workspace');
-  const [views, setViews] = useState<Record<string, string>>({ workspace: 'appearance', export: 'format' });
-  return <UI.Tabs label="Settings group" value={group} onChange={setGroup} tabs={[
-    { id: 'workspace', label: 'Workspace', content: <UI.Tabs label="Workspace setting pages" value={views.workspace} onChange={value => setViews(current => ({ ...current, workspace: value }))} tabs={[
-      { id: 'appearance', label: 'Appearance', content: <UI.Switch label="Show line numbers" defaultChecked /> },
-      { id: 'keyboard', label: 'Keyboard', content: <UI.Select label="Indent key" defaultValue="tab"><option value="tab">Tab</option><option value="spaces">Spaces</option></UI.Select> },
-    ]} /> },
-    { id: 'export', label: 'Export', content: <UI.Tabs label="Export setting pages" value={views.export} onChange={value => setViews(current => ({ ...current, export: value }))} tabs={[
-      { id: 'format', label: 'Format', content: <UI.Select label="Default format" defaultValue="csv"><option value="csv">CSV</option><option value="text">Plain text</option></UI.Select> },
-      { id: 'naming', label: 'Naming', content: <UI.TextInput label="Filename prefix" defaultValue="study" /> },
-    ]} /> },
+  const [tab, setTab] = useState('appearance');
+  return <UI.Tabs label="Grouped settings" value={tab} onChange={setTab} groups={[{ id: 'workspace', label: 'Workspace' }, { id: 'export', label: 'Export' }]} tabs={[
+    { id: 'appearance', label: 'Appearance', group: 'workspace', content: <UI.Switch label="Show line numbers" defaultChecked /> },
+    { id: 'keyboard', label: 'Keyboard', group: 'workspace', content: <UI.Select label="Indent key" defaultValue="tab"><option value="tab">Tab</option><option value="spaces">Spaces</option></UI.Select> },
+    { id: 'format', label: 'Format', group: 'export', content: <UI.Select label="Default format" defaultValue="csv"><option value="csv">CSV</option><option value="text">Plain text</option></UI.Select> },
+    { id: 'naming', label: 'Naming', group: 'export', content: <UI.TextInput label="Filename prefix" defaultValue="study" /> },
   ]} />;
+}
+const startingDocuments = [{ id: 'spacing', label: 'Spacing study' }, { id: 'states', label: 'Control states' }, { id: 'notes', label: 'Layout notes' }];
+function ClosableTabsDemo() {
+  const [open, setOpen] = useState(startingDocuments); const [tab, setTab] = useState('spacing');
+  function close(id: string) { const index = open.findIndex(d => d.id === id); const next = open.filter(d => d.id !== id); setOpen(next); if (tab === id && next.length) setTab(next[Math.min(index, next.length - 1)].id); }
+  if (!open.length) return <UI.EmptyState title="No open documents" description="Closed tabs close immediately, without a confirmation." action={<UI.Button onClick={() => { setOpen(startingDocuments); setTab('spacing'); }}>Reopen examples</UI.Button>} />;
+  return <UI.Tabs label="Open documents" value={tab} onChange={setTab} onCloseTab={close} tabs={open.map(d => ({ id: d.id, label: d.label, content: <UI.TextArea label={d.label} defaultValue={`${d.label} stays as you left it while you switch tabs.`} /> }))} />;
 }
 
 export function ContainerDemo({ id }: { id: string }) {
