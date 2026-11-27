@@ -430,7 +430,7 @@ AboutPage::AboutPage(const QString &productName, const QString &description, con
     if (!source.open(QIODevice::ReadOnly)) throw std::runtime_error("Stack Junkie attribution resource missing");
     const auto info = QJsonDocument::fromJson(source.readAll()).object();
     auto *creditLogo = new QLabel; creditLogo->setFixedSize(22, 22); creditLogo->setProperty("sjBrandSize", 22);
-    auto *credit = paragraph(QStringLiteral("%1 ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· %2<br><a href=\"%3\">%4</a><br>ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© %5 %6")
+    auto *credit = paragraph(QString::fromUtf8("%1 · %2<br><a href=\"%3\">%4</a><br>© %5 %6")
         .arg(info.value("name").toString().toHtmlEscaped(), QStringLiteral(STACKJUNKIE_VERSION), info.value("website").toString().toHtmlEscaped(), info.value("projectLine").toString().toHtmlEscaped())
         .arg(QDate::currentDate().year()).arg(info.value("copyrightHolder").toString().toHtmlEscaped()));
     credit->setTextFormat(Qt::RichText); credit->setOpenExternalLinks(true); credit->setProperty("sjRole", "attribution");
