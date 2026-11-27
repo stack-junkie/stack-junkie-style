@@ -9,7 +9,7 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 - Web app: browser tools. Desktop app: Windows tools. Document editor: editors. Website: reading sites.
 - Pass the Preset to `AppShell` and override single choices (web `preset` and `choices`; native `setPreset(id, overrides)`). Keep only the choices that differ from the Preset, so deleting one returns to the Preset.
 - The showcase Settings window's Layout section holds the Preset picker, every choice, and Export starter.
-- Saving a custom Preset and exporting it as a file is decided but not built yet. Until it is, the overrides in the starter's `App.tsx` or `main.cpp` are the project's record of its choices.
+- A custom Preset is a name, a base Preset and its changed choices. The showcase saves, renames, updates, deletes, exports and imports them; one file format for web and native ([PRESET-FILE.md](../ui/shared/PRESET-FILE.md)), read with `parseCustomPresetFile` or `CustomPreset::parse`.
 - The frame does not own a command palette. An app that has one reads the `commandPalette` choice.
 
 ## Frame parts

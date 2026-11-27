@@ -349,7 +349,15 @@ int main(int argc, char *argv[]) {
         auto *exportCustom = new Button(QStringLiteral("Export file..."));
         auto *deleteCustom = new Button(QStringLiteral("Delete"), ButtonVariant::Danger);
         QLabel *customCaption = nullptr, *customHelp = nullptr;
-        auto *customRow = settingsRow(QStringLiteral("Custom preset"), QString(), controlGroup({updateCustom, renameCustom, exportCustom, deleteCustom}), &customHelp, &customCaption);
+        // Four buttons leave too little room beside the description, so they sit under it.
+        auto *customRow = new QWidget;
+        {
+            auto *layout = new QVBoxLayout(customRow); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(2);
+            customCaption = new QLabel; customHelp = new QLabel; customHelp->setProperty("sjRole", "muted"); customHelp->setWordWrap(true);
+            auto *buttons = controlGroup({updateCustom, renameCustom, exportCustom, deleteCustom});
+            buttons->layout()->addItem(new QSpacerItem(0, 0, QSizePolicy::Expanding));
+            layout->addWidget(customCaption); layout->addWidget(customHelp); layout->addSpacing(Theme::spacing(2)); layout->addWidget(buttons);
+        }
         layoutPage->contentLayout()->addWidget(customRow);
         auto *customNameEdit = new QLineEdit; customNameEdit->setPlaceholderText(QStringLiteral("e.g. My editor")); customNameEdit->setMaxLength(60); customNameEdit->setMinimumWidth(200);
         customNameEdit->setAccessibleName(QStringLiteral("Custom preset name"));

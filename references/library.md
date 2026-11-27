@@ -60,4 +60,4 @@ Hint text (an input's `placeholder` on web, `setPlaceholderText` on native) is a
 - The showcase imports the same component an app uses. Fix appearance or behavior in the library, never with a private fix in the example.
 - Examples show realistic, labeled demonstration content and every applicable state: default, hover, focus, selected, disabled, pending, empty, invalid, failed.
 - Bump [VERSION](../VERSION) once per delivered preview or release, not per planning edit, and add the change to [CHANGELOG](../ui/CHANGELOG.md).
-- Tests guard real behavior only: `npm run test:starters` (every Preset to a building starter) and `npm run test:stub-guard` in `ui/web`, and `tests/stub-guard/run.ps1` in `ui/native`. Look and layout are checked with screenshots, not tests.
+- Tests guard real behavior only: `npm run test:starters` (every Preset to a building starter), `npm run test:presets` (custom preset file round trip and rejection) and `npm run test:stub-guard` in `ui/web`, and `tests/stub-guard/run.ps1` in `ui/native`. Look and layout are checked with screenshots, not tests.
