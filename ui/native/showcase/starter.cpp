@@ -4,6 +4,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
@@ -19,6 +20,27 @@ static QString readTemplate(const QString &path, QString *error) {
     QFile file(QStringLiteral(":/starters/") + path);
     if (!file.open(QIODevice::ReadOnly)) { *error = QStringLiteral("Missing starter template ") + path; return {}; }
     return QString::fromUtf8(file.readAll()).remove(QLatin1Char('\r'));
+}
+
+// The starter's areas and pages as code, exactly as starters.mjs writes them.
+static QString sectionsCode(bool web, const QJsonObject &structure) {
+    QStringList lines;
+    const auto areas = structure.value(QStringLiteral("areas")).toArray();
+    for (int i = 0; i < areas.size(); ++i) {
+        const auto area = areas[i].toObject();
+        const auto pages = area.value(QStringLiteral("pages")).toArray();
+        const QString label = area.value(QStringLiteral("label")).toString(), icon = area.value(QStringLiteral("icon")).toString();
+        if (web) lines << QStringLiteral("  { id: '%1', label: stub('%2'), icon: '%3', pages: [").arg(area.value(QStringLiteral("id")).toString(), label, icon);
+        else lines << QStringLiteral("    const int area%1 = shell.addSection(STACKJUNKIE_STUB_TEXT(\"%2\"), QStringLiteral(\"%3\"));").arg(i + 1).arg(label, icon);
+        for (const auto &value : pages) {
+            const auto page = value.toObject();
+            const QString id = page.value(QStringLiteral("id")).toString(), pageLabel = page.value(QStringLiteral("label")).toString(), content = page.value(QStringLiteral("content")).toString();
+            if (web) lines << QStringLiteral("    { id: '%1', label: stub('%2'), content: <Stub block>%3</Stub> },").arg(id, pageLabel, content);
+            else lines << QStringLiteral("    shell.addPage(STACKJUNKIE_STUB_TEXT(\"%1\"), STACKJUNKIE_STUB(\"%2\"), QStringLiteral(\"file\"), area%3);").arg(pageLabel, content).arg(i + 1);
+        }
+        if (web) lines << QStringLiteral("  ] },");
+    }
+    return lines.join(QLatin1Char('\n'));
 }
 
 QString starterLabel(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("label")).toString(); }
@@ -57,7 +79,8 @@ Starter generateStarter(const QString &platform, const QString &presetId, const 
         {QStringLiteral("cmakeVersion"), core.hasMatch() ? core.captured(0) : version},
         {QStringLiteral("repository"), doc.value(QStringLiteral("repository")).toString()},
         {QStringLiteral("preset"), preset.id}, {QStringLiteral("presetLabel"), preset.label},
-        {QStringLiteral("overrides"), literal}, {QStringLiteral("theme"), choices.theme}, {QStringLiteral("density"), choices.density}};
+        {QStringLiteral("overrides"), literal}, {QStringLiteral("theme"), choices.theme}, {QStringLiteral("density"), choices.density},
+        {QStringLiteral("sections"), sectionsCode(web, doc.value(QStringLiteral("structure")).toObject())}};
 
     QJsonObject files = kind.value(QStringLiteral("files")).toObject();
     const auto presetFiles = kind.value(QStringLiteral("presetFiles")).toObject().value(presetId).toObject();

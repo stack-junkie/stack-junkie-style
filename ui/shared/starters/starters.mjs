@@ -20,6 +20,19 @@ function literal(platform, changed) {
   return `{${changed.map(([k, v]) => `{QStringLiteral("${k}"), ${typeof v === 'string' ? `QStringLiteral("${v}")` : v}}`).join(', ')}}`;
 }
 
+/** The starter's areas and pages as code: AppShell sections for web, addSection and addPage calls for native. */
+function sectionsCode(platform, structure) {
+  if (platform === 'web') return structure.areas.map(area => [
+    `  { id: '${area.id}', label: stub('${area.label}'), icon: '${area.icon}', pages: [`,
+    ...area.pages.map(page => `    { id: '${page.id}', label: stub('${page.label}'), content: <Stub block>${page.content}</Stub> },`),
+    '  ] },',
+  ].join('\n')).join('\n');
+  return structure.areas.map((area, i) => [
+    `    const int area${i + 1} = shell.addSection(STACKJUNKIE_STUB_TEXT("${area.label}"), QStringLiteral("${area.icon}"));`,
+    ...area.pages.map(page => `    shell.addPage(STACKJUNKIE_STUB_TEXT("${page.label}"), STACKJUNKIE_STUB("${page.content}"), QStringLiteral("file"), area${i + 1});`),
+  ].join('\n')).join('\n');
+}
+
 /**
  * Generates a starter project.
  * request: { platform: 'web' | 'native', preset, overrides, version }
@@ -37,6 +50,7 @@ export function generateStarter({ platform, preset, overrides = {}, version }, {
     version, tag: `v${version}`, cmakeVersion: /^\d+\.\d+\.\d+/.exec(version)?.[0] ?? version,
     repository: manifest.repository, preset, presetLabel: presets.presets.find(p => p.id === preset).label,
     overrides: literal(platform, changed), theme: choices.theme, density: choices.density,
+    sections: sectionsCode(platform, manifest.structure),
   };
   const files = { ...kind.files, ...kind.presetFiles?.[preset] };
   return {

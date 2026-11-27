@@ -2,7 +2,9 @@ export type StarterPlatform = 'web' | 'native';
 export type StarterFile = { path: string; text: string };
 export type StarterResult = { files: StarterFile[]; unsupported?: undefined } | { files?: undefined; unsupported: string };
 export type StarterKind = { label: string; description: string; files: Record<string, string>; presetFiles?: Record<string, Record<string, string>>; unsupported?: Record<string, string> };
-export type StarterManifest = { repository: string; web: StarterKind; native: StarterKind };
+export type StarterPage = { id: string; label: string; content: string };
+export type StarterArea = { id: string; label: string; icon: string; pages: StarterPage[] };
+export type StarterManifest = { repository: string; structure: { note?: string; areas: StarterArea[] }; web: StarterKind; native: StarterKind };
 export type StarterPresets = {
   choices: Record<string, { options: readonly (string | boolean)[] }>;
   presets: readonly { id: string; label: string; choices: Record<string, string | boolean> }[];

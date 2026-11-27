@@ -12,9 +12,9 @@ int main(int argc, char *argv[]) {
     StackJunkie::initializeResources();
     StackJunkie::AppShell shell(QStringLiteral("My app"), QStringLiteral("What this app does."), QStringLiteral("0.1.0"));
 
-    // Your app's sections (rail icons) and their pages (sidebar entries).
-    const int home = shell.addSection(QStringLiteral("Home"), QStringLiteral("grid"));
-    shell.addPage(QStringLiteral("Overview"), StackJunkie::paragraph(QStringLiteral("Start here.")), QStringLiteral("file"), home);
+    // Your app's areas (Rail icons) and their pages (Sidebar entries). Every name and page is a Stub:
+    // a Release build stops at each one until it is replaced with the app's own.
+{{sections}}
 
     // The preset sets the App frame. Choices list only what was changed from it; delete one to go back to the preset.
     const QVariantMap choices = {{overrides}};

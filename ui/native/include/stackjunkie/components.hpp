@@ -454,7 +454,8 @@ STACKJUNKIE_EXPORT QWidget *row(const QList<QWidget *> &widgets, QWidget *parent
 STACKJUNKIE_EXPORT QWidget *wrap(const QList<QWidget *> &widgets, QWidget *parent = nullptr);
 }
 
-// STACKJUNKIE_STUB("Sample text") or STACKJUNKIE_STUB(widget, parent) returns a new StackJunkie::Stub.
+// STACKJUNKIE_STUB("Sample text") or STACKJUNKIE_STUB(widget, parent) returns a new StackJunkie::Stub widget;
+// STACKJUNKIE_STUB_TEXT("Sample name") (below) marks plain text.
 // Release builds (NDEBUG, or STACKJUNKIE_RELEASE, which the CMake package sets for Release,
 // RelWithDebInfo and MinSizeRel) refuse to compile while any remain, and the error names the file and line.
 #if defined(STACKJUNKIE_RELEASE) || defined(NDEBUG)
@@ -470,4 +471,13 @@ STACKJUNKIE_EXPORT QWidget *wrap(const QList<QWidget *> &widgets, QWidget *paren
 #define STACKJUNKIE_STUB(...) ([]() -> ::StackJunkie::Stub * { \
     static_assert(false, "Stub remains at " __FILE__ "(" STACKJUNKIE_STUB_LINE_(__LINE__) "): replace it with real content before a release build."); \
     return nullptr; }())
+#endif
+// STACKJUNKIE_STUB_TEXT("Sample name") marks plain stand-in text, such as a page or area name, as a Stub: a QString in
+// development builds, and a compile error naming its file and line in release builds, like STACKJUNKIE_STUB.
+#if STACKJUNKIE_STUBS_ALLOWED
+#define STACKJUNKIE_STUB_TEXT(text) (QStringLiteral(text))
+#else
+#define STACKJUNKIE_STUB_TEXT(text) ([]() -> QString { \
+    static_assert(false, "Stub remains at " __FILE__ "(" STACKJUNKIE_STUB_LINE_(__LINE__) "): replace it with real content before a release build."); \
+    return {}; }())
 #endif

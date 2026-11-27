@@ -1,7 +1,9 @@
-// Preset to starter test: Export's starters must build without edits.
-// For every preset, generate the web starter and typecheck and build it against the locally built library.
-// For the three app presets, generate the native starter and build it with CMake against the library
-// installed into a temporary prefix, plus once through the FetchContent fallback with a local source.
+// Preset to starter test: Export's starters must build without edits, and their Stubs must stop a release build.
+// For every preset, generate the web starter and typecheck it against the locally built library. Its release build
+// must stop and name every Stub; with the Stubs replaced by plain text, it must build.
+// For the three app presets, generate the native starter and build it in Debug with CMake against the library
+// installed into a temporary prefix, plus once through the FetchContent fallback with a local source. Its Release
+// build must stop at a Stub.
 // The native showcase's --export-starter must write the same files as the shared generator.
 //
 // node ../scripts/test-starters.mjs [--only web|native] [--qt <Qt prefix>] [--keep]
@@ -62,6 +64,14 @@ function compareWithShowcase(label, platform, testCase, files) {
   result(JSON.stringify(written) === JSON.stringify(expected) && !differing.length, `${label}: native showcase writes the same files`, differing.length ? `differs in ${differing.join(', ')}` : '');
 }
 
+// What an app does with its Stubs: swap each for its own text. Here, the text inside it.
+function replaceStubs(dir, files) {
+  for (const file of files.filter(f => /\.tsx?$/.test(f.path))) {
+    const text = file.text.replace(/<Stub(?: block)?>([^<]*)<\/Stub>/g, '<p>$1</p>').replace(/\bstub\(('[^']*')\)/g, '$1').replace(/\bStub, stub, /, '');
+    writeFileSync(path.join(dir, file.path), text);
+  }
+}
+
 // ---------- web ----------
 function webCase(testCase) {
   const label = `web ${testCase.name}`;
@@ -89,10 +99,20 @@ function webCase(testCase) {
   if (missing.length) return result(false, label, `not installable here: ${missing.join(', ')}`);
   const tsc = run(process.execPath, [path.join(web, 'node_modules/typescript/bin/tsc'), '-p', dir, '--noEmit'], { cwd: dir });
   if (!tsc.ok) return result(false, label, `typecheck failed\n${tail(tsc.output)}`);
-  const vite = run(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), 'build', '--logLevel', 'error'], { cwd: dir });
-  if (!vite.ok) return result(false, label, `build failed\n${tail(vite.output)}`);
+  const vite = () => run(process.execPath, [path.join(web, 'node_modules/vite/bin/vite.js'), 'build', '--logLevel', 'error'], { cwd: dir });
+  // Every Stub in the starter's source files must be named by the release guard.
+  const stubs = generated.files.filter(f => /\.tsx?$/.test(f.path)).flatMap(f => f.text.split('\n').flatMap((line, i) => [...line.matchAll(/<Stub[\s>]|\bstub\(/g)].map(m => `${f.path}:${i + 1}:${m.index + 1}`)));
+  const guarded = vite();
+  if (stubs.length) {
+    if (guarded.ok) return result(false, label, 'the release build finished with Stubs in the starter');
+    const missing = stubs.filter(at => !guarded.output.includes(at));
+    if (missing.length) return result(false, label, `the release build did not name ${missing.join(', ')}\n${tail(guarded.output)}`);
+    replaceStubs(dir, generated.files);
+    const clean = vite();
+    if (!clean.ok) return result(false, label, `build with the Stubs replaced failed\n${tail(clean.output)}`);
+  } else if (!guarded.ok) return result(false, label, `build failed\n${tail(guarded.output)}`);
   if (!existsSync(path.join(dir, 'dist/index.html'))) return result(false, label, 'build wrote no dist/index.html');
-  return result(true, label, `typecheck and build passed${testCase.expect ? ', custom choices carried' : ''}`);
+  return result(true, label, `typecheck passed, ${stubs.length ? `release build stopped at all ${stubs.length} Stubs, build passed with them replaced` : 'build passed'}${testCase.expect ? ', custom choices carried' : ''}`);
 }
 
 // ---------- native ----------
@@ -105,6 +125,8 @@ function findCmake() {
   return vs && existsSync(cmake) ? cmake : null;
 }
 const generatorArgs = process.platform === 'win32' ? ['-G', 'Visual Studio 17 2022', '-A', 'x64'] : ['-DCMAKE_BUILD_TYPE=Release'];
+// Starters open with Stubs, which compile only outside Release builds.
+const debugArgs = process.platform === 'win32' ? generatorArgs : ['-DCMAKE_BUILD_TYPE=Debug'];
 const buildTail = process.platform === 'win32' ? ['--', '/nodeReuse:false'] : [];
 
 // Starts the built program on the offscreen platform and checks it is still running after three seconds.
@@ -117,7 +139,7 @@ function starts(program) {
     setTimeout(() => { if (!exited) { child.removeAllListeners('exit'); child.kill(); resolve({ ok: true, output }); } }, 3000);
   });
 }
-const programIn = dir => [path.join(dir, 'build/Release/MyApp.exe'), path.join(dir, 'build/MyApp')].find(existsSync);
+const programIn = dir => [path.join(dir, 'build/Debug/MyApp.exe'), path.join(dir, 'build/MyApp')].find(existsSync);
 
 async function nativeCase(testCase, cmake, prefix, qt, { fetch = false } = {}) {
   const label = `native ${testCase.name}${fetch ? ' (FetchContent fallback)' : ''}`;
@@ -133,15 +155,21 @@ async function nativeCase(testCase, cmake, prefix, qt, { fetch = false } = {}) {
   if (!cmakeLists.includes('find_package(StackJunkie') || !cmakeLists.includes(`GIT_TAG v${version}`) || !cmakeLists.includes(`GIT_REPOSITORY ${manifest.repository}.git`)) return result(false, label, 'CMakeLists.txt is not pinned to the release tag');
   // The installed case must find the package: with fetching disconnected, a miss fails configure.
   const where = fetch ? [`-DCMAKE_PREFIX_PATH=${qt}`, `-DFETCHCONTENT_SOURCE_DIR_STACKJUNKIE=${skillRoot}`] : [`-DCMAKE_PREFIX_PATH=${prefix};${qt}`, '-DFETCHCONTENT_FULLY_DISCONNECTED=ON'];
-  const configure = run(cmake, ['-S', dir, '-B', path.join(dir, 'build'), ...generatorArgs, ...where]);
+  const configure = run(cmake, ['-S', dir, '-B', path.join(dir, 'build'), ...debugArgs, ...where]);
   if (!configure.ok) return result(false, label, `configure failed\n${tail(configure.output)}`);
-  const build = run(cmake, ['--build', path.join(dir, 'build'), '--config', 'Release', '--parallel', ...buildTail]);
+  const build = run(cmake, ['--build', path.join(dir, 'build'), '--config', 'Debug', '--parallel', ...buildTail]);
   if (!build.ok) return result(false, label, `build failed\n${tail(build.output)}`);
   const program = programIn(dir);
   if (!program) return result(false, label, 'build wrote no MyApp program');
   const started = await starts(program);
   if (!started.ok) return result(false, label, `the built program did not start offscreen: ${tail(started.output)}`);
-  return result(true, label, `CMake configure and Release build passed, starts offscreen${testCase.expect ? ', custom choices carried' : ''}`);
+  // The Release build must stop at the starter's Stubs and name main.cpp.
+  const release = path.join(dir, 'build-release');
+  const releaseConfigure = run(cmake, ['-S', dir, '-B', release, ...generatorArgs, ...where]);
+  if (!releaseConfigure.ok) return result(false, label, `Release configure failed\n${tail(releaseConfigure.output)}`);
+  const releaseBuild = run(cmake, ['--build', release, '--config', 'Release', ...buildTail]);
+  if (releaseBuild.ok || !/Stub remains at .*main\.cpp/.test(releaseBuild.output)) return result(false, label, `the Release build did not stop at the Stubs\n${tail(releaseBuild.output)}`);
+  return result(true, label, `CMake Debug build passed, starts offscreen, Release build stopped at the Stubs${testCase.expect ? ', custom choices carried' : ''}`);
 }
 
 async function nativeTests() {

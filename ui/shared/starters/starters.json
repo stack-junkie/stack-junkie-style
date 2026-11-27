@@ -1,5 +1,20 @@
 {
   "repository": "https://github.com/stack-junkie/stack-junkie-style",
+  "structure": {
+    "note": "Every app starter opens with these areas (Rail icons) and pages (Sidebar entries). Names and content are Stubs for the app to replace.",
+    "areas": [
+      { "id": "first-area", "label": "First area", "icon": "grid", "pages": [
+        { "id": "first-page", "label": "First page", "content": "What the first page shows." },
+        { "id": "second-page", "label": "Second page", "content": "What the second page shows." },
+        { "id": "third-page", "label": "Third page", "content": "What the third page shows." }
+      ] },
+      { "id": "second-area", "label": "Second area", "icon": "folder", "pages": [
+        { "id": "fourth-page", "label": "Fourth page", "content": "What the fourth page shows." },
+        { "id": "fifth-page", "label": "Fifth page", "content": "What the fifth page shows." },
+        { "id": "sixth-page", "label": "Sixth page", "content": "What the sixth page shows." }
+      ] }
+    ]
+  },
   "web": {
     "label": "Web starter",
     "description": "A Vite, React and TypeScript project.",

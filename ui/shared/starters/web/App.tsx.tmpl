@@ -1,14 +1,15 @@
 // App.tsx, exported from the Stack Junkie Style showcase with the {{presetLabel}} preset.
 // It imports the shared library instead of copying it, so every app stays on the same components.
-import { AppShell, BrandMark, type PresetChoices, type PresetId, type ShellSection } from '@stack-junkie/ui-web';
+import { AppShell, BrandMark, Stub, stub, type PresetChoices, type PresetId, type ShellSection } from '@stack-junkie/ui-web';
 
 // The preset sets the App frame. Choices list only what was changed from it; delete one to go back to the preset.
 export const preset: PresetId = '{{preset}}';
 export const choices: Partial<PresetChoices> = {{overrides}};
 
-// Your app's sections (rail icons) and their pages (sidebar entries).
+// Your app's areas (Rail icons) and their pages (Sidebar entries). Every name and page is a Stub:
+// `npm run build` stops and lists each one until it is replaced with the app's own.
 const sections: ShellSection[] = [
-  { id: 'home', label: 'Home', icon: 'grid', pages: [{ id: 'overview', label: 'Overview', content: <p>Start here.</p> }] },
+{{sections}}
 ];
 
 export default function App() {

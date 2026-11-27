@@ -16,24 +16,28 @@
       "id": "web-app",
       "label": "Web app",
       "description": "A browser tool with a rail, a sidebar tree and a command palette.",
+      "madeFor": "Made for browser tools and dashboards people keep open all day.",
       "choices": { "rail": true, "sidebar": "tree", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
     },
     {
       "id": "desktop-app",
       "label": "Desktop app",
       "description": "A Windows tool with a rail, a sidebar list and a Status bar.",
+      "madeFor": "Made for Windows utilities that do one job well.",
       "choices": { "rail": true, "sidebar": "list", "menuBar": false, "statusBar": true, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
     },
     {
       "id": "document-editor",
       "label": "Document editor",
       "description": "An editor with a Menu bar, a Status bar, a bottom panel and closable document tabs.",
+      "madeFor": "Made for editors that open, change and save documents.",
       "choices": { "rail": true, "sidebar": "tree", "menuBar": true, "statusBar": true, "bottomPanel": true, "documentTabs": true, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
     },
     {
       "id": "website",
       "label": "Website",
       "description": "A reading site with a header, a footer, a reading column and a theme toggle.",
+      "madeFor": "Made for blogs, article sites and documentation.",
       "choices": { "rail": false, "sidebar": "off", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": false, "theme": "system", "density": "comfortable", "dashboardHome": false }
     }
   ]
