@@ -16,7 +16,7 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 
 **Rail.** Selects a top-level section. Icons have accessible names; add labels where an icon is ambiguous.
 
-**Sidebar.** Lists the pages of the current section: a `NavTree` of collapsible groups when there are many, a flat list when there are few. Its heading names the section (such as Actions); the selected item names the page. It is resizable across the available space with pointer and keyboard, collapses completely, and restores its width and selection. Expanded, it pushes the work area over; a narrow window or browser zoom never turns it into an overlay or changes Chris's collapse choice. One toggle shows and hides it, fixed at the top of the Rail, in the same place whether the Sidebar is open or closed. Without a Rail, the toggle stays reachable in the header.
+**Sidebar.** Lists the pages of the current section: a `NavTree` of collapsible groups when there are many, a flat list when there are few. Its heading names the section (such as Actions); the selected item names the page. It is resizable across the available space with pointer and keyboard, collapses completely, and restores its width and selection. Expanded, it pushes the work area over; a narrow window or browser zoom never turns it into an overlay or changes the user's collapse choice. One toggle shows and hides it, fixed at the top of the Rail, in the same place whether the Sidebar is open or closed. Without a Rail, the toggle stays reachable in the header.
 
 **Tab row.** Switches peer views of the selected page, or holds closable document tabs (separate open objects). Put it at the top of the work area, aligned with the Sidebar heading, with no page title row above it. While the Sidebar is collapsed, show a compact page name beside the tabs.
 
@@ -39,7 +39,7 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 
 **Bottom panel.** A resizable panel under the work area with its own Tab row, for output, problems or a terminal. It is drawn only when it has content.
 
-**Logo slot.** The app's logo sits in the App frame's logo slot (web `AppShell` `logo`) and clicking it returns to the app's Home, never the style's website. Until Chris makes the app its own logo, use the interim SJ mark (web `BrandMark`; shared images in `ui/shared/brand`). Work tools otherwise carry no personal branding: plain functional names, no "Stack Junkie" prefix.
+**Logo slot.** The app's logo sits in the App frame's logo slot (web `AppShell` `logo`) and clicking it returns to the app's Home, never the style's website. Until the app has its own logo, use the interim SJ mark (web `BrandMark`; shared images in `ui/shared/brand`). Work tools otherwise carry no personal branding: plain functional names, no "Stack Junkie" prefix.
 
 ## Website
 

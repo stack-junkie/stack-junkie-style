@@ -52,7 +52,7 @@ Since preview.10: the native showcase shows Content > Stub in every build, the w
 
 ## 3.0.0-preview.7
 
-- Reduce the SJ corner mark from 28px to 25px through one shared size token, following owner review of the blue J in the web preview.
+- Reduce the SJ corner mark from 28px to 25px through one shared size token, after review of the blue J in the web preview.
 
 ## 3.0.0-preview.6
 
@@ -61,7 +61,7 @@ Since preview.10: the native showcase shows Content > Stub in every build, the w
 
 ## 3.0.0-preview.5
 
-- Use the owner's selected F logo, a black SJ monogram on a white square, in both web and Windows showcase headers.
+- Use the selected F logo, a black SJ monogram on a white square, in both web and Windows showcase headers.
 - Share one standalone logo asset across themes and toolkits. Preserve the previous site assets and private selection history.
 
 ## 3.0.0-preview.4
@@ -76,7 +76,7 @@ Since preview.10: the native showcase shows Content > Stub in every build, the w
 
 - Darken Clean utility to neutral black surfaces and remove the blue tint from selection backgrounds. Keep the light palette separate.
 - Replace the invented initials badge with the site's Stack-Junkie header wordmark, using shared brand values in the web and native showcases.
-- Clean utility is the owner's closest candidate; its overall appearance remains under review.
+- Clean utility is the closest candidate; its overall appearance remains under review.
 
 ## 3.0.0-preview.2
 
@@ -85,7 +85,7 @@ Since preview.10: the native showcase shows Content > Stub in every build, the w
 - Restore the clean dark baseline to near-black neutral surfaces while keeping the other directions and light themes available.
 - Keep headers and tabs outside independently scrolling example panels; use compact shell titles and controls.
 
-Fonts, accents and owner-operated interaction acceptance remain open. This update does not install the skill or change ART.
+Fonts, accents and hands-on interaction review remain open. This update does not install the skill or change ART.
 
 ## 3.0.0-preview.1
 
@@ -95,4 +95,4 @@ Fonts, accents and owner-operated interaction acceptance remain open. This updat
 - Bundle fonts, licenses and icons for offline use.
 - Replace the independently styled legacy HTML specimen with a route to the living showcase.
 
-This is a working comparison preview. The final visual direction and owner interaction acceptance remain open.
+This is a working comparison preview. The final visual direction and hands-on interaction review remain open.

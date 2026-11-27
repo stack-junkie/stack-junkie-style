@@ -176,4 +176,4 @@ const pages: WebsitePage[] = [
 - When the layout is narrower than 600 pixels, the navigation folds into a menu button and the gutters shrink to 16 pixels. It uses a container query, so it also folds inside a narrow frame.
 - The layout fills its parent and does not reset the page. Give `html` and `body` a zero margin in the site's own stylesheet.
 
-The declarations and built library do not require the source `shared` directory in consuming applications. Keep the distributed font licenses with the package. Browser appearance and assistive-technology behavior still require owner review; a successful build alone does not establish that review.
+The declarations and built library do not require the source `shared` directory in consuming applications. Keep the distributed font licenses with the package. Check browser appearance and assistive-technology behavior by hand; a passing build does not cover them.

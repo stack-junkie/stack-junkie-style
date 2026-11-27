@@ -17,7 +17,7 @@ Desktop.ini
 *.tmp
 *.log
 
-# Private design discussions and research collected for owner review.
+# Private design discussions and research kept out of the public repo.
 /docs/design-skill-revamp-history/
 /scripts/
 

@@ -1,6 +1,6 @@
 # Stack Junkie Style
 
-Chris's reusable design system for the interfaces of his apps and sites, so a new project inherits its look, layout and behavior instead of rebuilding them.
+A reusable design system for app and site interfaces, so a new project inherits its look, layout and behavior instead of rebuilding them.
 
 ## Language
 
@@ -19,6 +19,10 @@ _Avoid_: Near black, dark gray
 **Preset**:
 A named starting set of App frame choices for one kind of project (Web app, Desktop app, Document editor, Website). Its choices can be switched individually, and the result saved as a custom preset.
 _Avoid_: Template, profile, mode
+
+**Builder**:
+The full-window showcase screen where you pick a Preset, switch its choices on a blank App frame (or Website layout), and export exactly what it shows. The one place for presets, custom presets and Export.
+_Avoid_: Wizard, configurator, starter preview
 
 **Website**:
 The Preset for reading sites: a top header with logo and navigation, a footer, a reading-width column and a small theme toggle, instead of the App frame.
