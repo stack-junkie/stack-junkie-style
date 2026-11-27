@@ -1,35 +1,54 @@
 ---
 name: stack-junkie-style
-description: Apply Christopher Kvamme's Stack Junkie UI system by default when building, editing, or reviewing web, desktop, mobile, and application interfaces, unless the user explicitly chooses another design system. Reuse its components and layouts where the toolkit fits; preserve established conventions for narrow edits.
+description: Chris's design system for every front end (web apps, desktop apps, document editors, websites). Use when planning, building, editing or reviewing any interface, unless Chris names another design system or the app is a Look-alike app.
 ---
 
 # Stack Junkie Style
 
-Build the requested interface around its real work. Keep existing capabilities, approved compositions and later corrections in their original scope. A clean screen still fails if it loses a required operation or misrepresents what is running.
+Terms follow [GLOSSARY.md](GLOSSARY.md). Decisions behind them are in [docs/adr](docs/adr/).
 
-## Start with the product
+## When it applies
 
-Identify the task, toolkit, shared controls, theme, affected surfaces and state that must survive navigation. Read the original request and material later corrections before changing their result. Briefly explain the primary task, what stays visible, what becomes optional and how a narrow layout behaves. A small change needs only a small explanation.
+Every project with a front end uses this skill unless Chris says otherwise. When planning front-end work, say so in one line: "Using the stack-junkie-style skill, since you haven't said otherwise."
 
-Load the references needed for the change:
+A **Look-alike app** (built to imitate an existing app, like SJ Paint imitating Microsoft Paint) follows the imitated app's look and layout. It may still use library components where they fit. Keep it out of the App frame ([ADR 0002](docs/adr/0002-look-alike-apps-exempt.md)).
 
-- Appearance or theme work: [visual system](references/design-system.md), then the relevant values in [shared tokens](ui/shared/tokens.json).
-- Font hierarchy, reading surfaces or compact application sizing: [typography and density](references/typography-and-density.md).
-- Controls or component reuse: [components](references/components.md), the applicable [catalog](ui/shared/catalog.json) entries and the matching toolkit implementation.
-- Page structure, navigation or responsive work: [layouts](references/layouts.md).
-- Content, disclosure, feedback, help or interaction work: [product UX rules](references/product-ux-rules.md).
-- Repository setup or delivery documentation: [application delivery preferences](references/application-delivery-preferences.md).
+For a narrow edit in an existing project, keep that project's established conventions and change only what was asked.
 
-## Use the working system
+## Start a project
 
-Consuming products import the shared library and its `AppShell` frame rather than copying components or styling. Settings always opens as a window (`SettingsWindow`) from the gear at the bottom of the activity rail, or of the sidebar when the rail is absent, and from Control comma. It is never a page in the app's navigation. Theme and About are sections of that window; keep the compact style attribution and library-sourced version beneath the consuming product's own identity. Showcase-only controls and explanatory content remain outside consumer imports.
+1. Pick the Preset that matches the project from [presets.json](ui/shared/presets.json): Web app, Desktop app, Document editor or Website.
+2. Switch individual choices where the project needs it.
+3. Export a starter for that Preset and those choices. It installs the library from a tagged release ([ADR 0003](docs/adr/0003-install-from-github-tags.md)).
+4. Import the library and compose its components. Pages supply the app's own content, state and actions.
 
-[UI package instructions](ui/README.md) describe the React/TypeScript web and Qt 6 Widgets native libraries and their showcase commands. The showcases import those libraries. Compose named components and layout primitives; do not recreate their styling in each page or maintain a separate showcase theme. Other toolkits reuse the decisions and tokens through an appropriate adapter, not incompatible executable controls.
+Every component and style comes from the library import. Copying a component, stylesheet or token value into a project is the drift this system exists to stop. Commands and APIs: [library](references/library.md).
 
-The working showcase runs on `AppShell`: a section rail, an adjustable sidebar, and one row of tabs. Clean utility is the only design direction. Its dark mode is true black (`#000000`) with structure from thin borders, near-white text and the blue accent. Light mode is one white ground with thin borders. Avoid gray fills used as structure in either mode. Retained user theme selections still win. The accent is blue. A default preview is not an approved design. Follow an explicit product choice when one exists; show a concrete comparison when a new aesthetic choice is needed. The old static specimen is not a second source of truth.
+## Settled rules
 
-## Check and hand off
+- **Clean** is the only look: True black dark mode, white light mode, thin borders for structure, blue accent. Values live in [tokens.json](ui/shared/tokens.json).
+- **App frame**: Rail, Sidebar and one Tab row, drawn by `AppShell` on web and native. The Sidebar pushes the content over; it never overlays it, at any width or zoom.
+- **Settings window** opens from the gear at the bottom of the Rail (the Sidebar when there is no Rail) and from Control comma. Settings is never a page in the navigation and never sits in the header.
+- **One Tab row** per page, never stacked under or inside another.
+- **Menu bar** only in the Document editor Preset: File, Edit, View, the app's menus, then Help. Settings sits under File and About under Help.
+- **Status bar**: the current item's state on the left, small facts on the right. Never ads or tips.
+- **Website** Preset: `WebsiteLayout` (header with logo, navigation and theme toggle; reading-width column; footer) instead of the App frame.
+- **Stub** marks all development stand-in content. It is striped in development and release builds fail while any remain, on web and native. **Hint text** is a short example inside an empty input; it never replaces the label and is not a Stub.
+- **Dashboard** only when each tile shows a real number that answers a question the user asks and links to where they act on it. No Preset opens on one by default.
+- **Logo slot**: the app's logo goes in the App frame's logo slot, and clicking it goes Home. Until the app has its own logo, use the interim SJ mark.
+- **Page content** stays app-specific. The skill never invents it. Write it to the [no slop](references/no-slop.md) rules.
 
-Use permitted source, API and command-line checks. Never take control of the owner's PC or use browser or desktop UI automation. The owner operates the GUI for visual and interaction review. Prepare usable launch instructions and report what still needs that review; a successful build does not establish visual acceptance.
+Details for each rule: [App frame](references/app-frame.md).
 
-Fix observed mismatches without adding validators, compliance reports, audit loops or permanent checking machinery. When changing this system, keep the component, its example and affected guidance in the same release, using the package [VERSION](VERSION). Report the changed surfaces, behavior and actual verification. Do not install, publish or change another product merely because this skill was invoked.
+## Verify
+
+Look at screenshots of every changed page in dark and light before calling visual work done. A hex value, a token diff or a passing build is not a look. Take the screenshots in your own isolated preview (the built-in browser pane for web, the native showcase's offscreen `--export-preview`). Driving Chris's desktop needs his yes first. Report what you looked at and what you did not check. Fix what you see; add no validators, compliance reports or audit loops.
+
+## References
+
+- Building screens, navigation, Presets, Settings or layouts: [App frame](references/app-frame.md).
+- Colors, fonts, sizes, density or text scaling: [look](references/look.md).
+- Installing, importing, Stubs, the Stub guard, or changing the library itself: [library](references/library.md).
+- Content, help, feedback, errors, forms, Dashboards or accessibility: [product UX](references/product-ux-rules.md).
+- Any visible text: [no slop](references/no-slop.md).
+- README, versions or release conventions of an app repo: [delivery](references/delivery.md).
