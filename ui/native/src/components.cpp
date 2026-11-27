@@ -19,6 +19,7 @@
 #include <QSignalBlocker>
 #include <QSplitterHandle>
 #include <QStyle>
+#include <QStyleHints>
 #include <QTabBar>
 #include <QVBoxLayout>
 #include <QTextBlock>
@@ -407,6 +408,7 @@ void Tabs::showEvent(QShowEvent *event) {
 SettingsPage::SettingsPage(const QString &title, QWidget *parent) : QScrollArea(parent) {
     setWidgetResizable(true); setFrameShape(QFrame::NoFrame);
     auto *body = new QWidget;
+    body->setProperty("sjContentPadding", true);
     auto *layout = new QVBoxLayout(body);
     const int padding = Theme::density(QStringLiteral("contentPadding"), 20);
     layout->setContentsMargins(padding, padding, padding, padding);
@@ -426,7 +428,7 @@ AboutPage::AboutPage(const QString &productName, const QString &description, con
     if (!source.open(QIODevice::ReadOnly)) throw std::runtime_error("Stack Junkie attribution resource missing");
     const auto info = QJsonDocument::fromJson(source.readAll()).object();
     auto *creditLogo = new QLabel; creditLogo->setFixedSize(22, 22); creditLogo->setProperty("sjBrandSize", 22);
-    auto *credit = paragraph(QStringLiteral("%1 · %2<br><a href=\"%3\">%4</a><br>© %5 %6")
+    auto *credit = paragraph(QStringLiteral("%1 ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· %2<br><a href=\"%3\">%4</a><br>ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â© %5 %6")
         .arg(info.value("name").toString().toHtmlEscaped(), QStringLiteral(STACKJUNKIE_VERSION), info.value("website").toString().toHtmlEscaped(), info.value("projectLine").toString().toHtmlEscaped())
         .arg(QDate::currentDate().year()).arg(info.value("copyrightHolder").toString().toHtmlEscaped()));
     credit->setTextFormat(Qt::RichText); credit->setOpenExternalLinks(true); credit->setProperty("sjRole", "attribution");
@@ -493,11 +495,33 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     navigation_->setProperty("sjRole", "navigation");
     navigation_->setAccessibleName(QStringLiteral("Context pages"));
     sidebarLayout->addWidget(navigation_, 1);
-    pages_ = new QStackedWidget(splitter_);
+    tree_ = new NavTree(QStringLiteral("Pages"), sidebar_);
+    tree_->hide();
+    sidebarLayout->addWidget(tree_, 1);
+    // The work area: the frame's one tab row (open documents, or the pages when there is no sidebar) above the pages.
+    work_ = new QWidget(splitter_);
+    work_->setMinimumWidth(0);
+    work_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
+    auto *workLayout = new QVBoxLayout(work_); workLayout->setContentsMargins(0, 0, 0, 0); workLayout->setSpacing(0);
+    tabRow_ = new QFrame(work_); tabRow_->setProperty("sjRole", "pageTabRow"); tabRow_->hide();
+    auto *tabRowLayout = new QHBoxLayout(tabRow_); tabRowLayout->setContentsMargins(0, 0, 0, 0); tabRowLayout->setSpacing(0);
+    pageTabs_ = new QTabBar(tabRow_);
+    pageTabs_->setAccessibleName(QStringLiteral("Pages"));
+    pageTabs_->setDocumentMode(true); pageTabs_->setExpanding(false); pageTabs_->setUsesScrollButtons(true); pageTabs_->setDrawBase(false);
+    tabRowLayout->addWidget(pageTabs_); tabRowLayout->addStretch();
+    workLayout->addWidget(tabRow_);
+    pages_ = new QStackedWidget(work_);
     pages_->setMinimumWidth(0);
     pages_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
+    workLayout->addWidget(pages_, 1);
+    emptyPages_ = new QLabel(QStringLiteral("No open pages. Choose one in the sidebar."), work_);
+    emptyPages_->setProperty("sjRole", "muted"); emptyPages_->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    const int emptyPadding = Theme::density(QStringLiteral("contentPadding"), 20);
+    emptyPages_->setContentsMargins(emptyPadding, emptyPadding, emptyPadding, emptyPadding);
+    emptyPages_->setProperty("sjContentPadding", true); emptyPages_->hide();
+    workLayout->addWidget(emptyPages_, 1);
     splitter_->addWidget(sidebar_);
-    splitter_->addWidget(pages_);
+    splitter_->addWidget(work_);
     splitter_->setCollapsible(0, true);
     splitter_->setStretchFactor(1, 1);
     splitter_->setSizes({220, 800});
@@ -507,6 +531,11 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     connect(navigation_, &QListWidget::currentRowChanged, this, [this](int row) { if (auto *item = navigation_->item(row)) setCurrentPage(item->data(Qt::UserRole).toInt()); });
     connect(rail_, &QListWidget::currentRowChanged, this, &Workspace::setCurrentSection);
     connect(rail_, &QListWidget::itemClicked, this, [this](QListWidgetItem *) { if (!sidebarVisible()) setSidebarVisible(true); });
+    connect(tree_, &NavTree::pageChosen, this, [this](const QString &id) { setCurrentPage(id.toInt()); });
+    connect(pageTabs_, &QTabBar::currentChanged, this, [this](int tab) { if (tab >= 0) setCurrentPage(pageTabs_->tabData(tab).toInt()); });
+    connect(pageTabs_, &QTabBar::tabCloseRequested, this, [this](int tab) { closeDocument(pageTabs_->tabData(tab).toInt()); });
+    auto *closeTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), pageTabs_, nullptr, nullptr, Qt::WidgetShortcut);
+    connect(closeTab, &QShortcut::activated, this, [this] { if (pageTabs_->tabsClosable() && pageTabs_->currentIndex() >= 0) closeDocument(pageTabs_->tabData(pageTabs_->currentIndex()).toInt()); });
 }
 int Workspace::addSection(const QString &title, const QString &iconName) {
     const int section = sectionSelections_.size();
@@ -532,7 +561,8 @@ void Workspace::setResizable(bool resizable) {
     if (auto *handle = splitter_->handle(1)) { handle->setEnabled(resizable); handle->setCursor(resizable ? Qt::SplitHCursor : Qt::ArrowCursor); }
 }
 void Workspace::setCollapsible(bool collapsible) {
-    collapse_->setVisible(collapsible);
+    collapsible_ = collapsible;
+    collapse_->setVisible(collapsible && choices_.sidebar != QStringLiteral("off"));
     if (!collapsible) setSidebarVisible(true);
 }
 void Workspace::setSectionVisible(int section, bool visible) {
@@ -542,7 +572,7 @@ void Workspace::setRailVisible(bool visible) {
     railContainer_->setVisible(visible);
     if (visible) qobject_cast<QVBoxLayout *>(railContainer_->layout())->insertWidget(0, collapse_, 0, Qt::AlignHCenter);
     else qobject_cast<QHBoxLayout *>(toolbar_->layout())->insertWidget(0, collapse_);
-    collapse_->show();
+    collapse_->setVisible(collapsible_ && choices_.sidebar != QStringLiteral("off"));
     auto *target = visible ? qobject_cast<QVBoxLayout *>(railContainer_->layout()) : qobject_cast<QVBoxLayout *>(sidebar_->layout());
     target->addWidget(settingsButton_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
     if (!visible) setSidebarVisible(true);
@@ -563,9 +593,7 @@ int Workspace::addPage(const QString &title, QWidget *page, const QString &iconN
     }
     pageLabels_.append(contextLabel);
     if (sectionSelections_[section] < 0) sectionSelections_[section] = index;
-    if (currentSection_ == section) {
-        auto *item = new QListWidgetItem(title, navigation_); item->setData(Qt::UserRole, index);
-    }
+    if (currentSection_ == section || !choices_.rail) refreshNavigation();
     if (index == 0) setCurrentPage(0);
     return index;
 }
@@ -573,13 +601,8 @@ void Workspace::setCurrentSection(int section) {
     if (section < 0 || section >= sectionSelections_.size()) return;
     if (currentSection_ != section) {
         currentSection_ = section;
-        QSignalBlocker blocker(navigation_);
-        navigation_->clear();
-        for (int i = 0; i < pageSections_.size(); ++i) if (pageSections_[i] == section) {
-            auto *item = new QListWidgetItem(pageTitles_[i], navigation_); item->setData(Qt::UserRole, i);
-        }
-        contextHeading_->setText(rail_->item(section)->toolTip());
-        navigation_->setAccessibleName(contextHeading_->text());
+        // Without the rail the sidebar and tab row list every page, so a new section changes nothing in them.
+        if (choices_.rail) refreshNavigation();
     }
     if (rail_->currentRow() != section) { QSignalBlocker blocker(rail_); rail_->setCurrentRow(section); }
     settingsButton_->setChecked(section == settingsSection_);
@@ -593,17 +616,20 @@ void Workspace::setCurrentPage(int index) {
     if (currentSection_ != section) { setCurrentSection(section); return; }
     const bool changed = pages_->currentIndex() != index;
     pages_->setCurrentIndex(index);
-    QSignalBlocker blocker(navigation_);
-    for (int row = 0; row < navigation_->count(); ++row) if (navigation_->item(row)->data(Qt::UserRole).toInt() == index) navigation_->setCurrentRow(row);
+    if (choices_.documentTabs && choices_.sidebar != QStringLiteral("off")) openDocument(index);
+    syncNavigation();
     if (changed) emit currentChanged(index);
 }
 int Workspace::currentPage() const { return pages_->currentIndex(); }
 void Workspace::setSidebarVisible(bool visible) {
+    const bool off = choices_.sidebar == QStringLiteral("off");
+    if (off) visible = false;
     if (!visible && !sidebar_->isHidden()) savedWidth_ = qMax(0, splitter_->sizes().value(0, savedWidth_));
     if (!visible && sidebar_->isAncestorOf(QApplication::focusWidget())) collapse_->setFocus();
     sidebar_->setVisible(visible);
     if (railContainer_->isHidden()) {
-        auto *target = visible ? qobject_cast<QVBoxLayout *>(sidebar_->layout()) : qobject_cast<QVBoxLayout *>(layout());
+        // With neither rail nor sidebar, Settings sits at the end of the header.
+        auto *target = visible ? qobject_cast<QBoxLayout *>(sidebar_->layout()) : off ? qobject_cast<QBoxLayout *>(toolbar_->layout()) : qobject_cast<QBoxLayout *>(layout());
         target->addWidget(settingsButton_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
     }
     collapse_->setChecked(visible);
@@ -634,6 +660,140 @@ void Workspace::saveSettings(const QString &key) const {
     QVariantList selections; for (int page : sectionSelections_) selections.append(page);
     settings.setValue(key + QStringLiteral("/sectionPages"), selections);
 }
+void Workspace::setChoices(const PresetChoices &choices) {
+    const bool wasOff = choices_.sidebar == QStringLiteral("off");
+    choices_ = choices;
+    // Menu bar, Status bar, bottom panel and dashboard home are accepted but not drawn yet; they arrive with their components in #9.
+    setRailVisible(choices.rail);
+    if (choices.sidebar == QStringLiteral("off")) setSidebarVisible(false);
+    else if (wasOff) setSidebarVisible(true);
+    collapse_->setVisible(collapsible_ && choices.sidebar != QStringLiteral("off"));
+    if (!choices.documentTabs) openPages_.clear();
+    refreshNavigation();
+    if (choices.documentTabs && choices.sidebar != QStringLiteral("off") && currentPage() >= 0) openDocument(currentPage());
+    updateOpenState();
+    if (choices.density != Theme::densityMode()) {
+        Theme::setDensityMode(choices.density);
+        applyDensity();
+        // Re-apply the theme this frame already carries, so the stylesheet picks up the new control sizes.
+        if (property("sjDirection").isValid()) Theme::load(property("sjDirection").toString(), property("sjDark").toBool()).apply(this);
+    }
+    emit choicesChanged(choices_);
+}
+// Beside the rail the sidebar holds the current section's pages; without it, every page grouped by section.
+void Workspace::refreshNavigation() {
+    const bool sidebarOn = choices_.sidebar != QStringLiteral("off");
+    const bool tree = choices_.sidebar == QStringLiteral("tree");
+    const bool allPages = !choices_.rail;
+    const auto listed = [&](int page) { return allPages ? listedSection(pageSections_[page]) : pageSections_[page] == currentSection_; };
+    {
+        QSignalBlocker blocker(navigation_);
+        navigation_->clear();
+        if (sidebarOn && !tree) for (int i = 0; i < pageSections_.size(); ++i) if (listed(i)) {
+            auto *item = new QListWidgetItem(pageTitles_[i], navigation_); item->setData(Qt::UserRole, i);
+        }
+    }
+    {
+        QSignalBlocker blocker(tree_);
+        tree_->clear();
+        if (sidebarOn && tree) for (int section = 0; section < sectionSelections_.size(); ++section) {
+            if (allPages ? !listedSection(section) : section != currentSection_) continue;
+            QList<QPair<QString, QString>> items;
+            for (int i = 0; i < pageSections_.size(); ++i) if (pageSections_[i] == section) items.append({QString::number(i), pageTitles_[i]});
+            if (!items.isEmpty()) tree_->addGroup(QString::number(section), rail_->item(section)->toolTip(), items);
+        }
+    }
+    navigation_->setVisible(sidebarOn && !tree);
+    tree_->setVisible(sidebarOn && tree);
+    const QString title = allPages ? QStringLiteral("Pages") : currentSection_ >= 0 ? rail_->item(currentSection_)->toolTip() : QString();
+    contextHeading_->setText(title);
+    navigation_->setAccessibleName(title); tree_->setAccessibleName(title);
+    refreshTabRow();
+    syncNavigation();
+}
+// The frame's one tab row: open documents beside a sidebar, or the pages themselves when there is no sidebar.
+void Workspace::refreshTabRow() {
+    const bool sidebarOn = choices_.sidebar != QStringLiteral("off");
+    const bool documents = sidebarOn && choices_.documentTabs;
+    QList<int> wanted;
+    if (documents) wanted = openPages_;
+    else if (!sidebarOn) for (int i = 0; i < pageSections_.size(); ++i)
+        if (choices_.rail ? pageSections_[i] == currentSection_ : listedSection(pageSections_[i])) wanted << i;
+    QList<int> shown;
+    for (int tab = 0; tab < pageTabs_->count(); ++tab) shown << pageTabs_->tabData(tab).toInt();
+    if (shown != wanted || pageTabs_->tabsClosable() != documents) {
+        QSignalBlocker blocker(pageTabs_);
+        while (pageTabs_->count()) pageTabs_->removeTab(0);
+        pageTabs_->setTabsClosable(documents);
+        for (int page : wanted) {
+            const int at = pageTabs_->addTab(pageTitles_[page]);
+            pageTabs_->setTabData(at, page);
+            if (!documents) continue;
+            // Closing is immediate, with the library's quiet close icon instead of the platform's button.
+            auto *close = new IconButton(QStringLiteral("close"), QStringLiteral("Close ") + pageTitles_[page]);
+            close->setProperty("sjVariant", "quiet"); close->setProperty("sjRole", "tabClose"); close->setFixedSize(18, 18); close->setIconSize(QSize(12, 12));
+            close->setFocusPolicy(Qt::NoFocus);
+            connect(close, &QToolButton::clicked, this, [this, page] { closeDocument(page); });
+            pageTabs_->setTabButton(at, QTabBar::RightSide, close);
+        }
+    }
+    const bool row = documents || !sidebarOn;
+    tabRow_->setVisible(row);
+    // A page must not add a second tab row under the frame's: hide a tabbed page's own row while the frame shows one.
+    for (int i = 0; i < pages_->count(); ++i) if (auto *tabs = qobject_cast<QTabWidget *>(pages_->widget(i))) tabs->tabBar()->setVisible(!row);
+    updateOpenState();
+}
+void Workspace::syncNavigation() {
+    const int page = pages_->currentIndex();
+    const bool shown = !(choices_.documentTabs && choices_.sidebar != QStringLiteral("off") && openPages_.isEmpty());
+    {
+        QSignalBlocker blocker(navigation_);
+        int match = -1;
+        for (int row = 0; row < navigation_->count(); ++row) if (navigation_->item(row)->data(Qt::UserRole).toInt() == page) match = row;
+        if (match >= 0 && shown) navigation_->setCurrentRow(match);
+        else { navigation_->setCurrentRow(-1); navigation_->clearSelection(); }
+    }
+    if (shown) tree_->setCurrentId(QString::number(page));
+    else { QSignalBlocker blocker(tree_); tree_->setCurrentItem(nullptr); tree_->clearSelection(); }
+    QSignalBlocker blocker(pageTabs_);
+    for (int tab = 0; tab < pageTabs_->count(); ++tab) if (pageTabs_->tabData(tab).toInt() == page) pageTabs_->setCurrentIndex(tab);
+}
+void Workspace::openDocument(int page) {
+    if (page < 0 || openPages_.contains(page)) return;
+    openPages_.append(page);
+    refreshTabRow();
+}
+void Workspace::closeDocument(int page) {
+    const int at = openPages_.indexOf(page);
+    if (at < 0) return;
+    openPages_.removeAt(at);
+    refreshTabRow();
+    if (page == currentPage() && !openPages_.isEmpty()) setCurrentPage(openPages_[qMin(at, openPages_.size() - 1)]);
+    else syncNavigation();
+}
+void Workspace::updateOpenState() {
+    const bool empty = choices_.documentTabs && choices_.sidebar != QStringLiteral("off") && openPages_.isEmpty();
+    emptyPages_->setVisible(empty);
+    pages_->setVisible(!empty);
+}
+// Fixed sizes come from the density tokens, so they are set again when the density changes.
+void Workspace::applyDensity() {
+    const int railWidth = Theme::density(QStringLiteral("railWidth"), 48);
+    const int context = Theme::density(QStringLiteral("contextHeight"), 36);
+    toolbar_->setMinimumHeight(Theme::density(QStringLiteral("headerHeight"), 40));
+    rail_->setFixedWidth(railWidth);
+    collapse_->setFixedSize(railWidth - 8, context);
+    settingsButton_->setFixedSize(railWidth - 8, context);
+    contextHeading_->setMinimumHeight(context);
+    for (int i = 0; i < rail_->count(); ++i) rail_->item(i)->setSizeHint(QSize(railWidth - Theme::spacing(1), context));
+    // Content areas mark themselves with sjContentPadding so their margins follow the density too.
+    const int padding = Theme::density(QStringLiteral("contentPadding"), 20);
+    for (auto *widget : findChildren<QWidget *>()) {
+        if (!widget->property("sjContentPadding").toBool()) continue;
+        if (widget->layout()) widget->layout()->setContentsMargins(padding, padding, padding, padding);
+        else widget->setContentsMargins(padding, padding, padding, padding);
+    }
+}
 void Workspace::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
 }
@@ -647,8 +807,20 @@ AppShell::AppShell(const QString &name, const QString &description, const QStrin
 void AppShell::addSettingsSection(const QString &label, QWidget *content, const QString &keywords) { settings_->addSection(label, content, keywords); }
 void AppShell::setDark(bool dark) {
     dark_ = dark;
+    if (mode_) { QSignalBlocker blocker(mode_); mode_->setCurrentIndex(dark ? 0 : 1); }
     const auto theme = Theme::load(QStringLiteral("clean"), dark);
     theme.apply(this);
+}
+void AppShell::setPreset(const QString &presetId, const QVariantMap &overrides) {
+    preset_ = Preset::find(presetId).id;
+    const auto choices = Preset::resolve(preset_, overrides);
+    disconnect(followSystem_);
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    if (choices.theme == QStringLiteral("system"))
+        followSystem_ = connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this] { setDark(systemPrefersDark()); });
+#endif
+    setChoices(choices);
+    setDark(prefersDark(choices.theme));
 }
 void AppShell::showEvent(QShowEvent *event) { finishSettings(); Workspace::showEvent(event); }
 void AppShell::finishSettings() {
@@ -657,7 +829,9 @@ void AppShell::finishSettings() {
     auto *appearance = new SettingsPage(QStringLiteral("Appearance"));
     auto *mode = new QComboBox; mode->setAccessibleName(QStringLiteral("Color theme"));
     mode->addItems({QStringLiteral("Dark"), QStringLiteral("Light")}); mode->setCurrentIndex(dark_ ? 0 : 1);
-    connect(mode, &QComboBox::currentIndexChanged, this, [this](int index) { setDark(index == 0); });
+    mode_ = mode;
+    // Picking a theme here ends following the device's color scheme.
+    connect(mode, &QComboBox::currentIndexChanged, this, [this](int index) { disconnect(followSystem_); setDark(index == 0); });
     appearance->contentLayout()->addWidget(new Field(QStringLiteral("Theme"), mode, QStringLiteral("Choose the light or dark appearance.")));
     settings_->addSection(QStringLiteral("Appearance"), appearance, QStringLiteral("theme dark light mode color"));
     settings_->addSection(QStringLiteral("About"), new AboutPage(name_, description_, version_), QStringLiteral("version copyright"));

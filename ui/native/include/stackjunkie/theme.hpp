@@ -19,6 +19,10 @@ struct STACKJUNKIE_EXPORT Theme {
     static int spacing(int index);
     static int typeSize(const QString &role, int fallback = 14);
     static int density(const QString &role, int fallback = 0);
+    /** "compact" (the default) or "comfortable". One mode for the whole app: density() and the control height read it.
+        Workspace::setChoices sets it; re-apply the theme after setting it yourself. */
+    static void setDensityMode(const QString &mode);
+    static QString densityMode();
     static qreal typography(const QString &role, qreal fallback = 0);
     static int motionDuration(const QString &role = QStringLiteral("normal"));
     QColor color(const QString &name) const;

@@ -4,8 +4,9 @@ import tokens from '../../../shared/tokens.json';
 export type Direction = 'clean';
 export type ThemeMode = 'light' | 'dark';
 export type Density = 'compact' | 'comfortable';
-// The shared density tokens are compact. Comfortable adds room for reading sites; only the values that change are listed.
-const comfortable: Partial<Record<keyof typeof tokens.density, number>> = { headerHeight: 48, contextHeight: 40, tabHeight: 36, navRowHeight: 32, iconTarget: 32, railWidth: 52, contentPadding: 32, controlPaddingY: 6, controlPaddingX: 12 };
+// The shared density tokens are compact. Their comfortable block adds room for reading sites and lists only the values that change.
+const { comfortable, ...compact } = tokens.density;
+const comfortableValues: Partial<Record<string, number>> = comfortable;
 export const directions = tokens.directions;
 export const spacing = tokens.spacing;
 const ThemeContext = createContext<{ direction: Direction; mode: ThemeMode }>({ direction: 'clean', mode: 'light' });
@@ -18,8 +19,8 @@ export function ThemeProvider({ direction = 'clean', mode = 'light', density = '
   for (const [key, value] of Object.entries(theme[mode])) vars[`--sj-${key}`] = value;
   for (const [key, value] of Object.entries(theme.metrics)) vars[`--sj-${key}`] = key === 'lineHeight' ? value : `${value}px`;
   for (const [key, value] of Object.entries(theme.fonts)) vars[`--sj-font-${key}`] = value === 'system-ui' ? '"Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif' : value;
-  for (const [key, value] of Object.entries(tokens.density)) vars[`--sj-density-${key}`] = `${density === 'comfortable' ? comfortable[key as keyof typeof tokens.density] ?? value : value}px`;
-  if (density === 'comfortable') vars['--sj-controlHeight'] = `${theme.metrics.controlHeight + 4}px`;
+  for (const [key, value] of Object.entries(compact)) vars[`--sj-density-${key}`] = `${density === 'comfortable' ? comfortableValues[key] ?? value : value}px`;
+  if (density === 'comfortable') vars['--sj-controlHeight'] = `${comfortable.controlHeight}px`;
   for (const [key, value] of Object.entries(tokens.typography)) vars[`--sj-${key}`] = key === 'readingMeasure' ? `${value}ch` : value;
   vars['--sj-fast'] = `${tokens.motion.fast}ms`;
   vars['--sj-normal'] = `${tokens.motion.normal}ms`;

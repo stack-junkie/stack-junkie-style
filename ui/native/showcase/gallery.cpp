@@ -440,6 +440,7 @@ QWidget *makeFamily(const QJsonObject &family, QWidget *parent) {
     const bool readingPage = entries.size() == 1 && entries.first().toObject().value(QStringLiteral("id")).toString() == QStringLiteral("prose");
     auto *content = new QWidget;
     auto *layout = new QVBoxLayout(content);
+    content->setProperty("sjContentPadding", true);
     const int contentPadding = Theme::density(QStringLiteral("contentPadding"), 20);
     layout->setContentsMargins(contentPadding, contentPadding, contentPadding, contentPadding);
     layout->setSpacing(Theme::spacing(4));
@@ -493,6 +494,7 @@ QWidget *makeFamily(const QJsonObject &family, QWidget *parent) {
     tabs->addTab(scroll(content), QStringLiteral("Example"));
     auto *referenceContent = new QWidget;
     auto *referenceLayout = new QVBoxLayout(referenceContent);
+    referenceContent->setProperty("sjContentPadding", true);
     referenceLayout->setContentsMargins(contentPadding, contentPadding, contentPadding, contentPadding);
     for (const auto &value : family.value(QStringLiteral("components")).toArray()) {
         const auto spec = value.toObject();

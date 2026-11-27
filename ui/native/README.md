@@ -60,6 +60,47 @@ Apply the theme after composing a surface, and reapply after adding custom icon 
 
 Use the themed native Qt controls for text, passwords, dates, times, numbers, sliders, checkboxes, radio choices, selects, tabs, menus, dialogs, tables, trees, lists, grids and scroll areas. This avoids replacing mature native behavior with decorative copies. The showcase contains compositions for local data filtering/sorting, editable documents, canvas selection/zoom, progress with pause/cancel, file/color selection and focused dialogs.
 
+## Presets
+
+A Preset is a named starting set of App frame choices. The four presets live in `../shared/presets.json`, the one source that web, native and the skill read; the library embeds it like the tokens and catalog.
+
+| Choice | Web app | Desktop app | Document editor | Website |
+|---|---|---|---|---|
+| `rail` | on | on | on | off |
+| `sidebar` | tree | list | tree | off |
+| `menuBar` | off | off | on | off |
+| `statusBar` | off | on | on | off |
+| `bottomPanel` | off | off | on | off |
+| `documentTabs` | off | off | on | off |
+| `commandPalette` | on | on | on | off |
+| `theme` | dark | dark | dark | system |
+| `density` | compact | compact | compact | comfortable |
+| `dashboardHome` | off | off | off | off |
+
+Start `AppShell` from a preset and override single choices:
+
+```cpp
+#include <stackjunkie/components.hpp>
+StackJunkie::AppShell shell(QStringLiteral("My app"), QStringLiteral("What it does."), QStringLiteral("0.1.0"));
+// add sections and pages, then:
+shell.setPreset(QStringLiteral("desktop-app"), {{QStringLiteral("sidebar"), QStringLiteral("tree")}});
+```
+
+`Preset::resolve(id, overrides)` returns the full `PresetChoices`, `Preset::overrides(id, choices)` returns only the changed ones for saving, `Preset::all()` lists every preset with its label and description, and `Preset::choiceInfo()` lists every choice with its label, description and allowed values. Unknown ids fall back to Web app, and invalid overrides are ignored. A plain `Workspace` takes `setChoices(choices)`; without it, it keeps the rail and list sidebar it always had.
+
+What the frame draws today:
+
+- `rail`: the section rail, or none. Without the rail the sidebar lists every page, grouped by section, and Settings moves to the sidebar or, with no sidebar, the end of the header.
+- `sidebar`: a `NavTree`, a flat list, or nothing. With no sidebar the pages become the one tab row: the current section's pages beside the rail, every page without it.
+- `documentTabs`: beside a sidebar, every page opened from it stays in one row of closable tabs until closed (Control W closes the focused one). With none open the work area says so.
+- `theme`: `AppShell::setPreset` applies dark or light; `system` follows `QStyleHints::colorScheme` live until someone picks a theme in Settings. The offscreen platform reports no scheme, which counts as light.
+- `density`: compact or comfortable, both from the `density` tokens. `Theme::setDensityMode` holds one mode for the app; `setChoices` sets it, resizes the frame and re-applies the frame's theme. Content areas marked with the `sjContentPadding` property follow the padding.
+- `commandPalette`: the frame does not own a palette, so an app that has one reads `choices().commandPalette` or listens to `choicesChanged`.
+- `menuBar`, `statusBar`, `bottomPanel` and `dashboardHome` are accepted but drawn in a later preview (#9).
+
+When the frame shows its own tab row, a page that is itself a `QTabWidget` has its tab row hidden, so tab rows never stack.
+
+In the showcase, Settings > Layout holds the preset picker and one control per choice, generated from `presets.json`. Changes apply to the showcase at once and are saved in `QSettings`; "Reset to" the preset appears once a choice differs.
 ## Stub
 
 A Stub marks development stand-in content: sample text, fake data, unfinished labels. Create one only with the macro, which records its file and line:
@@ -93,9 +134,11 @@ The export option selects Qt's offscreen platform before the application starts,
 StackJunkieShowcase --export-preview home-dark.png --theme dark --page home
 StackJunkieShowcase --export-preview settings-light.png --theme light --page settings
 StackJunkieShowcase --export-preview inputs-narrow.png --page inputs --width 540 --height 900
+StackJunkieShowcase --export-preview website-light.png --theme light --page actions --preset website
+StackJunkieShowcase --export-preview layout-dark.png --theme dark --page settings/layout --height 900 --preset desktop-app --choice sidebar=tree
 ```
 
-Page IDs are the catalog family IDs, `family/component` (for example `navigation/tabs`), `home`, or `settings` for the Settings window. Exported previews capture the visible viewport, not every scroll position. Screenshot generation is a product artifact, not proof that all interactions work.
+Page IDs are the catalog family IDs, `family/component` (for example `navigation/tabs`), `home`, `settings` for the Settings window, or `settings/<section>` (`appearance`, `layout`, `keyboard`, `about`) for one section at the export height. `--preset <id>` starts from that preset alone, ignoring saved choices, and `--choice name=value` (repeatable) changes one choice the way Settings does. Exported previews capture the visible viewport, not every scroll position. Screenshot generation is a product artifact, not proof that all interactions work.
 
 ## Shared source
 

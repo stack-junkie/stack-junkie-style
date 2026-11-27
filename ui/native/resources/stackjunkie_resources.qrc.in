@@ -7,6 +7,7 @@
   <file alias="brand/sj-dark.png">@STACKJUNKIE_SHARED@/brand/sj-dark.png</file>
   <file alias="brand/sj-light.png">@STACKJUNKIE_SHARED@/brand/sj-light.png</file>
   <file alias="catalog.json">@STACKJUNKIE_SHARED@/catalog.json</file>
+  <file alias="presets.json">@STACKJUNKIE_SHARED@/presets.json</file>
   <file alias="icons.svg">@STACKJUNKIE_SHARED@/icons.svg</file>
 @STACKJUNKIE_INDICATOR_RESOURCES@
   <file alias="fonts/Manrope.ttf">@STACKJUNKIE_SHARED@/fonts/Manrope.ttf</file>

@@ -64,11 +64,29 @@ int Theme::spacing(int index) {
     return index >= 0 && index < values.size() ? values.at(index).toInt(8) : 8;
 }
 int Theme::typeSize(const QString &role, int fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typeScale")).toObject().value(role).toInt(fallback); }
-int Theme::density(const QString &role, int fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("density")).toObject().value(role).toInt(fallback); }
+static QString currentDensity = QStringLiteral("compact");
+void Theme::setDensityMode(const QString &mode) { currentDensity = mode == QStringLiteral("comfortable") ? mode : QStringLiteral("compact"); }
+QString Theme::densityMode() { return currentDensity; }
+// The density tokens are compact. Their comfortable block lists only the values that change.
+static QJsonValue comfortableValue(const QJsonObject &density, const QString &role) {
+    if (currentDensity != QStringLiteral("comfortable")) return {};
+    return density.value(QStringLiteral("comfortable")).toObject().value(role);
+}
+int Theme::density(const QString &role, int fallback) {
+    const auto values = document(QStringLiteral("tokens.json")).value(QStringLiteral("density")).toObject();
+    const auto comfortable = comfortableValue(values, role);
+    return comfortable.isDouble() ? comfortable.toInt(fallback) : values.value(role).toInt(fallback);
+}
 qreal Theme::typography(const QString &role, qreal fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typography")).toObject().value(role).toDouble(fallback); }
 int Theme::motionDuration(const QString &role) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("motion")).toObject().value(role).toInt(0); }
 QColor Theme::color(const QString &name) const { return QColor(colors.value(name).toString()); }
-int Theme::metric(const QString &name, int fallback) const { return definition.value(QStringLiteral("metrics")).toObject().value(name).toInt(fallback); }
+int Theme::metric(const QString &name, int fallback) const {
+    if (name == QStringLiteral("controlHeight")) {
+        const auto comfortable = comfortableValue(document(QStringLiteral("tokens.json")).value(QStringLiteral("density")).toObject(), name);
+        if (comfortable.isDouble()) return comfortable.toInt(fallback);
+    }
+    return definition.value(QStringLiteral("metrics")).toObject().value(name).toInt(fallback);
+}
 QString Theme::font(const QString &role) const {
     initializeResources();
     const QString token = definition.value(QStringLiteral("fonts")).toObject().value(role).toString(QStringLiteral("Manrope"));
@@ -145,6 +163,12 @@ QTabWidget::pane { border: @metricBorderWidthpx solid @border; background: @surf
 QTabBar::tab { background: @canvas; color: @muted; font-size: @chromepx; font-weight: @regularWeight; border-top: 2px solid transparent; border-bottom: 1px solid transparent; border-right: @metricBorderWidthpx solid @border; padding: 0 @controlPaddingXpx; min-height: @tabInnerHeightpx; margin: 0; }
 QTabBar::tab:selected { background: @surface; color: @text; border-top-color: @accent; border-bottom: 1px solid @surface; }
 QTabBar::tab:hover { background: @raised; }
+QFrame[sjRole="pageTabRow"] { background: @canvas; border: 0; border-bottom: @metricBorderWidthpx solid @border; }
+QTabBar QToolButton { background: @canvas; border: 0; border-left: @metricBorderWidthpx solid @border; border-radius: 0; padding: 0; min-height: 0; }
+QTabBar QToolButton:hover { background: @raised; }
+QTabBar QToolButton::left-arrow { image: url(:/stackjunkie/chevron-left-@glyphTone.svg); width: 12px; height: 12px; }
+QTabBar QToolButton::right-arrow { image: url(:/stackjunkie/chevron-right-@glyphTone.svg); width: 12px; height: 12px; }
+QTabBar::scroller { width: 48px; }
 QListWidget, QTreeWidget, QTableWidget, QListView, QTreeView, QTableView { background: @surface; alternate-background-color: @raised; border: @metricBorderWidthpx solid @border; gridline-color: @border; selection-background-color: @selection; selection-color: @text; }
 QListWidget::item, QTreeView::item, QTableView::item { padding: 6px; min-height: 20px; }
 QListWidget::item:hover, QTreeView::item:hover { background: @raised; }

@@ -1,5 +1,6 @@
 #pragma once
 #include <stackjunkie/theme.hpp>
+#include <stackjunkie/presets.hpp>
 #include <QFrame>
 #include <QScrollArea>
 #include <QLabel>
@@ -18,6 +19,7 @@ class QVBoxLayout;
 class QButtonGroup;
 class QListWidget;
 class QSplitterHandle;
+class QTabBar;
 #include <QTabWidget>
 class QGraphicsScene;
 class QGraphicsView;
@@ -258,13 +260,35 @@ public:
     void setHeader(const QString &title);
     void restoreSettings(const QString &key);
     void saveSettings(const QString &key) const;
+    /** Apply App frame choices, usually Preset::resolve(id, overrides). The frame draws the rail, the sidebar as a tree
+        (NavTree), a list or nothing, closable document tabs and the density. Without the rail the sidebar lists every
+        page; without a sidebar the pages become the one tab row. Theme and command palette belong to the app: AppShell
+        applies the theme, and an app that owns a palette reads choices().commandPalette. Menu bar, Status bar, bottom
+        panel and dashboard home are accepted but not drawn yet; they arrive with their components in #9. */
+    void setChoices(const PresetChoices &choices);
+    PresetChoices choices() const { return choices_; }
 signals:
     void currentChanged(int index);
-protected:
+    void choicesChanged(const StackJunkie::PresetChoices &choices);protected:
     void resizeEvent(QResizeEvent *event) override;
 private:
+    void refreshNavigation();
+    void refreshTabRow();
+    void syncNavigation();
+    void openDocument(int page);
+    void closeDocument(int page);
+    void updateOpenState();
+    void applyDensity();
+    bool listedSection(int section) const { return section != settingsSection_; }
     QListWidget *navigation_;
-    QWidget *sidebar_;
+    NavTree *tree_;
+    QWidget *work_;
+    QFrame *tabRow_;
+    QTabBar *pageTabs_;
+    QLabel *emptyPages_;
+    PresetChoices choices_;
+    QList<int> openPages_;
+    bool collapsible_ = true;    QWidget *sidebar_;
     QLabel *contextHeading_;
     QList<int> pageSections_;
     QList<QString> pageTitles_;
@@ -294,7 +318,11 @@ public:
     void addSettingsSection(const QString &label, QWidget *content, const QString &keywords = {});
     void setDark(bool dark);
     bool isDark() const { return dark_; }
-protected:
+    /** Start from a preset and replace single choices, for example {{"sidebar", "list"}}. Unknown ids use Web app.
+        Applies the layout and density (see Workspace::setChoices) and the default theme, where "system" follows the
+        device's color scheme until someone picks a theme in Settings. */
+    void setPreset(const QString &presetId, const QVariantMap &overrides = {});
+    QString preset() const { return preset_; }protected:
     void showEvent(QShowEvent *event) override;
 private:
     void finishSettings();
@@ -302,6 +330,9 @@ private:
     QString name_, description_, version_;
     bool dark_ = true;
     bool settingsFinished_ = false;
+    QString preset_;
+    QComboBox *mode_ = nullptr;
+    QMetaObject::Connection followSystem_;
 };
 // Development stand-in content (sample text, fake data, unfinished labels). Create it only with
 // STACKJUNKIE_STUB. Development builds paint it striped; release builds fail at each remaining Stub.
