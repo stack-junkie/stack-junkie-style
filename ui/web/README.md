@@ -105,6 +105,25 @@ What the frame draws today: the rail; the sidebar as a tree, a flat list or noth
 
 In the showcase, Settings > Layout holds the preset picker and every choice. Changes apply to the showcase frame at once, are saved in local storage, and Export writes them into a starter project (see Export below). Preview the starter app shows the frame a starter gets, including the Website layout.
 
+### Custom presets
+
+A custom preset is a name, a base preset and only the choices that differ from it. The file format is shared with native and described in `../shared/PRESET-FILE.md`:
+
+```json
+{ "format": "stack-junkie-preset", "version": 1, "name": "My editor", "base": "desktop-app", "choices": { "sidebar": "tree" } }
+```
+
+The library reads and writes it, so an app can offer the same feature:
+
+- `customPresetFile(preset)` returns the file text: two-space JSON, choices in `presets.json` order.
+- `parseCustomPresetFile(text)` returns `{ preset }` or `{ error }`. Any unknown base, choice name or value, wrong type (`"true"` for `true`), missing or overlong name, other format or version, or extra field rejects the whole file with one plain message.
+- `checkCustomPreset({ name, base, choices })` checks a preset built in code and trims it to the changed choices. `customPresetNameError(name)` checks a name alone.
+- Apply one with `<AppShell preset={custom.base} choices={custom.choices} />`.
+
+In the showcase, Settings > Layout > Save as custom preset names the current preset and choices. Custom presets are kept in local storage (`sj-v3-custom-presets`) and listed in the preset picker after the four presets, marked "(custom)". With one selected, its row offers Update (save the current choices into it), Rename, Export file (downloads `<name>.preset.json`) and Delete. Import file adds a preset from a file and selects it; a preset with the same name is replaced. Export starter uses the selected preset's base and choices.
+
+`npm run test:presets` writes a preset file with the shared web logic, has the native showcase import it and export it again (`--import-preset`, `--export-preset`), and checks the bytes match and web reads it back. It also checks the native `--preset` and `--choice` route writes the same file, that a starter exported from an imported preset carries its choices, and that nine bad files are rejected by web and by native (non-zero exit, a message, no file written). It uses the newest Release showcase under `../native/build*/`, or `-- --showcase <exe>`; Qt comes from `-- --qt <prefix>`, `STACKJUNKIE_QT` or `../.tools/Qt/6.8.3/msvc2022_64`. The showcase runs offscreen.
+
 ### Export
 
 Settings > Layout > Export starter writes a new project that matches the chosen preset and changed choices, as one zip (`my-app-web-starter.zip` or `my-app-native-starter.zip`). Pick Web starter or Native starter and preview any file before downloading.

@@ -51,6 +51,26 @@ struct STACKJUNKIE_EXPORT Preset {
     /** Only the choices that differ from the preset, for saving a compact set of overrides. */
     static QVariantMap overrides(const QString &id, const PresetChoices &choices);
 };
+/**
+ * A custom preset: a name, a base preset and only the choices that differ from it.
+ * Its file is the same on web and native; the format and rules are in ui/shared/PRESET-FILE.md.
+ */
+struct STACKJUNKIE_EXPORT CustomPreset {
+    QString name;
+    /** A preset id, such as "desktop-app". */ QString base;
+    /** Choice name to value, such as {{"sidebar", "tree"}}. Booleans must be bool, not text. */ QVariantMap choices;
+
+    /** A plain error message for a name, or an empty string when it is usable. Names are trimmed first. */
+    static QString nameError(const QString &name);
+    /** Checks the preset. Returns an error message, or an empty string and, in *checked, the preset with its name trimmed and only the changed choices. */
+    static QString check(const CustomPreset &preset, CustomPreset *checked = nullptr);
+    /** Reads a preset file. Returns an error message and leaves *result unchanged, or an empty string and sets *result. */
+    static QString parse(const QByteArray &text, CustomPreset *result);
+    /** The preset file text: the same bytes web writes for this preset. Empty when check() fails. */
+    QByteArray toFile() const;
+    /** The base preset's choices with this preset's choices applied. */
+    PresetChoices resolve() const { return Preset::resolve(base, choices); }
+};
 /** True when the device's color scheme is dark. Unknown schemes, such as the offscreen platform's, count as light. */
 STACKJUNKIE_EXPORT bool systemPrefersDark();
 /** Resolves a theme choice: "dark", "light", or "system", which follows the device. */

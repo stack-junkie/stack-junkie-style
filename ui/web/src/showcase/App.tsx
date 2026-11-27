@@ -6,6 +6,7 @@ import catalog from '../../../shared/catalog.json';
 import './showcase.css';
 import { SiteWordmark } from './SiteWordmark';
 import { ExportDialog } from './ExportDialog';
+import { CustomPresetSettings, loadCustomPresets, sameChoices, saveCustomPresets } from './CustomPresets';
 
 const demoFamilies: Record<string, React.ComponentType<{ id: string }>> = { foundations: FoundationDemo, actions: ActionDemo, inputs: InputDemo, navigation: NavigationDemo, containers: ContainerDemo, collections: CollectionDemo, feedback: FeedbackDemo, overlays: OverlayDemo, content: ContentDemo };
 const prefix = 'sj-v3';
@@ -42,6 +43,10 @@ export default function App() {
   const [preset, setPreset] = useState<UI.PresetId>(() => saved<UI.PresetId>('preset', 'web-app', UI.presetIds));
   const [overrides, setOverrides] = useState<Partial<UI.PresetChoices>>(() => UI.presetOverrides(preset, savedJson<Partial<UI.PresetChoices>>('choices', {})));
   const choices = UI.resolvePreset(preset, overrides);
+  // A selected custom preset is a marker over the base preset and its overrides; changing a choice keeps it selected until Update.
+  const [customs, setCustoms] = useState<UI.CustomPreset[]>(loadCustomPresets);
+  const [customName, setCustomName] = useState<string | undefined>(() => { try { const name = localStorage.getItem(`${prefix}-custom`); return customs.some(c => c.name === name && c.base === preset) ? name ?? undefined : undefined; } catch { return undefined; } });
+  const selectedCustom = customs.find(c => c.name === customName);
   const systemMode = UI.useSystemTheme();
   const themeFor = (theme: UI.ThemeChoice): UI.ThemeMode => theme === 'system' ? systemMode : theme;
   const [section, setSection] = useState('home');
@@ -50,13 +55,19 @@ export default function App() {
   // The bottom panel's Output tab lists the pages opened in this session, newest last.
   const [opened, setOpened] = useState<string[]>([]);
   const [settings, setSettings] = useState<UI.SettingsState>({ open: false, section: 'appearance' }); const [exportOpen, setExportOpen] = useState(false);
-  useEffect(() => { try { Object.entries({ mode, preset, choices: JSON.stringify(overrides), layout: JSON.stringify(layout), pages: JSON.stringify(pages) }).forEach(([k, v]) => localStorage.setItem(`${prefix}-${k}`, v)); } catch { /* Optional storage. */ } }, [mode, preset, overrides, layout, pages]);
+  useEffect(() => { try { Object.entries({ mode, preset, choices: JSON.stringify(overrides), layout: JSON.stringify(layout), pages: JSON.stringify(pages), custom: selectedCustom?.name ?? '' }).forEach(([k, v]) => localStorage.setItem(`${prefix}-${k}`, v)); } catch { /* Optional storage. */ } }, [mode, preset, overrides, layout, pages, selectedCustom]);
+  useEffect(() => saveCustomPresets(customs), [customs]);
   useEffect(() => { if (!choices.commandPalette) { setCommands(false); return; } function key(e: KeyboardEvent) { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCommands(o => !o); } } document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key); }, [choices.commandPalette]);
   const shellConfig: UI.ShellConfig = useMemo(() => ({ ...UI.defaultShellConfig, mode, ...layout }), [mode, layout]);
   useEffect(() => { if (choices.theme === 'system') setMode(systemMode); }, [choices.theme, systemMode]);
   const frame: FrameSettings =useMemo(() => ({ preset, choices: overrides, config: shellConfig }), [preset, overrides, shellConfig]);
   // Picking a preset starts from its choices; changing one choice keeps the rest. The theme choice also switches the showcase's own theme.
-  function choosePreset(id: UI.PresetId) { setPreset(id); setOverrides({}); setMode(themeFor(UI.resolvePreset(id).theme)); }
+  function choosePreset(id: UI.PresetId) { setPreset(id); setOverrides({}); setCustomName(undefined); setMode(themeFor(UI.resolvePreset(id).theme)); }
+  function chooseCustom(custom: UI.CustomPreset | undefined) {
+    if (!custom) return;
+    setCustomName(custom.name); setPreset(custom.base); setOverrides(custom.choices); setMode(themeFor(UI.resolvePreset(custom.base, custom.choices).theme));
+  }
+  const customModified = !!selectedCustom && (selectedCustom.base !== preset || !sameChoices(selectedCustom.choices, overrides));
   function setChoice<K extends UI.PresetChoice>(key: K, value: UI.PresetChoices[K]) {
     setOverrides(o => UI.presetOverrides(preset, { ...o, [key]: value }));
     if (key === 'theme') setMode(themeFor(value as UI.ThemeChoice));
@@ -110,16 +121,21 @@ export default function App() {
       { id: 'appearance', label: 'Appearance', keywords: 'theme dark light mode color', content: <UI.SettingsSection label="Appearance">
         <UI.ThemeSetting mode={mode} onChange={setMode} />
       </UI.SettingsSection> },
-      { id: 'layout', label: 'Layout', keywords: 'preset rail sidebar menu status panel tabs command palette theme density dashboard resize collapse export template', content: <UI.SettingsSection label="Layout">
+      { id: 'layout', label: 'Layout', keywords: 'preset custom import rail sidebar menu status panel tabs command palette theme density dashboard resize collapse export template', content: <UI.SettingsSection label="Layout">
         <div className="showcase-only-note">Showcase only. A preset sets the App frame for a new project; change any choice, then Export hands it over.</div>
-        <UI.SettingsRow label="Preset" description={UI.presets.find(p => p.id === preset)?.description}><UI.Select label="Preset" value={preset} onChange={e => choosePreset(e.target.value as UI.PresetId)}>{UI.presets.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</UI.Select></UI.SettingsRow>
+        <UI.SettingsRow label="Preset" description={selectedCustom ? `Your custom preset, based on ${UI.presets.find(p => p.id === preset)?.label}.` : UI.presets.find(p => p.id === preset)?.description}><UI.Select label="Preset" value={selectedCustom ? `custom:${selectedCustom.name}` : preset} onChange={e => { const value = e.target.value; if (value.startsWith('custom:')) chooseCustom(customs.find(c => `custom:${c.name}` === value)); else choosePreset(value as UI.PresetId); }}>
+          {UI.presets.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
+          {customs.length > 0 && <optgroup label="Custom presets">{customs.map(c => <option key={c.name} value={`custom:${c.name}`}>{c.name} (custom)</option>)}</optgroup>}
+        </UI.Select></UI.SettingsRow>
+        <CustomPresetSettings customs={customs} onCustomsChange={setCustoms} selected={selectedCustom} onSelect={chooseCustom} onMark={setCustomName} base={preset} overrides={overrides} />
         {(Object.entries(UI.presetChoices) as [UI.PresetChoice, UI.PresetChoiceInfo][]).map(([key, info]) => {
           const value = choices[key]; const description = [info.description, notDrawnYet[key]].filter(Boolean).join(' ');
           return <UI.SettingsRow key={key} label={info.label} description={description}>{typeof value === 'boolean'
             ? <UI.Switch label={info.label} checked={value} onChange={e => setChoice(key, e.target.checked as never)} />
             : <UI.Select label={info.label} value={value} onChange={e => setChoice(key, e.target.value as never)}>{info.options.map(o => <option key={String(o)} value={String(o)}>{optionLabel(String(o))}</option>)}</UI.Select>}</UI.SettingsRow>;
         })}
-        {Object.keys(overrides).length > 0 && <div><UI.Button onClick={() => choosePreset(preset)}>Reset to {UI.presets.find(p => p.id === preset)?.label}</UI.Button></div>}
+        {selectedCustom ? customModified && <div><UI.Button onClick={() => chooseCustom(selectedCustom)}>Reset to {selectedCustom.name}</UI.Button></div>
+          : Object.keys(overrides).length > 0 && <div><UI.Button onClick={() => choosePreset(preset)}>Reset to {UI.presets.find(p => p.id === preset)?.label}</UI.Button></div>}
         {([['resizableSidebar', 'Resizable sidebar', 'Drag the sidebar edge to any width.'], ['collapsibleSidebar', 'Collapsible sidebar', 'The menu button hides and shows the sidebar.']] as const).map(([key, label, description]) =>
           <UI.SettingsRow key={key} label={label} description={description}><UI.Switch label={label} checked={layout[key]} disabled={choices.sidebar === 'off'} onChange={e => setLayout(l => ({ ...l, [key]: e.target.checked }))} /></UI.SettingsRow>)}
         <UI.SettingsRow label="Export" description="Download a web or native starter project that installs the library at this version and uses this preset and these choices."><UI.Button variant="primary" onClick={() => setExportOpen(true)}>Export starter</UI.Button></UI.SettingsRow>
@@ -128,7 +144,7 @@ export default function App() {
       { id: 'keyboard', label: 'Keyboard', keywords: 'shortcuts keys resize command', content: <UI.SettingsSection label="Keyboard"><UI.Prose><p>Drag a sidebar divider to resize it. Arrow keys adjust a focused divider; Home and End use its available range.</p><p>Control K opens command search. Control comma opens Settings. In a row of open documents, Delete or Control W closes the focused tab.</p><p>With the Menu bar on, Control B shows or hides the sidebar and Control J the bottom panel. In the Menu bar, arrow keys move between menus and items and Escape closes the open menu.</p></UI.Prose></UI.SettingsSection> },
     ]}
     overlays={<>
-      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} preset={preset} overrides={overrides} />
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} preset={preset} overrides={overrides} customName={selectedCustom?.name} />
       {choices.commandPalette && <UI.CommandPalette open={commands} onClose={() => setCommands(false)} commands={[...catalog.families.map(f => ({ id: f.id, label: `Open ${f.label.toLowerCase()}`, run: () => navigate(f.id) })), { id: 'settings', label: 'Open Settings', run: () => openSettings() }, { id: 'export', label: 'Export starter', run: () => setExportOpen(true) }, { id: 'theme', label: `Use ${mode === 'dark' ? 'light' : 'dark'} theme`, run: () => setMode(mode === 'dark' ? 'light' : 'dark') }]} />}
     </>} />;
 }

@@ -1,4 +1,5 @@
 import data from '../../../shared/presets.json';
+import { checkCustomPreset as checkPreset, parsePresetFile, presetFileFormat, presetFileText, presetFileVersion, presetNameError } from '../../../shared/preset-file.mjs';
 
 // Presets are read from the shared definition, the only source of preset choices for web, native and the skill.
 export type PresetId = 'web-app' | 'desktop-app' | 'document-editor' | 'website';
@@ -34,3 +35,20 @@ export function presetOverrides(id: PresetId, choices: Partial<PresetChoices>): 
   const base = resolvePreset(id);
   return Object.fromEntries(Object.entries(choices).filter(([key, value]) => base[key as PresetChoice] !== value)) as Partial<PresetChoices>;
 }
+
+/** A custom preset: a name, a base preset and only the choices that differ from it. */
+export type CustomPreset = { name: string; base: PresetId; choices: Partial<PresetChoices> };
+export type CustomPresetResult = { preset: CustomPreset; error?: undefined } | { preset?: undefined; error: string };
+// The file format and its rules are shared with native: see ui/shared/PRESET-FILE.md.
+export const customPresetFormat: string = presetFileFormat;
+export const customPresetVersion: number = presetFileVersion;
+/** Checks a name, base and choices. Returns the preset trimmed to its changed choices, or a plain error. */
+export function checkCustomPreset(preset: { name: string; base: string; choices: Partial<PresetChoices> }): CustomPresetResult {
+  return checkPreset(preset, data) as CustomPresetResult;
+}
+/** A plain error message for a custom preset name, or an empty string when it is usable. */
+export function customPresetNameError(name: string): string { return presetNameError(name); }
+/** The preset file text for a custom preset. Throws on an invalid preset. */
+export function customPresetFile(preset: CustomPreset): string { return presetFileText(preset, data); }
+/** Reads a preset file. Any broken rule rejects the whole file with one plain message, and nothing is returned to apply. */
+export function parseCustomPresetFile(text: string): CustomPresetResult { return parsePresetFile(text, data) as CustomPresetResult; }

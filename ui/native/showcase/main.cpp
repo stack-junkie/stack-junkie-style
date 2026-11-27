@@ -14,6 +14,10 @@
 #include <QDir>
 #include <QFileDialog>
 #include <QHBoxLayout>
+#include <QInputDialog>
+#include <QLineEdit>
+#include <QRegularExpression>
+#include <QStyle>
 #include <QVBoxLayout>
 #include <QImage>
 #include <QJsonArray>
@@ -33,7 +37,7 @@
 
 using namespace StackJunkie;
 // A settings row like the web SettingsRow: label and visible description on the left, the control on the right.
-static QWidget *settingsRow(const QString &label, const QString &description, QWidget *control, QLabel **descriptionLabel = nullptr) {
+static QWidget *settingsRow(const QString &label, const QString &description, QWidget *control, QLabel **descriptionLabel = nullptr, QLabel **captionLabel = nullptr) {
     auto *result = new QWidget;
     auto *layout = new QHBoxLayout(result); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(Theme::spacing(3));
     auto *text = new QVBoxLayout; text->setSpacing(2);
@@ -43,12 +47,44 @@ static QWidget *settingsRow(const QString &label, const QString &description, QW
     layout->addLayout(text, 1); layout->addWidget(control, 0, Qt::AlignVCenter);
     control->setAccessibleName(label); control->setAccessibleDescription(description);
     if (descriptionLabel) *descriptionLabel = help;
+    if (captionLabel) *captionLabel = caption;
     return result;
 }
+// Several controls side by side in one settings row.
+static QWidget *controlGroup(const QList<QWidget *> &widgets) {
+    auto *group = new QWidget;
+    auto *layout = new QHBoxLayout(group); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(Theme::spacing(2));
+    for (auto *widget : widgets) layout->addWidget(widget);
+    return group;
+}
+// Custom presets are saved as their preset file text, the same text Export file writes.
+static QList<CustomPreset> savedCustomPresets(const QSettings &settings) {
+    QList<CustomPreset> result;
+    for (const auto &text : settings.value(QStringLiteral("layout/customPresets")).toStringList()) {
+        CustomPreset preset;
+        if (CustomPreset::parse(text.toUtf8(), &preset).isEmpty()) result << preset;
+    }
+    return result;
+}
+static QString readPresetFile(const QString &path, CustomPreset *preset) {
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) return QStringLiteral("The file could not be read.");
+    return CustomPreset::parse(file.readAll(), preset);
+}
+static const QString writeFailed = QStringLiteral("The preset file could not be written.");
+static QString writePresetFile(const QString &path, const CustomPreset &preset) {
+    const QByteArray text = preset.toFile();
+    if (text.isEmpty()) return CustomPreset::check(preset);
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) || file.write(text) != text.size()) return writeFailed;
+    return {};
+}
+static bool sameName(const QString &a, const QString &b) { return a.trimmed().compare(b.trimmed(), Qt::CaseInsensitive) == 0; }
 int main(int argc, char *argv[]) {
     bool exporting = false;
     for (int i = 1; i < argc; ++i) if (std::strcmp(argv[i], "--export-preview") == 0 || std::strncmp(argv[i], "--export-preview=", 17) == 0
-        || std::strcmp(argv[i], "--export-starter") == 0 || std::strncmp(argv[i], "--export-starter=", 17) == 0) exporting = true;
+        || std::strcmp(argv[i], "--export-starter") == 0 || std::strncmp(argv[i], "--export-starter=", 17) == 0
+        || std::strcmp(argv[i], "--export-preset") == 0 || std::strncmp(argv[i], "--export-preset=", 16) == 0) exporting = true;
     if (exporting && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
     app.setOrganizationName(QStringLiteral("StackJunkie"));
@@ -65,19 +101,41 @@ int main(int argc, char *argv[]) {
     parser.addOption({QStringLiteral("page"), QStringLiteral("Family ID, family/component ID, home, settings or settings/<section>"), QStringLiteral("page")});
     parser.addOption({QStringLiteral("menu"), QStringLiteral("Show one Menu bar menu open in the export: file, edit, view, library or help."), QStringLiteral("menu")});
     parser.addOption({QStringLiteral("choice"), QStringLiteral("Change one preset choice, such as sidebar=list, the same way Settings does. Repeatable."), QStringLiteral("name=value")});
-    parser.addOption({QStringLiteral("preset"), QStringLiteral("App frame preset: web-app, desktop-app, document-editor or website. Saved choices are not used."), QStringLiteral("id")});    parser.addOption({QStringLiteral("width"), QStringLiteral("Export width, at least 480 pixels."), QStringLiteral("pixels"), QStringLiteral("1440")});
+    parser.addOption({QStringLiteral("preset"), QStringLiteral("App frame preset: web-app, desktop-app, document-editor or website. Saved choices are not used."), QStringLiteral("id")});
+    parser.addOption({QStringLiteral("import-preset"), QStringLiteral("Import a custom preset file and use it, the same way Settings > Layout > Import file does. Not with --preset."), QStringLiteral("file")});
+    parser.addOption({QStringLiteral("export-preset"), QStringLiteral("Write the current preset and choices as a custom preset file, then exit."), QStringLiteral("file")});
+    parser.addOption({QStringLiteral("preset-name"), QStringLiteral("Name for --export-preset. Defaults to the imported or selected custom preset's name, else Custom preset."), QStringLiteral("name")});
+    parser.addOption({QStringLiteral("width"), QStringLiteral("Export width, at least 480 pixels."), QStringLiteral("pixels"), QStringLiteral("1440")});
     parser.addOption({QStringLiteral("height"), QStringLiteral("Export height, at least 460 pixels."), QStringLiteral("pixels"), QStringLiteral("1000")});
     parser.process(app);
     try {
         initializeResources();
-        if (parser.isSet(QStringLiteral("export-starter"))) {
-            // The same starter Settings > Layout > Export writes: --preset alone, or the saved preset and choices, then each --choice.
+        if (parser.isSet(QStringLiteral("import-preset")) && parser.isSet(QStringLiteral("preset"))) { std::fprintf(stderr, "Use --import-preset or --preset, not both\n"); return 2; }
+        // An imported preset file is checked first: a bad file stops here with its message, before anything is applied or written.
+        CustomPreset imported;
+        if (parser.isSet(QStringLiteral("import-preset"))) {
+            const QString error = readPresetFile(parser.value(QStringLiteral("import-preset")), &imported);
+            if (!error.isEmpty()) { std::fprintf(stderr, "Preset file not imported: %s\n", qPrintable(error)); return 2; }
+        }
+        if (parser.isSet(QStringLiteral("export-starter")) || parser.isSet(QStringLiteral("export-preset"))) {
+            // The same files Settings > Layout writes: an imported preset, --preset alone, or the saved preset and choices, then each --choice.
             QSettings saved;
-            const QString id = parser.isSet(QStringLiteral("preset")) ? parser.value(QStringLiteral("preset")) : saved.value(QStringLiteral("layout/preset"), QStringLiteral("web-app")).toString();
+            const bool fromImport = parser.isSet(QStringLiteral("import-preset"));
+            const QString id = fromImport ? imported.base : parser.isSet(QStringLiteral("preset")) ? parser.value(QStringLiteral("preset")) : saved.value(QStringLiteral("layout/preset"), QStringLiteral("web-app")).toString();
             if (!Preset::exists(id)) { std::fprintf(stderr, "Unknown preset\n"); return 2; }
-            auto choices = Preset::resolve(id, parser.isSet(QStringLiteral("preset")) ? QVariantMap() : saved.value(QStringLiteral("layout/choices")).toMap());
+            auto choices = Preset::resolve(id, fromImport ? imported.choices : parser.isSet(QStringLiteral("preset")) ? QVariantMap() : saved.value(QStringLiteral("layout/choices")).toMap());
             for (const auto &assignment : parser.values(QStringLiteral("choice")))
                 if (!choices.setValue(assignment.section(QLatin1Char('='), 0, 0), assignment.section(QLatin1Char('='), 1))) { std::fprintf(stderr, "Unknown choice or value\n"); return 2; }
+            if (parser.isSet(QStringLiteral("export-preset"))) {
+                const QString savedName = fromImport || parser.isSet(QStringLiteral("preset")) ? QString() : saved.value(QStringLiteral("layout/custom")).toString();
+                const QString name = parser.isSet(QStringLiteral("preset-name")) ? parser.value(QStringLiteral("preset-name")) : fromImport ? imported.name : savedName.isEmpty() ? QStringLiteral("Custom preset") : savedName;
+                const CustomPreset preset{name, id, Preset::overrides(id, choices)};
+                const QString path = parser.value(QStringLiteral("export-preset"));
+                const QString error = writePresetFile(path, preset);
+                if (!error.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(error)); return error == writeFailed ? 3 : 2; }
+                std::printf("Wrote preset file %s\n", qPrintable(QDir::toNativeSeparators(QFileInfo(path).absoluteFilePath())));
+                if (!parser.isSet(QStringLiteral("export-starter"))) return 0;
+            }
             const auto starter = generateStarter(parser.value(QStringLiteral("starter")), id, Preset::overrides(id, choices));
             if (!starter.error.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(starter.error)); return 2; }
             if (!starter.unsupported.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(starter.unsupported)); return 2; }
@@ -213,6 +271,31 @@ int main(int argc, char *argv[]) {
             presetId = QStringLiteral("web-app");
         }
         QVariantMap overrides = parser.isSet(QStringLiteral("preset")) ? QVariantMap() : Preset::overrides(presetId, Preset::resolve(presetId, settings.value(QStringLiteral("layout/choices")).toMap()));
+        // Custom presets are listed after the four presets. A selected one is a marker over its base preset and choices.
+        QList<CustomPreset> customs = savedCustomPresets(settings);
+        auto findCustom = [&customs](const QString &name) { for (int i = 0; i < customs.size(); ++i) if (customs[i].name == name) return i; return -1; };
+        QString customName = parser.isSet(QStringLiteral("preset")) ? QString() : settings.value(QStringLiteral("layout/custom")).toString();
+        if (findCustom(customName) < 0 || customs[findCustom(customName)].base != presetId) customName.clear();
+        auto saveCustoms = [&] {
+            if (exporting) return;
+            QStringList texts;
+            for (const auto &custom : customs) texts << QString::fromUtf8(custom.toFile());
+            settings.setValue(QStringLiteral("layout/customPresets"), texts);
+        };
+        // Import adds the preset and selects it. A preset with the same name is replaced, so a file moved between machines updates it.
+        auto addImported = [&](const CustomPreset &preset) {
+            bool replaced = false;
+            for (int i = customs.size() - 1; i >= 0; --i) if (sameName(customs[i].name, preset.name)) { customs.removeAt(i); replaced = true; }
+            customs << preset;
+            saveCustoms();
+            return replaced;
+        };
+        QString startMessage;
+        if (parser.isSet(QStringLiteral("import-preset"))) {
+            const bool replaced = addImported(imported);
+            presetId = imported.base; overrides = imported.choices; customName = imported.name;
+            startMessage = (replaced ? QStringLiteral("Replaced ") : QStringLiteral("Imported ")) + imported.name + QStringLiteral(".");
+        }
         window.setChoices(Preset::resolve(presetId, overrides));
         const QString presetTheme = Preset::resolve(presetId, overrides).theme;
         const QString savedTheme = settings.value(QStringLiteral("theme"), prefersDark(presetTheme) ? QStringLiteral("dark") : QStringLiteral("light")).toString();
@@ -250,9 +333,39 @@ int main(int argc, char *argv[]) {
         // Settings > Layout: the preset picker and one control per choice, generated from presets.json and applied at once.
         layoutPage->contentLayout()->addWidget(new Notice(QStringLiteral("Showcase only. A preset sets the App frame for a new project; change any choice and the frame follows.")));
         auto *presetBox = new QComboBox; presetBox->setMinimumWidth(180);
-        for (const auto &preset : Preset::all()) presetBox->addItem(preset.label, preset.id);
+        auto fillPresetBox = [&] {
+            QSignalBlocker blocker(presetBox);
+            presetBox->clear();
+            for (const auto &preset : Preset::all()) presetBox->addItem(preset.label, preset.id);
+            if (!customs.isEmpty()) presetBox->insertSeparator(presetBox->count());
+            for (const auto &custom : customs) presetBox->addItem(custom.name + QStringLiteral(" (custom)"), QStringLiteral("custom:") + custom.name);
+        };
+        fillPresetBox();
         QLabel *presetHelp = nullptr;
         layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Preset"), Preset::find(presetId).description, presetBox, &presetHelp));
+        // The selected custom preset's row, then Save as custom preset and Import preset file.
+        auto *updateCustom = new Button(QStringLiteral("Update"));
+        auto *renameCustom = new Button(QStringLiteral("Rename..."));
+        auto *exportCustom = new Button(QStringLiteral("Export file..."));
+        auto *deleteCustom = new Button(QStringLiteral("Delete"), ButtonVariant::Danger);
+        QLabel *customCaption = nullptr, *customHelp = nullptr;
+        auto *customRow = settingsRow(QStringLiteral("Custom preset"), QString(), controlGroup({updateCustom, renameCustom, exportCustom, deleteCustom}), &customHelp, &customCaption);
+        layoutPage->contentLayout()->addWidget(customRow);
+        auto *customNameEdit = new QLineEdit; customNameEdit->setPlaceholderText(QStringLiteral("e.g. My editor")); customNameEdit->setMaxLength(60); customNameEdit->setMinimumWidth(200);
+        customNameEdit->setAccessibleName(QStringLiteral("Custom preset name"));
+        auto *saveCustom = new Button(QStringLiteral("Save"));
+        layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Save as custom preset"), QStringLiteral("Name the current preset and choices to pick them again. Saved on this computer."), controlGroup({customNameEdit, saveCustom})));
+        auto *importCustom = new Button(QStringLiteral("Import file..."));
+        layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Import preset file"), QStringLiteral("Add a custom preset from a preset file exported on web or native."), importCustom));
+        auto *customMessage = new QLabel; customMessage->setWordWrap(true); customMessage->setVisible(false);
+        layoutPage->contentLayout()->addWidget(customMessage);
+        auto showMessage = [customMessage](const QString &text, bool error) {
+            customMessage->setText(text);
+            customMessage->setProperty("sjRole", error ? "error" : "muted");
+            customMessage->style()->unpolish(customMessage); customMessage->style()->polish(customMessage);
+            customMessage->setVisible(true);
+        };
+        auto changedText = [](int count) { return count == 0 ? QStringLiteral("no changed choices") : QStringLiteral("%1 changed %2").arg(count).arg(count == 1 ? QStringLiteral("choice") : QStringLiteral("choices")); };
         // Choices drawn by later components keep their switch so the preset is complete, and the note says what is missing.
         const QHash<QString, QString> notes{{QStringLiteral("dashboardHome"), QStringLiteral("Drawn in a later preview.")},
             {QStringLiteral("commandPalette"), QStringLiteral("Apps read this choice; the native showcase has no command palette yet.")}};
@@ -288,15 +401,23 @@ int main(int argc, char *argv[]) {
         layoutPage->contentLayout()->addWidget(exportResult);
         auto syncLayout = [&] {
             const auto choices = Preset::resolve(presetId, overrides);
-            { QSignalBlocker blocker(presetBox); presetBox->setCurrentIndex(presetBox->findData(presetId)); }
-            presetHelp->setText(Preset::find(presetId).description);
+            const int custom = findCustom(customName);
+            const bool modified = custom >= 0 && (customs[custom].base != presetId || customs[custom].choices != overrides);
+            { QSignalBlocker blocker(presetBox); presetBox->setCurrentIndex(presetBox->findData(custom >= 0 ? QStringLiteral("custom:") + customName : presetId)); }
+            presetHelp->setText(custom >= 0 ? QStringLiteral("Your custom preset, based on %1.").arg(Preset::find(presetId).label) : Preset::find(presetId).description);
+            customRow->setVisible(custom >= 0);
+            if (custom >= 0) {
+                customCaption->setText(customName);
+                customHelp->setText(QStringLiteral("Based on %1, %2.%3").arg(Preset::find(customs[custom].base).label, changedText(int(customs[custom].choices.size())), modified ? QStringLiteral(" The current choices differ.") : QString()));
+            }
+            updateCustom->setEnabled(modified);
             for (auto it = controls.begin(); it != controls.end(); ++it) {
                 QSignalBlocker blocker(it.value());
                 if (auto *check = qobject_cast<QCheckBox *>(it.value())) check->setChecked(choices.value(it.key()).toBool());
                 else if (auto *combo = qobject_cast<QComboBox *>(it.value())) combo->setCurrentIndex(combo->findData(choices.value(it.key()).toString()));
             }
-            reset->setText(QStringLiteral("Reset to ") + Preset::find(presetId).label);
-            reset->setVisible(!overrides.isEmpty());
+            reset->setText(QStringLiteral("Reset to ") + (custom >= 0 ? customName : Preset::find(presetId).label));
+            reset->setVisible(custom >= 0 ? modified : !overrides.isEmpty());
             const QString unsupported = generateStarter(starterBox->currentData().toString(), presetId, overrides).unsupported;
             exportHelp->setText(unsupported.isEmpty() ? exportDescription : unsupported);
             exportButton->setEnabled(unsupported.isEmpty());
@@ -304,11 +425,17 @@ int main(int argc, char *argv[]) {
         auto applyLayout = [&] {
             window.setChoices(Preset::resolve(presetId, overrides));
             syncLayout();
-            if (!exporting) { settings.setValue(QStringLiteral("layout/preset"), presetId); settings.setValue(QStringLiteral("layout/choices"), overrides); }
+            if (!exporting) { settings.setValue(QStringLiteral("layout/preset"), presetId); settings.setValue(QStringLiteral("layout/choices"), overrides); settings.setValue(QStringLiteral("layout/custom"), customName); }
         };
         // The theme choice also switches the showcase's own theme; "system" follows the device.
         auto showTheme = [&](const QString &theme) { mode->setCurrentIndex(prefersDark(theme) ? 1 : 0); };
-        auto choosePreset = [&](const QString &id) { presetId = id; overrides.clear(); applyLayout(); showTheme(Preset::find(id).choices.theme); };
+        auto choosePreset = [&](const QString &id) { presetId = id; overrides.clear(); customName.clear(); applyLayout(); showTheme(Preset::find(id).choices.theme); };
+        auto chooseCustom = [&](const QString &name) {
+            const int index = findCustom(name);
+            if (index < 0) return;
+            presetId = customs[index].base; overrides = customs[index].choices; customName = name;
+            applyLayout(); showTheme(customs[index].resolve().theme);
+        };
         setChoice = [&](const QString &id, const QVariant &value) {
             auto choices = Preset::resolve(presetId, overrides);
             if (!choices.setValue(id, value)) return;
@@ -316,8 +443,72 @@ int main(int argc, char *argv[]) {
             applyLayout();
             if (id == QStringLiteral("theme")) showTheme(value.toString());
         };
-        QObject::connect(presetBox, &QComboBox::currentIndexChanged, &window, [&](int) { choosePreset(presetBox->currentData().toString()); });
-        QObject::connect(reset, &QPushButton::clicked, &window, [&] { choosePreset(presetId); });
+        QObject::connect(presetBox, &QComboBox::currentIndexChanged, &window, [&](int) {
+            const QString value = presetBox->currentData().toString();
+            if (value.startsWith(QStringLiteral("custom:"))) chooseCustom(value.mid(7)); else choosePreset(value);
+        });
+        QObject::connect(reset, &QPushButton::clicked, &window, [&] { if (findCustom(customName) >= 0) chooseCustom(customName); else choosePreset(presetId); });
+        auto taken = [&](const QString &name, const QString &except) { for (const auto &c : customs) if (sameName(c.name, name) && !(!except.isEmpty() && sameName(c.name, except))) return true; return false; };
+        auto saveNew = [&] {
+            CustomPreset checked;
+            const QString error = CustomPreset::check({customNameEdit->text(), presetId, overrides}, &checked);
+            if (!error.isEmpty()) { showMessage(error, true); return; }
+            if (taken(checked.name, QString())) { showMessage(QStringLiteral("A custom preset named \"%1\" already exists.").arg(checked.name), true); return; }
+            customs << checked; customName = checked.name;
+            saveCustoms(); fillPresetBox(); applyLayout();
+            customNameEdit->clear(); showMessage(QStringLiteral("Saved %1.").arg(checked.name), false);
+        };
+        QObject::connect(saveCustom, &QPushButton::clicked, &window, saveNew);
+        QObject::connect(customNameEdit, &QLineEdit::returnPressed, &window, saveNew);
+        QObject::connect(updateCustom, &QPushButton::clicked, &window, [&] {
+            const int index = findCustom(customName);
+            CustomPreset checked;
+            if (index < 0 || !CustomPreset::check({customName, presetId, overrides}, &checked).isEmpty()) return;
+            customs[index] = checked; saveCustoms(); syncLayout(); showMessage(QStringLiteral("Updated %1.").arg(customName), false);
+        });
+        QObject::connect(renameCustom, &QPushButton::clicked, &window, [&] {
+            const int index = findCustom(customName);
+            if (index < 0) return;
+            bool ok = false;
+            const QString name = QInputDialog::getText(settingsWindow, QStringLiteral("Rename custom preset"), QStringLiteral("New name"), QLineEdit::Normal, customName, &ok);
+            if (!ok) return;
+            CustomPreset renamed = customs[index]; renamed.name = name;
+            CustomPreset checked;
+            const QString error = CustomPreset::check(renamed, &checked);
+            if (!error.isEmpty()) { showMessage(error, true); return; }
+            if (taken(checked.name, customName)) { showMessage(QStringLiteral("A custom preset named \"%1\" already exists.").arg(checked.name), true); return; }
+            customs[index] = checked; customName = checked.name;
+            saveCustoms(); fillPresetBox(); applyLayout(); showMessage(QStringLiteral("Renamed to %1.").arg(checked.name), false);
+        });
+        QObject::connect(exportCustom, &QPushButton::clicked, &window, [&] {
+            const int index = findCustom(customName);
+            if (index < 0) return;
+            QString slug = customName.toLower();
+            slug.replace(QRegularExpression(QStringLiteral("[^a-z0-9]+")), QStringLiteral("-"));
+            slug.remove(QRegularExpression(QStringLiteral("^-|-$")));
+            const QString path = QFileDialog::getSaveFileName(settingsWindow, QStringLiteral("Export preset file"), (slug.isEmpty() ? QStringLiteral("custom") : slug) + QStringLiteral(".preset.json"), QStringLiteral("Preset files (*.json)"));
+            if (path.isEmpty()) return;
+            const QString error = writePresetFile(path, customs[index]);
+            showMessage(error.isEmpty() ? QStringLiteral("Wrote %1.").arg(QDir::toNativeSeparators(path)) : error, !error.isEmpty());
+        });
+        QObject::connect(deleteCustom, &QPushButton::clicked, &window, [&] {
+            const int index = findCustom(customName);
+            if (index < 0 || QMessageBox::question(settingsWindow, QStringLiteral("Delete custom preset?"), QStringLiteral("Delete %1? The current choices stay as they are.").arg(customName)) != QMessageBox::Yes) return;
+            const QString name = customName;
+            customs.removeAt(index); customName.clear();
+            saveCustoms(); fillPresetBox(); applyLayout(); showMessage(QStringLiteral("Deleted %1.").arg(name), false);
+        });
+        QObject::connect(importCustom, &QPushButton::clicked, &window, [&] {
+            const QString path = QFileDialog::getOpenFileName(settingsWindow, QStringLiteral("Import preset file"), QString(), QStringLiteral("Preset files (*.json);;All files (*)"));
+            if (path.isEmpty()) return;
+            CustomPreset preset;
+            const QString error = readPresetFile(path, &preset);
+            if (!error.isEmpty()) { showMessage(QStringLiteral("Preset file not imported. ") + error, true); return; }
+            const bool replaced = addImported(preset);
+            fillPresetBox(); chooseCustom(preset.name);
+            showMessage((replaced ? QStringLiteral("Replaced ") : QStringLiteral("Imported ")) + preset.name + QStringLiteral("."), false);
+        });
+        if (!startMessage.isEmpty()) showMessage(startMessage, false);
         QObject::connect(starterBox, &QComboBox::currentIndexChanged, &window, [&](int) { syncLayout(); exportResult->setVisible(false); });
         QObject::connect(exportButton, &QPushButton::clicked, &window, [&] {
             const QString platform = starterBox->currentData().toString();

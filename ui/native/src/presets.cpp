@@ -130,6 +130,107 @@ QVariantMap Preset::overrides(const QString &id, const PresetChoices &choices) {
     for (auto it = chosen.begin(); it != chosen.end(); ++it) if (base.value(it.key()) != it.value()) result.insert(it.key(), it.value());
     return result;
 }
+// Custom preset files mirror ui/shared/preset-file.mjs: the same rules, messages and bytes.
+static const QString presetFileFormat = QStringLiteral("stack-junkie-preset");
+static constexpr int presetFileVersion = 1;
+static constexpr int presetNameMaxLength = 60;
+static QString shown(const QJsonValue &value) {
+    if (value.isString()) return QLatin1Char('"') + value.toString() + QLatin1Char('"');
+    if (value.isUndefined()) return QStringLiteral("undefined");
+    const QString text = QString::fromUtf8(QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact));
+    return text.mid(1, text.size() - 2);
+}
+static QString optionsText(const QJsonArray &options) {
+    QStringList result;
+    for (const auto &option : options) result << (option.isBool() ? (option.toBool() ? QStringLiteral("true") : QStringLiteral("false")) : option.toString());
+    return result.join(QStringLiteral(", "));
+}
+static QString presetIdsText() {
+    QStringList ids;
+    for (const auto &preset : Preset::all()) ids << preset.id;
+    return ids.join(QStringLiteral(", "));
+}
+QString CustomPreset::nameError(const QString &name) {
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty()) return QStringLiteral("The preset needs a name.");
+    if (trimmed.size() > presetNameMaxLength) return QStringLiteral("The preset name is longer than %1 characters.").arg(presetNameMaxLength);
+    for (const QChar c : name) if (c.unicode() < 0x20 || c.unicode() == 0x7f) return QStringLiteral("The preset name cannot contain line breaks or control characters.");
+    return {};
+}
+// Checks JSON values, so a bool written as text is rejected exactly as on web.
+static QString checkJson(const QString &name, const QJsonValue &base, const QJsonValue &choicesValue, CustomPreset *checked) {
+    const QString nameProblem = CustomPreset::nameError(name);
+    if (!nameProblem.isEmpty()) return nameProblem;
+    if (!base.isString()) return QStringLiteral("The preset needs a base preset: one of %1.").arg(presetIdsText());
+    if (!Preset::exists(base.toString())) return QStringLiteral("Unknown base preset %1. Use one of: %2.").arg(shown(base), presetIdsText());
+    if (!choicesValue.isObject()) return QStringLiteral("The preset choices must be an object.");
+    const auto choices = choicesValue.toObject();
+    const auto definitions = presetDocument().value(QStringLiteral("choices")).toObject();
+    for (auto it = choices.begin(); it != choices.end(); ++it) {
+        if (!definitions.contains(it.key())) return QStringLiteral("Unknown choice %1.").arg(shown(it.key()));
+        const auto options = definitions.value(it.key()).toObject().value(QStringLiteral("options")).toArray();
+        if (!options.contains(it.value())) return QStringLiteral("The %1 choice cannot be %2. Use one of: %3.").arg(it.key(), shown(it.value()), optionsText(options));
+    }
+    const auto baseChoices = Preset::find(base.toString()).choices;
+    CustomPreset result{name.trimmed(), base.toString(), {}};
+    for (const auto &id : presetSource().choiceOrder) {
+        if (!choices.contains(id)) continue;
+        const QVariant value = choices.value(id).toVariant();
+        if (value != baseChoices.value(id)) result.choices.insert(id, value);
+    }
+    if (checked) *checked = result;
+    return {};
+}
+QString CustomPreset::check(const CustomPreset &preset, CustomPreset *checked) {
+    QJsonObject choices;
+    for (auto it = preset.choices.begin(); it != preset.choices.end(); ++it) {
+        const auto type = it.value().typeId();
+        // Only bool and text reach the file: other types (such as a number) are shown as they are and rejected.
+        choices.insert(it.key(), type == QMetaType::Bool ? QJsonValue(it.value().toBool()) : type == QMetaType::QString ? QJsonValue(it.value().toString()) : QJsonValue::fromVariant(it.value()));
+    }
+    return checkJson(preset.name, QJsonValue(preset.base), choices, checked);
+}
+QString CustomPreset::parse(const QByteArray &text, CustomPreset *result) {
+    QByteArray bytes = text;
+    if (bytes.startsWith("\xEF\xBB\xBF")) bytes.remove(0, 3);
+    QJsonParseError parseError;
+    const auto doc = QJsonDocument::fromJson(bytes, &parseError);
+    if (parseError.error != QJsonParseError::NoError) return QStringLiteral("The file is not valid JSON.");
+    const auto data = doc.object();
+    if (!doc.isObject() || data.value(QStringLiteral("format")) != QJsonValue(presetFileFormat)) return QStringLiteral("This is not a Stack Junkie preset file.");
+    const auto version = data.value(QStringLiteral("version"));
+    if (!version.isDouble() || version.toDouble() != presetFileVersion) return QStringLiteral("The preset file is version %1. This version reads version %2.").arg(shown(version)).arg(presetFileVersion);
+    const QStringList fileKeys{QStringLiteral("format"), QStringLiteral("version"), QStringLiteral("name"), QStringLiteral("base"), QStringLiteral("choices")};
+    for (const auto &key : data.keys()) if (!fileKeys.contains(key)) return QStringLiteral("Unknown field %1 in the preset file.").arg(shown(key));
+    if (!data.contains(QStringLiteral("choices"))) return QStringLiteral("The preset file has no choices.");
+    const auto name = data.value(QStringLiteral("name"));
+    if (!name.isString()) return QStringLiteral("The preset needs a name.");
+    CustomPreset checked;
+    const QString error = checkJson(name.toString(), data.value(QStringLiteral("base")), data.value(QStringLiteral("choices")), &checked);
+    if (!error.isEmpty()) return error;
+    if (result) *result = checked;
+    return {};
+}
+// JSON text the way JSON.stringify(value, null, 2) writes it. Names have no control characters, so only quotes and backslashes need escaping.
+static QByteArray jsonText(const QString &text) {
+    QString escaped = text;
+    escaped.replace(QLatin1Char('\\'), QStringLiteral("\\\\")).replace(QLatin1Char('"'), QStringLiteral("\\\""));
+    return '"' + escaped.toUtf8() + '"';
+}
+QByteArray CustomPreset::toFile() const {
+    CustomPreset preset;
+    if (!check(*this, &preset).isEmpty()) return {};
+    QByteArray out = "{\n  \"format\": " + jsonText(presetFileFormat) + ",\n  \"version\": " + QByteArray::number(presetFileVersion)
+        + ",\n  \"name\": " + jsonText(preset.name) + ",\n  \"base\": " + jsonText(preset.base) + ",\n  \"choices\": {";
+    QList<QByteArray> lines;
+    for (const auto &id : presetSource().choiceOrder) {
+        if (!preset.choices.contains(id)) continue;
+        const QVariant value = preset.choices.value(id);
+        lines << "    " + jsonText(id) + ": " + (value.typeId() == QMetaType::Bool ? QByteArray(value.toBool() ? "true" : "false") : jsonText(value.toString()));
+    }
+    out += lines.isEmpty() ? QByteArray("}") : "\n" + lines.join(",\n") + "\n  }";
+    return out + "\n}\n";
+}
 bool systemPrefersDark() {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     if (qGuiApp) return QGuiApplication::styleHints()->colorScheme() == Qt::ColorScheme::Dark;

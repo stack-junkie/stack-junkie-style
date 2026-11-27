@@ -2,6 +2,7 @@
 
 ## 3.0.0-preview.10
 
+- Custom presets on web and native: Settings > Layout saves the current preset and choices under a name, lists them in the preset picker, and can update, rename, delete, export and import them. One file format (`shared/PRESET-FILE.md`) for both, checked by `parseCustomPresetFile` on web and `CustomPreset::parse` on native; a bad file is rejected whole with a plain message. Native adds `--import-preset`, `--export-preset` and `--preset-name`, and `npm run test:presets` checks a web to native round trip and bad files on both.
 - Swap the next web and native versions in. There is one web library and one native library again.
 - Settings is a window (`SettingsWindow`) opened from the gear or Control comma, never a page.
 - No stacked tab rows: groups sit in one row, document tabs close immediately, and debug builds warn about a tab row inside another. `TabBoundary` marks real visual breaks.

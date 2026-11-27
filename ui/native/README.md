@@ -103,6 +103,32 @@ When the frame shows its own tab row, a page that is itself a `QTabWidget` has i
 
 In the showcase, Settings > Layout holds the preset picker and one control per choice, generated from `presets.json`. Changes apply to the showcase at once and are saved in `QSettings`; "Reset to" the preset appears once a choice differs.
 
+### Custom presets
+
+A custom preset is a name, a base preset and only the choices that differ from it. Web and native save, export and import the same file, described in `../shared/PRESET-FILE.md`. `CustomPreset` (in `presets.hpp`) applies the same rules as web, reading the allowed values from the embedded `presets.json`:
+
+```cpp
+CustomPreset preset;
+const QString error = CustomPreset::parse(file.readAll(), &preset); // empty on success; nothing is set on failure
+shell.setPreset(preset.base, preset.choices);
+QByteArray text = CustomPreset{QStringLiteral("My editor"), QStringLiteral("desktop-app"), Preset::overrides(id, choices)}.toFile();
+```
+
+`toFile()` writes the same bytes as the web library. `check(preset, &checked)` checks a preset built in code and trims it to the changed choices, and `nameError(name)` checks a name alone. Booleans must be `bool`, not text, as in the file.
+
+In the showcase, Settings > Layout > Save as custom preset names the current preset and choices. Custom presets are kept in `QSettings` (`layout/customPresets`, as file text) and listed in the preset picker after the four presets, marked "(custom)". With one selected, its row offers Update, Rename, Export file and Delete. Import file adds a preset from a file and selects it; a preset with the same name is replaced. Export starter uses the selected preset's base and choices.
+
+For testing without dialogs:
+
+```powershell
+StackJunkieShowcase -platform offscreen --import-preset my-editor.preset.json --export-preset copy.preset.json
+StackJunkieShowcase -platform offscreen --preset desktop-app --choice sidebar=tree --preset-name "My editor" --export-preset my-editor.preset.json
+StackJunkieShowcase -platform offscreen --import-preset my-editor.preset.json --export-starter my-app --starter native
+StackJunkieShowcase -platform offscreen --import-preset my-editor.preset.json --page settings/layout --export-preview layout.png --height 1300
+```
+
+`--import-preset <file>` checks the file first: a bad file prints "Preset file not imported" with the reason and exits with code 2 before anything is applied or written. It cannot be combined with `--preset`. `--export-preset <file>` writes the current choices (imported, `--preset`, or saved, then each `--choice`) and exits; `--preset-name` names it, defaulting to the imported or selected custom preset's name, else "Custom preset". During an export nothing is saved to `QSettings`. `npm run test:presets` in `../web` runs the web and native round trip.
+
 ### Menu bar, Status bar and bottom panel
 
 The Document editor preset turns all three on. `Workspace` draws them from the choices; the app supplies their content:

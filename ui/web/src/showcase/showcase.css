@@ -25,3 +25,6 @@ html,body,#root{margin:0;height:100%;min-height:100%}body{min-width:320px}.showc
 .demo-status-bar{border:1px solid var(--sj-border);border-radius:var(--sj-radius);overflow:hidden}
 .demo-bottom-panel{height:300px;display:flex;flex-direction:column;border:1px solid var(--sj-border);border-radius:var(--sj-radius);overflow:hidden}
 .demo-bottom-panel-work{flex:1;min-height:0;padding:12px}
+
+/* Custom presets: a name field and its buttons on one line in a settings row. */
+.custom-preset-controls{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:flex-end;gap:8px}.custom-preset-controls>span{align-self:center}.custom-preset-controls .sj-field{min-width:200px}.custom-preset-controls .sj-field>label{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0);overflow:hidden;white-space:nowrap}
