@@ -25,8 +25,12 @@ The full-window showcase screen where you pick a Preset, switch its choices on a
 _Avoid_: Wizard, configurator, starter preview
 
 **Website**:
-The Preset for reading sites: a top header with logo and navigation, a footer, a reading-width column and a small theme toggle, instead of the App frame.
+The Preset for reading sites, such as a blog or article site: navigation in a top bar or a sidebar, a Site footer, a reading-width column and a small theme toggle, instead of the App frame.
 _Avoid_: Site layout, blog template
+
+**Site footer**:
+The bottom area of every Website page, linking to all of the site's pages. It can be switched off. Apps have a Status bar instead.
+_Avoid_: Footer bar, bottom nav
 
 **Look-alike app**:
 An app built to deliberately imitate an existing app (such as SJ Paint imitating Microsoft Paint). It follows that app's look instead of this system.
