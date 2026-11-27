@@ -68,3 +68,4 @@
 .sj-workspace-resize{background:linear-gradient(var(--sj-border),var(--sj-border)) center / 1px 100% no-repeat}
 .sj-workspace-resize:hover,.sj-workspace-resize:focus-visible{background:var(--sj-accent)}
 .sj-skip-link{position:fixed;top:-80px;left:16px;z-index:120;padding:12px 16px;background:var(--sj-surface);color:var(--sj-text);border:2px solid var(--sj-focus)}.sj-skip-link:focus{top:12px}
+.sj-shell-empty{padding:var(--sj-density-contentPadding)}

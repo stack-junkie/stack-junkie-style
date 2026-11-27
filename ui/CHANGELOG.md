@@ -10,6 +10,7 @@
 - Product layouts use their own `layout` icon. The workbench is the reference for many-page apps: rail, sidebar tree, one row of open documents and a bottom panel.
 - The expanded sidebar always pushes the work area and never becomes an overlay.
 - Remove the Warm editorial and Precise technical directions. Clean utility is the only direction.
+- Add Presets (Web app, Desktop app, Document editor, Website) in `shared/presets.json`. The web `AppShell` takes `preset` and `choices` and draws the rail, tree or list sidebar, closable document tabs, default theme (including system) and density. The showcase Settings window picks the preset and switches every choice, and Export writes them into `App.tsx`.
 
 ## 3.0.0-preview.9
 

@@ -40,7 +40,7 @@ export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, childr
         onPointerMove={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) { const panel = document.getElementById(uid)!; setWidth(Math.max(0, Math.min(maximum, e.clientX - panel.getBoundingClientRect().left))); } }}
         onPointerUp={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); }} />}
       <main id={mainId} tabIndex={-1} className={`sj-workspace-main ${contentOwnsHeader && rail ? 'sj-workspace-main--integrated' : ''}`}>
-        {(!contentOwnsHeader || !rail) && <header className="sj-workspace-bar">{!rail && sidebarToggle}{toolbar}</header>}
+        {(!contentOwnsHeader || !rail) && ((!rail && sidebarToggle) || toolbar) && <header className="sj-workspace-bar">{!rail && sidebarToggle}{toolbar}</header>}
         <div className="sj-workspace-content">{typeof children === 'function' ? children({ sidebarCollapsed: !shown }): children}</div>
       </main>
     </div>
