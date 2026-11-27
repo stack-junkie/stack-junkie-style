@@ -37,6 +37,7 @@ const logo = { name: path.basename(logoPath), data: readFileSync(logoPath) };
 const cases = [
   ...presets.presets.map(p => ({ name: p.id, preset: p.id, overrides: {} })),
   { name: 'web-app logo', preset: 'web-app', overrides: {}, logo },
+  { name: 'website sidebar', preset: 'website', overrides: { siteNavigation: 'sidebar', siteFooter: false, headerSearch: false, headerButton: false } },
   { name: 'desktop-app custom', preset: 'desktop-app', overrides: custom, expect: { web: "{ sidebar: 'tree', statusBar: false, theme: 'light', density: 'comfortable' }", native: '{{QStringLiteral("sidebar"), QStringLiteral("tree")}, {QStringLiteral("statusBar"), false}, {QStringLiteral("theme"), QStringLiteral("light")}, {QStringLiteral("density"), QStringLiteral("comfortable")}}' } },
 ];
 
@@ -70,7 +71,7 @@ function compareWithShowcase(label, platform, testCase, files) {
 // What an app does with its Stubs: swap each for its own text. Here, the text inside it.
 function replaceStubs(dir, files) {
   for (const file of files.filter(f => /\.tsx?$/.test(f.path))) {
-    const text = file.text.replace(/<Stub(?: block)?>([^<]*)<\/Stub>/g, '<p>$1</p>').replace(/\bstub\(('[^']*')\)/g, '$1').replace(/\bStub, stub, /, '');
+    const text = file.text.replace(/<Stub block>([^<]*)<\/Stub>/g, '<p>$1</p>').replace(/<Stub>([^<]*)<\/Stub>/g, '$1').replace(/\bstub\(('[^']*')\)/g, '$1').replace(/\bstub\((\(\) => \{\})\)/g, '$1').replace(/\bStub, stub, /, '');
     writeFileSync(path.join(dir, file.path), text);
   }
 }

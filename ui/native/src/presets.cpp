@@ -53,6 +53,10 @@ QVariant PresetChoices::value(const QString &choice) const {
     if (choice == QStringLiteral("theme")) return theme;
     if (choice == QStringLiteral("density")) return density;
     if (choice == QStringLiteral("dashboardHome")) return dashboardHome;
+    if (choice == QStringLiteral("siteNavigation")) return siteNavigation;
+    if (choice == QStringLiteral("siteFooter")) return siteFooter;
+    if (choice == QStringLiteral("headerSearch")) return headerSearch;
+    if (choice == QStringLiteral("headerButton")) return headerButton;
     return {};
 }
 bool PresetChoices::setValue(const QString &choice, const QVariant &value) {
@@ -70,6 +74,9 @@ bool PresetChoices::setValue(const QString &choice, const QVariant &value) {
         else if (choice == QStringLiteral("documentTabs")) documentTabs = on;
         else if (choice == QStringLiteral("commandPalette")) commandPalette = on;
         else if (choice == QStringLiteral("dashboardHome")) dashboardHome = on;
+        else if (choice == QStringLiteral("siteFooter")) siteFooter = on;
+        else if (choice == QStringLiteral("headerSearch")) headerSearch = on;
+        else if (choice == QStringLiteral("headerButton")) headerButton = on;
         else return false;
         return true;
     }
@@ -78,6 +85,7 @@ bool PresetChoices::setValue(const QString &choice, const QVariant &value) {
     if (choice == QStringLiteral("sidebar")) sidebar = text;
     else if (choice == QStringLiteral("theme")) theme = text;
     else if (choice == QStringLiteral("density")) density = text;
+    else if (choice == QStringLiteral("siteNavigation")) siteNavigation = text;
     else return false;
     return true;
 }
@@ -93,7 +101,10 @@ QList<PresetChoiceInfo> Preset::choiceInfo() {
     const auto choices = presetDocument().value(QStringLiteral("choices")).toObject();
     for (const auto &id : presetSource().choiceOrder) {
         const auto info = choices.value(id).toObject();
-        result.append({id, info.value(QStringLiteral("label")).toString(), info.value(QStringLiteral("description")).toString(), info.value(QStringLiteral("options")).toArray().toVariantList()});
+        QString group = QStringLiteral("shared");
+        const auto groups = presetDocument().value(QStringLiteral("groups")).toObject();
+        for (auto it = groups.begin(); it != groups.end(); ++it) if (it.value().toObject().value(QStringLiteral("choices")).toArray().contains(id)) group = it.key();
+        result.append({id, info.value(QStringLiteral("label")).toString(), info.value(QStringLiteral("description")).toString(), info.value(QStringLiteral("options")).toArray().toVariantList(), group});
     }
     return result;
 }
@@ -101,7 +112,7 @@ QList<Preset> Preset::all() {
     QList<Preset> result;
     for (const auto &value : presetDocument().value(QStringLiteral("presets")).toArray()) {
         const auto object = value.toObject();
-        Preset preset{object.value(QStringLiteral("id")).toString(), object.value(QStringLiteral("label")).toString(), object.value(QStringLiteral("description")).toString(), {}};
+        Preset preset{object.value(QStringLiteral("id")).toString(), object.value(QStringLiteral("label")).toString(), object.value(QStringLiteral("description")).toString(), {}, object.value(QStringLiteral("madeFor")).toString()};
         const auto choices = object.value(QStringLiteral("choices")).toObject();
         for (auto it = choices.begin(); it != choices.end(); ++it) preset.choices.setValue(it.key(), it.value().toVariant());
         result.append(preset);

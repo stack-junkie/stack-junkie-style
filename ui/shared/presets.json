@@ -9,7 +9,16 @@
     "commandPalette": { "label": "Command palette", "description": "Control K opens a searchable list of commands.", "options": [true, false] },
     "theme": { "label": "Default theme", "description": "The theme a new visitor sees. System follows the device setting.", "options": ["dark", "light", "system"] },
     "density": { "label": "Density", "description": "Compact for tools, comfortable for reading.", "options": ["compact", "comfortable"] },
-    "dashboardHome": { "label": "Dashboard home", "description": "Open on a Dashboard of real numbers. Off unless the app has numbers worth showing.", "options": [true, false] }
+    "dashboardHome": { "label": "Dashboard home", "description": "Open on a Dashboard of real numbers. Off unless the app has numbers worth showing.", "options": [true, false] },
+    "siteNavigation": { "label": "Navigation", "group": "website", "description": "The site's pages in a top bar, or in a sidebar beside the reading column.", "options": ["top", "sidebar"] },
+    "siteFooter": { "label": "Site footer", "group": "website", "description": "Every page ends with a footer that links to all of the site's pages.", "options": [true, false] },
+    "headerSearch": { "label": "Header search", "group": "website", "description": "A search button in the header.", "options": [true, false] },
+    "headerButton": { "label": "Main header button", "group": "website", "description": "One main button in the header, such as Subscribe.", "options": [true, false] }
+  },
+  "groups": {
+    "app": { "label": "App frame", "description": "Choices for the App frame: Web app, Desktop app and Document editor.", "choices": ["rail", "sidebar", "menuBar", "statusBar", "bottomPanel", "documentTabs", "commandPalette", "dashboardHome"] },
+    "website": { "label": "Website", "description": "Choices for the Website layout.", "choices": ["siteNavigation", "siteFooter", "headerSearch", "headerButton"] },
+    "shared": { "label": "Both", "description": "Choices every preset uses.", "choices": ["theme", "density"] }
   },
   "presets": [
     {
@@ -17,28 +26,28 @@
       "label": "Web app",
       "description": "A browser tool with a rail, a sidebar tree and a command palette.",
       "madeFor": "Made for browser tools and dashboards people keep open all day.",
-      "choices": { "rail": true, "sidebar": "tree", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
+      "choices": { "rail": true, "sidebar": "tree", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false, "siteNavigation": "top", "siteFooter": true, "headerSearch": true, "headerButton": true }
     },
     {
       "id": "desktop-app",
       "label": "Desktop app",
       "description": "A Windows tool with a rail, a sidebar list and a Status bar.",
       "madeFor": "Made for Windows utilities that do one job well.",
-      "choices": { "rail": true, "sidebar": "list", "menuBar": false, "statusBar": true, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
+      "choices": { "rail": true, "sidebar": "list", "menuBar": false, "statusBar": true, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false, "siteNavigation": "top", "siteFooter": true, "headerSearch": true, "headerButton": true }
     },
     {
       "id": "document-editor",
       "label": "Document editor",
       "description": "An editor with a Menu bar, a Status bar, a bottom panel and closable document tabs.",
       "madeFor": "Made for editors that open, change and save documents.",
-      "choices": { "rail": true, "sidebar": "tree", "menuBar": true, "statusBar": true, "bottomPanel": true, "documentTabs": true, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
+      "choices": { "rail": true, "sidebar": "tree", "menuBar": true, "statusBar": true, "bottomPanel": true, "documentTabs": true, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false, "siteNavigation": "top", "siteFooter": true, "headerSearch": true, "headerButton": true }
     },
     {
       "id": "website",
       "label": "Website",
       "description": "A reading site with a header, a footer, a reading column and a theme toggle.",
       "madeFor": "Made for blogs, article sites and documentation.",
-      "choices": { "rail": false, "sidebar": "off", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": false, "theme": "system", "density": "comfortable", "dashboardHome": false }
+      "choices": { "rail": false, "sidebar": "off", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": false, "theme": "system", "density": "comfortable", "dashboardHome": false, "siteNavigation": "top", "siteFooter": true, "headerSearch": true, "headerButton": true }
     }
   ]
 }

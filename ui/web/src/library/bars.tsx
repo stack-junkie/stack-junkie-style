@@ -135,10 +135,11 @@ export function StatusBar({ state, facts = [], label = 'Status bar' }: { state?:
 export type PanelTab = { id: string; label: string; content: ReactNode };
 /** A resizable panel under the work area with its own tab row, such as Output and Problems. Place it as the last child of a
  * column whose other child takes the remaining height. Drag the top edge, or focus it and use the up and down arrow keys. */
-export function BottomPanel({ tabs, value: controlledValue, onChange, height: controlledHeight, onHeightChange, onClose, label = 'Bottom panel', initialHeight = 160 }: {
+export function BottomPanel({ tabs, value: controlledValue, onChange, height: controlledHeight, onHeightChange, onClose, label = 'Bottom panel', initialHeight = 160, zoom = 100 }: {
   tabs: PanelTab[]; value?: string; onChange?: (id: string) => void;
   height?: number; onHeightChange?: (height: number) => void; initialHeight?: number;
   /** Shows a close control in the tab row. */ onClose?: () => void; label?: string;
+  /** Zoom percentage of the panel's content. */ zoom?: number;
 }) {
   const [ownValue, setOwnValue] = useState(tabs[0]?.id ?? '');
   const [ownHeight, setOwnHeight] = useState(initialHeight);
@@ -157,7 +158,7 @@ export function BottomPanel({ tabs, value: controlledValue, onChange, height: co
       onPointerMove={e => { if (e.currentTarget.hasPointerCapture(e.pointerId) && panel.current) resize(panel.current.getBoundingClientRect().bottom - e.clientY); }}
       onPointerUp={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); }} />
     <section ref={panel} className="sj-bottom-panel" aria-label={label} style={{ height }}>
-      <Tabs label={`${label} views`} value={value} onChange={choose} tabs={tabs} />
+      <div className="sj-bottom-panel-zoom" data-zoom-area="panel" style={zoom !== 100 ? { zoom: zoom / 100 } : undefined}><Tabs label={`${label} views`} value={value} onChange={choose} tabs={tabs} /></div>
       {onClose && <IconButton className="sj-bottom-panel-close" icon="close" label={`Hide ${label.toLowerCase()}`} variant="quiet" onClick={onClose} />}
     </section>
   </>;

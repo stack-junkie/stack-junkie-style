@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttrib
 import { Button, Icon } from './core';
 import { tipProps } from './tips';
 
-export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, children, navigationFooter, footer, storageKey, mainId, initialSidebarWidth = 228, contentOwnsHeader = false, resizable = true, collapsible = true, sidebarCollapsed, onSidebarCollapsedChange, zoom = 100 }: {
+export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, children, navigationFooter, footer, storageKey, mainId, initialSidebarWidth = 228, contentOwnsHeader = false, resizable = true, collapsible = true, sidebarCollapsed, onSidebarCollapsedChange, zoom = 100, areaZoom = {} }: {
   header: ReactNode; rail?: ReactNode; sidebar?: ReactNode; sidebarTitle: string; toolbar?: ReactNode; children: ReactNode | ((state: { sidebarCollapsed: boolean }) => ReactNode); navigationFooter?: ReactNode; storageKey?: string; mainId?: string; initialSidebarWidth?: number; contentOwnsHeader?: boolean;
   /** Let people drag the contextual sidebar to any width. */ resizable?: boolean;
   /** Let people hide the contextual sidebar with the menu control. */ collapsible?: boolean;
@@ -10,6 +10,7 @@ export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, childr
   /** Controlled sidebar collapse, for a frame that also toggles it from a menu. Without it the workspace remembers it itself. */ sidebarCollapsed?: boolean;
   onSidebarCollapsedChange?: (collapsed: boolean) => void;
   /** Zoom percentage of the whole workspace. */ zoom?: number;
+  /** Zoom percentages of single areas, relative to the whole workspace: the sidebar's list and the work area. */ areaZoom?: { sidebar?: number; content?: number };
 }) {
   const uid = useId(); const toggle = useRef<HTMLButtonElement>(null); const body = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(() => { try { const stored = storageKey ? localStorage.getItem(`${storageKey}:width`) : null; const value = Number(stored); return stored !== null && Number.isFinite(value) ? Math.max(0, value) : initialSidebarWidth; } catch { return initialSidebarWidth; } });
@@ -39,7 +40,7 @@ export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, childr
       {rail && <aside className="sj-workspace-rail" aria-label="Sections">{sidebarToggle}<div className="sj-workspace-rail-scroll">{rail}</div>{navigationFooter && <footer className="sj-navigation-footer">{navigationFooter}</footer>}</aside>}
       {hasSidebar && <aside id={uid} className="sj-workspace-sidebar" hidden={!shown} aria-label={sidebarTitle}>
         <header className="sj-workspace-bar"><strong>{sidebarTitle}</strong></header>
-        <div className="sj-workspace-sidebar-body"><div className="sj-workspace-navigation">{sidebar}</div>{!rail && navigationFooter && <footer className="sj-navigation-footer">{navigationFooter}</footer>}</div>
+        <div className="sj-workspace-sidebar-body"><div className="sj-workspace-navigation" data-zoom-area="sidebar" style={areaZoom.sidebar && areaZoom.sidebar !== 100 ? { zoom: areaZoom.sidebar / 100 } : undefined}>{sidebar}</div>{!rail && navigationFooter && <footer className="sj-navigation-footer">{navigationFooter}</footer>}</div>
       </aside>}
       {hasSidebar && <div hidden={!shown} className="sj-workspace-resize" role="separator" tabIndex={resizable ? 0 : -1} aria-label={`Resize ${sidebarTitle.toLowerCase()} sidebar`} aria-controls={uid} aria-orientation="vertical" aria-valuemin={0} aria-valuemax={Math.round(maximum)} aria-valuenow={Math.round(visibleWidth)} aria-disabled={!resizable || undefined}
         onKeyDown={e => { if (resizable && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) { e.preventDefault(); setWidth(e.key === 'Home' ? 0 : e.key === 'End' ? maximum : Math.max(0, Math.min(maximum, visibleWidth + (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 32 : 8)))); } }}
@@ -48,7 +49,7 @@ export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, childr
         onPointerUp={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); }} />}
       <main id={mainId} tabIndex={-1} className={`sj-workspace-main ${contentOwnsHeader && rail ? 'sj-workspace-main--integrated' : ''}`}>
         {(!contentOwnsHeader || !rail) && ((!rail && sidebarToggle) || toolbar) && <header className="sj-workspace-bar">{!rail && sidebarToggle}{toolbar}</header>}
-        <div className="sj-workspace-content">{typeof children === 'function' ? children({ sidebarCollapsed: !shown }): children}</div>
+        <div className="sj-workspace-content" data-zoom-area="content" style={areaZoom.content && areaZoom.content !== 100 ? { zoom: areaZoom.content / 100 } : undefined}>{typeof children === 'function' ? children({ sidebarCollapsed: !shown }): children}</div>
       </main>
     </div>
     {!rail && !shown && navigationFooter && <footer className="sj-navigation-footer">{navigationFooter}</footer>}

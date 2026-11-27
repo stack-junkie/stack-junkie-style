@@ -2,14 +2,15 @@
 const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
 function crc32(bytes: Uint8Array) { let c = 0xffffffff; for (const b of bytes) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; }
 
-export function zip(files: { path: string; text: string }[]): Blob {
+/** Text files are written as UTF-8; files with data, such as a logo image, as their bytes. */
+export function zip(files: { path: string; text?: string; data?: Uint8Array }[]): Blob {
   const encoder = new TextEncoder();
   const parts: Uint8Array[] = []; const central: Uint8Array[] = []; let offset = 0;
   const now = new Date();
   const time = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
   const date = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
   for (const file of files) {
-    const name = encoder.encode(file.path); const data = encoder.encode(file.text); const crc = crc32(data);
+    const name = encoder.encode(file.path); const data = file.data ?? encoder.encode(file.text ?? ''); const crc = crc32(data);
     const local = new DataView(new ArrayBuffer(30));
     [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, 0, 2], [10, time, 2], [12, date, 2], [14, crc, 4], [18, data.length, 4], [22, data.length, 4], [26, name.length, 2], [28, 0, 2]]
       .forEach(([at, value, size]) => size === 4 ? local.setUint32(at, value, true) : local.setUint16(at, value, true));

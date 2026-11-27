@@ -5,8 +5,8 @@ import { LayoutPage, layoutPages, type FrameSettings } from './layouts';
 import catalog from '../../../shared/catalog.json';
 import './showcase.css';
 import { SiteWordmark } from './SiteWordmark';
-import { ExportDialog } from './ExportDialog';
-import { CustomPresetSettings, loadCustomPresets, sameChoices, saveCustomPresets } from './CustomPresets';
+import { Builder, type BuilderLogo } from './Builder';
+import { loadCustomPresets, sameChoices, saveCustomPresets } from './CustomPresets';
 
 const demoFamilies: Record<string, React.ComponentType<{ id: string }>> = { foundations: FoundationDemo, actions: ActionDemo, inputs: InputDemo, navigation: NavigationDemo, containers: ContainerDemo, collections: CollectionDemo, feedback: FeedbackDemo, overlays: OverlayDemo, content: ContentDemo };
 const prefix = 'sj-v3';
@@ -54,7 +54,10 @@ export default function App() {
   const [query, setQuery] = useState(''); const [commands, setCommands] = useState(false);
   // The bottom panel's Output tab lists the pages opened in this session, newest last.
   const [opened, setOpened] = useState<string[]>([]);
-  const [settings, setSettings] = useState<UI.SettingsState>({ open: false, section: 'appearance' }); const [exportOpen, setExportOpen] = useState(false);
+  const [settings, setSettings] = useState<UI.SettingsState>({ open: false, section: 'appearance' });
+  // The Builder fills the window in place of the showcase frame; Back returns to where it was opened.
+  const [building, setBuilding] = useState(false); const [logo, setLogo] = useState<BuilderLogo | undefined>();
+  const openBuilder = () => { setBuilding(true); setSettings(s => ({ ...s, open: false })); setCommands(false); };
   useEffect(() => { try { Object.entries({ mode, preset, choices: JSON.stringify(overrides), layout: JSON.stringify(layout), pages: JSON.stringify(pages), custom: selectedCustom?.name ?? '' }).forEach(([k, v]) => localStorage.setItem(`${prefix}-${k}`, v)); } catch { /* Optional storage. */ } }, [mode, preset, overrides, layout, pages, selectedCustom]);
   useEffect(() => saveCustomPresets(customs), [customs]);
   useEffect(() => { if (!choices.commandPalette) { setCommands(false); return; } function key(e: KeyboardEvent) { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCommands(o => !o); } } document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key); }, [choices.commandPalette]);
@@ -73,7 +76,7 @@ export default function App() {
     if (key === 'theme') setMode(themeFor(value as UI.ThemeChoice));
   }
 
-  function navigate(sid: string, pid?: string) { setSection(sid); if (pid) setPages(p => ({ ...p, [sid]: pid })); else setQuery(''); }
+  function navigate(sid: string, pid?: string) { if (sid === 'builder') { openBuilder(); return; } setSection(sid); if (pid) setPages(p => ({ ...p, [sid]: pid })); else setQuery(''); }
   const pageLabel = section === 'home' ? 'Home' : section === 'layouts' ? layoutPages.find(l => l.id === pages.layouts)?.label : entries.find(e => e.id === pages[section])?.label;
   useEffect(() => { if (pageLabel) setOpened(o => o[o.length - 1] === pageLabel ? o : [...o.slice(-49), pageLabel]); }, [pageLabel]);
   function findComponent() { if (section === 'home' || (choices.rail && !families.some(f => f.id === section))) navigate('foundations'); setTimeout(() => document.getElementById('catalog-search')?.focus()); }
@@ -92,11 +95,16 @@ export default function App() {
   const sections: UI.ShellSection[] = [
     { id: 'home', label: 'Home', icon: 'grid', hidden: true,
       sidebar: <UI.SideNavigation label="Home pages" value="home" onChange={id => id === 'home' ? navigate('home'): navigate('foundations')} items={[{ id: 'home', label: 'Overview' }, { id: 'foundations', label: 'Foundations' }]} />,
-      pages: [{ id: 'overview', label: 'Overview', content: <UI.SettingsPage title="Stack Junkie UI"><p>Explore the shared components, layouts and foundations.</p><UI.Stack><UI.Button onClick={() => navigate('foundations')}>Foundations</UI.Button><p className="sj-muted">Colors, typography, spacing, icons and motion.</p></UI.Stack><div className="home-sections">{catalog.families.filter(f => f.id !== 'foundations').map(f => <UI.Button key={f.id} onClick={() => navigate(f.id)}><UI.Icon name={familyIcon(f)} />{f.label}</UI.Button>)}</div></UI.SettingsPage> }] },
+      pages: [{ id: 'overview', label: 'Overview', content: <UI.SettingsPage title="Stack Junkie UI"><p>Explore the shared components, layouts and foundations.</p><UI.Stack><UI.Button variant="primary" onClick={openBuilder}><UI.Icon name="plus" />Build an app</UI.Button><p className="sj-muted">Pick a Preset, switch its choices on a blank App frame, and export exactly what you see.</p></UI.Stack><UI.Stack><UI.Button onClick={() => navigate('foundations')}>Foundations</UI.Button><p className="sj-muted">Colors, typography, spacing, icons and motion.</p></UI.Stack><div className="home-sections">{catalog.families.filter(f => f.id !== 'foundations').map(f => <UI.Button key={f.id} onClick={() => navigate(f.id)}><UI.Icon name={familyIcon(f)} />{f.label}</UI.Button>)}</div></UI.SettingsPage> }] },
     ...families.map(f => ({ id: f.id, label: f.label, icon: familyIcon(f), rail: f.id !== 'foundations',
       pages: entries.filter(e => e.family === f.id).map(e => ({ id: e.id, label: e.label, content: (state: UI.ShellPageState) => <ComponentPage entry={e} state={state} /> })) })),
+    { id: 'builder', label: 'Build an app', icon: 'plus', pages: [{ id: 'builder', label: 'Build an app', content: null }] },
     { id: 'layouts', label: layoutsFamily.label, icon: 'layout', pages: layoutPages.map(l => ({ id: l.id, label: l.label, content: <div className="layout-host"><LayoutPage id={l.id} frame={frame} /></div> })) },
   ];
+
+  if (building) return <Builder preset={preset} overrides={overrides} mode={themeFor(choices.theme)} onPreset={choosePreset} onChoice={setChoice}
+    customs={customs} onCustomsChange={setCustoms} selectedCustom={selectedCustom} onSelectCustom={chooseCustom} onMarkCustom={setCustomName}
+    logo={logo} onLogo={setLogo} onBack={() => setBuilding(false)} />;
 
   return <UI.AppShell name="Stack Junkie UI" description="A living collection of reusable interface components, layouts and interactions." version={UI.systemVersion} logo={<UI.BrandMark size={44} />}
     links={{ website: 'https://style.stack-junkie.com', repository: 'https://github.com/stack-junkie/stack-junkie-style', license: 'MIT', licenseUrl: 'https://github.com/stack-junkie/stack-junkie-style/blob/main/ui/LICENSE' }}
@@ -106,7 +114,7 @@ export default function App() {
     brand={<UI.Button variant="quiet" className="app-brand home-link" aria-label="Home" title="Home" onClick={() => navigate('home')}><SiteWordmark /></UI.Button>}
     sidebarHeader={searchHere ? search : null} sidebar={searchHere && needle ? searchResults : undefined} sidebarTitle={sidebarTitle}
     menuItems={{
-      file: [{ id: 'export', label: 'Export starter…', run: () => setExportOpen(true) }],
+      file: [{ id: 'export', label: 'Export…', run: openBuilder }],
       edit: [{ id: 'find', label: 'Find component', run: findComponent }, { id: 'copy-name', label: 'Copy component name', disabled: !pageLabel || section === 'home', run: () => { void navigator.clipboard?.writeText(pageLabel ?? ''); } }],
       view: choices.commandPalette ? [{ id: 'commands', label: 'Command palette', shortcut: 'Ctrl+K', run: () => setCommands(true) }] : [],
       help: [{ id: 'keyboard', label: 'Keyboard shortcuts', run: () => openSettings('keyboard') }],
@@ -121,31 +129,17 @@ export default function App() {
     settings={[
       { id: 'appearance', label: 'Appearance', keywords: 'theme dark light mode color', content: <UI.SettingsSection label="Appearance">
         <UI.ThemeSetting mode={mode} onChange={setMode} />
+        <UI.AreaZoomSetting />
       </UI.SettingsSection> },
-      { id: 'layout', label: 'Layout', keywords: 'preset custom import rail sidebar menu status panel tabs command palette theme density dashboard resize collapse export template', content: <UI.SettingsSection label="Layout">
-        <div className="showcase-only-note">Showcase only. A preset sets the App frame for a new project; change any choice, then Export hands it over.</div>
-        <UI.SettingsRow label="Preset" description={selectedCustom ? `Your custom preset, based on ${UI.presets.find(p => p.id === preset)?.label}.` : UI.presets.find(p => p.id === preset)?.description}><UI.Select label="Preset" value={selectedCustom ? `custom:${selectedCustom.name}` : preset} onChange={e => { const value = e.target.value; if (value.startsWith('custom:')) chooseCustom(customs.find(c => `custom:${c.name}` === value)); else choosePreset(value as UI.PresetId); }}>
-          {UI.presets.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-          {customs.length > 0 && <optgroup label="Custom presets">{customs.map(c => <option key={c.name} value={`custom:${c.name}`}>{c.name} (custom)</option>)}</optgroup>}
-        </UI.Select></UI.SettingsRow>
-        <CustomPresetSettings customs={customs} onCustomsChange={setCustoms} selected={selectedCustom} onSelect={chooseCustom} onMark={setCustomName} base={preset} overrides={overrides} />
-        {(Object.entries(UI.presetChoices) as [UI.PresetChoice, UI.PresetChoiceInfo][]).map(([key, info]) => {
-          const value = choices[key]; const description = [info.description, notDrawnYet[key]].filter(Boolean).join(' ');
-          return <UI.SettingsRow key={key} label={info.label} description={description}>{typeof value === 'boolean'
-            ? <UI.Switch label={info.label} checked={value} onChange={e => setChoice(key, e.target.checked as never)} />
-            : <UI.Select label={info.label} value={value} onChange={e => setChoice(key, e.target.value as never)}>{info.options.map(o => <option key={String(o)} value={String(o)}>{optionLabel(String(o))}</option>)}</UI.Select>}</UI.SettingsRow>;
-        })}
-        {selectedCustom ? customModified && <div><UI.Button onClick={() => chooseCustom(selectedCustom)}>Reset to {selectedCustom.name}</UI.Button></div>
-          : Object.keys(overrides).length > 0 && <div><UI.Button onClick={() => choosePreset(preset)}>Reset to {UI.presets.find(p => p.id === preset)?.label}</UI.Button></div>}
-        {([['resizableSidebar', 'Resizable sidebar', 'Drag the sidebar edge to any width.'], ['collapsibleSidebar', 'Collapsible sidebar', 'The menu button hides and shows the sidebar.']] as const).map(([key, label, description]) =>
+      { id: 'layout', label: 'Layout', keywords: 'preset custom import rail sidebar menu status panel tabs command palette theme density dashboard resize collapse export template builder', content: <UI.SettingsSection label="Layout">
+        <div className="showcase-only-note">Showcase only. Presets, custom presets and Export live in the Builder: pick a Preset, switch its choices on a blank App frame, and export exactly what it shows.</div>
+        <UI.SettingsRow label="Preset" description={`${selectedCustom ? `${selectedCustom.name}, based on ` : ''}${UI.presets.find(p => p.id === preset)?.label}${Object.keys(overrides).length ? ' with changed choices' : ''}. The showcase uses it too.`}><UI.Button variant="primary" onClick={openBuilder}>Open the Builder</UI.Button></UI.SettingsRow>
+        {([['resizableSidebar', 'Resizable sidebar', 'Drag the sidebar edge to any width.'], ['collapsibleSidebar', 'Collapsible sidebar', 'The panel button hides and shows the sidebar.']] as const).map(([key, label, description]) =>
           <UI.SettingsRow key={key} label={label} description={description}><UI.Switch label={label} checked={layout[key]} disabled={choices.sidebar === 'off'} onChange={e => setLayout(l => ({ ...l, [key]: e.target.checked }))} /></UI.SettingsRow>)}
-        <UI.SettingsRow label="Export" description="Download a web or native starter project that installs the library at this version and uses this preset and these choices."><UI.Button variant="primary" onClick={() => setExportOpen(true)}>Export starter</UI.Button></UI.SettingsRow>
-        <div><UI.Button onClick={() => { navigate('layouts', 'starter'); setSettings(s => ({ ...s, open: false })); }}>Preview the starter app</UI.Button></div>
       </UI.SettingsSection> },
       { id: 'keyboard', label: 'Keyboard', keywords: 'shortcuts keys resize command', content: <UI.SettingsSection label="Keyboard"><UI.Prose><p>Drag a sidebar divider to resize it. Arrow keys adjust a focused divider; Home and End use its available range.</p><p>Control K opens command search. Control comma opens Settings. In a row of open documents, Delete or Control W closes the focused tab.</p><p>With the Menu bar on, Control B shows or hides the sidebar and Control J the bottom panel. In the Menu bar, arrow keys move between menus and items and Escape closes the open menu.</p></UI.Prose></UI.SettingsSection> },
     ]}
     overlays={<>
-      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} preset={preset} overrides={overrides} customName={selectedCustom?.name} />
-      {choices.commandPalette && <UI.CommandPalette open={commands} onClose={() => setCommands(false)} commands={[...catalog.families.map(f => ({ id: f.id, label: `Open ${f.label.toLowerCase()}`, run: () => navigate(f.id) })), { id: 'settings', label: 'Open Settings', run: () => openSettings() }, { id: 'export', label: 'Export starter', run: () => setExportOpen(true) }, { id: 'theme', label: `Use ${mode === 'dark' ? 'light' : 'dark'} theme`, run: () => setMode(mode === 'dark' ? 'light' : 'dark') }]} />}
+      {choices.commandPalette && <UI.CommandPalette open={commands} onClose={() => setCommands(false)} commands={[...catalog.families.map(f => ({ id: f.id, label: `Open ${f.label.toLowerCase()}`, run: () => navigate(f.id) })), { id: 'settings', label: 'Open Settings', run: () => openSettings() }, { id: 'builder', label: 'Build an app', run: openBuilder }, { id: 'theme', label: `Use ${mode === 'dark' ? 'light' : 'dark'} theme`, run: () => setMode(mode === 'dark' ? 'light' : 'dark') }]} />}
     </>} />;
 }

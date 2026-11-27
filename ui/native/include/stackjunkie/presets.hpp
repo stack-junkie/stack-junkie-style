@@ -19,6 +19,10 @@ struct STACKJUNKIE_EXPORT PresetChoices {
     /** "dark", "light" or "system". */ QString theme = QStringLiteral("dark");
     /** "compact" or "comfortable". */ QString density = QStringLiteral("compact");
     bool dashboardHome = false;
+    /** Website choices. "top" or "sidebar": where the site's pages are listed. */ QString siteNavigation = QStringLiteral("top");
+    bool siteFooter = true;
+    bool headerSearch = true;
+    bool headerButton = true;
 
     /** The value of one choice by its presets.json name, such as "sidebar". Invalid for an unknown name. */
     QVariant value(const QString &choice) const;
@@ -34,6 +38,7 @@ struct STACKJUNKIE_EXPORT PresetChoiceInfo {
     QString label;
     QString description;
     QVariantList options;
+    /** "app", "website" or "shared": which layout the choice applies to, from presets.json groups. */ QString group;
     /** True for an on or off choice, false for a choice between named options. */ bool isSwitch() const;
 };
 struct STACKJUNKIE_EXPORT Preset {
@@ -41,6 +46,7 @@ struct STACKJUNKIE_EXPORT Preset {
     QString label;
     QString description;
     PresetChoices choices;
+    /** A one-line note on what the preset is made for. */ QString madeFor;
 
     /** Every preset, in presets.json order. The first is Web app. */ static QList<Preset> all();
     /** Every choice, in presets.json order. */ static QList<PresetChoiceInfo> choiceInfo();

@@ -13,6 +13,17 @@
         { "id": "fifth-page", "label": "Fifth page", "content": "What the fifth page shows." },
         { "id": "sixth-page", "label": "Sixth page", "content": "What the sixth page shows." }
       ] }
+    ],
+    "panels": [
+      { "id": "output", "label": "Output", "content": "What the bottom panel shows." }
+    ]
+  },
+  "website": {
+    "note": "The Website starter's articles. Titles, dates and summaries are Stubs for the site to replace.",
+    "articles": [
+      { "id": "first-article", "title": "First article", "date": "Publication date", "summary": "One or two sentences on what the first article covers." },
+      { "id": "second-article", "title": "Second article", "date": "Publication date", "summary": "One or two sentences on what the second article covers." },
+      { "id": "third-article", "title": "Third article", "date": "Publication date", "summary": "One or two sentences on what the third article covers." }
     ]
   },
   "web": {

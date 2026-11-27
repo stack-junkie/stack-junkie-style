@@ -46,6 +46,28 @@ static QString sectionsCode(bool web, const QJsonObject &structure) {
 QString starterLabel(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("label")).toString(); }
 QString starterDescription(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("description")).toString(); }
 
+// The bottom panel's tabs as code, exactly as starters.mjs writes them.
+static QString panelsCode(bool web, const QJsonObject &structure) {
+    QStringList lines;
+    for (const auto &value : structure.value(QStringLiteral("panels")).toArray()) {
+        const auto p = value.toObject();
+        const QString id = p.value(QStringLiteral("id")).toString(), label = p.value(QStringLiteral("label")).toString(), content = p.value(QStringLiteral("content")).toString();
+        lines << (web ? QStringLiteral("  { id: '%1', label: stub('%2'), content: <Stub block>%3</Stub> },").arg(id, label, content)
+                      : QStringLiteral("    shell.bottomPanel()->addTab(STACKJUNKIE_STUB(\"%1\"), STACKJUNKIE_STUB_TEXT(\"%2\"));").arg(content, label));
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+// The Website starter's articles as code, exactly as starters.mjs writes them.
+static QString articlesCode(const QJsonObject &website) {
+    QStringList lines;
+    for (const auto &value : website.value(QStringLiteral("articles")).toArray()) {
+        const auto a = value.toObject();
+        lines << QStringLiteral("  { id: '%1', title: stub('%2'), date: stub('%3'), summary: stub('%4') },").arg(a.value(QStringLiteral("id")).toString(), a.value(QStringLiteral("title")).toString(), a.value(QStringLiteral("date")).toString(), a.value(QStringLiteral("summary")).toString());
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
 QString logoFileName(const QString &name, QString *error) {
     const QString extension = QFileInfo(name).suffix().toLower();
     static const QStringList types{QStringLiteral("png"), QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("svg"), QStringLiteral("webp")};
@@ -97,6 +119,11 @@ Starter generateStarter(const QString &platform, const QString &presetId, const 
         {QStringLiteral("preset"), preset.id}, {QStringLiteral("presetLabel"), preset.label},
         {QStringLiteral("overrides"), literal}, {QStringLiteral("theme"), choices.theme}, {QStringLiteral("density"), choices.density},
         {QStringLiteral("sections"), sectionsCode(web, doc.value(QStringLiteral("structure")).toObject())},
+        {QStringLiteral("panels"), panelsCode(web, doc.value(QStringLiteral("structure")).toObject())},
+        {QStringLiteral("articles"), articlesCode(doc.value(QStringLiteral("website")).toObject())},
+        {QStringLiteral("siteNavigation"), choices.siteNavigation}, {QStringLiteral("siteFooter"), choices.siteFooter ? QStringLiteral("true") : QStringLiteral("false")},
+        {QStringLiteral("headerSearch"), choices.headerSearch ? QStringLiteral(" onSearch={stub(() => {})}") : QString()},
+        {QStringLiteral("headerButton"), choices.headerButton ? QStringLiteral(" mainAction={{ label: stub('Subscribe'), href: stub('#subscribe') }}") : QString()},
         {QStringLiteral("logoImport"), logoFile.isEmpty() ? QString() : QStringLiteral("\nimport logo from './%1';").arg(logoFile)},
         {QStringLiteral("logo"), logoFile.isEmpty() ? QStringLiteral("<BrandMark size={20} />") : QStringLiteral("<img src={logo} alt=\"\" width={20} height={20} />")},
         {QStringLiteral("logoResources"), logoFile.isEmpty() ? QString() : QStringLiteral("\nqt_add_resources(my_app logo PREFIX / FILES %1)").arg(logoFile)},

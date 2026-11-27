@@ -32,6 +32,7 @@ class QGraphicsScene;
 class QGraphicsView;
 class QComboBox;
 class QDoubleSpinBox;
+class QWheelEvent;
 
 namespace StackJunkie {
 class STACKJUNKIE_EXPORT ReadingView : public QTextBrowser {
@@ -318,6 +319,12 @@ public:
         Windows 11 the maximize button shows snap layouts. AppShell turns it on for a top-level window. */
     void setMergedTitleBar(bool merged);
     bool mergedTitleBar() const { return merged_; }
+    /** Zoom only the area under the pointer with Control and the wheel: the Sidebar ("sidebar"), the pages ("pages") or
+        the bottom panel ("panel"). Off by default. Each area remembers its zoom; both are saved for the app. */
+    void setAreaZoomEnabled(bool enabled);
+    bool areaZoomEnabled() const { return areaZoomEnabled_; }
+    void setAreaZoom(const QString &area, int percent);
+    int areaZoom(const QString &area) const;
     /** View > Appearance: the Sidebar, Status bar and Panel toggles and the zoom commands. */
     QMenu *appearanceMenu() const { return appearanceMenu_; }
     void restoreSettings(const QString &key);
@@ -351,6 +358,7 @@ signals:
     void currentChanged(int index);
     void choicesChanged(const StackJunkie::PresetChoices &choices);
     void zoomChanged(int percent);
+    void areaZoomEnabledChanged(bool enabled);
     void logoChanged();
 protected:
     void resizeEvent(QResizeEvent *event) override;
@@ -358,8 +366,16 @@ protected:
     void showEvent(QShowEvent *event) override;
     bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
     bool eventFilter(QObject *object, QEvent *event) override;
+    /** Applies each zoomed area's own theme again, after the frame's theme was applied. */ void reapplyAreaZoom();
 private:
     void updateWindowButtons();
+    QWidget *areaWidget(const QString &area) const;
+    QString areaAt(QWidget *widget) const;
+    void restoreZoom();
+    void saveZoom() const;
+    bool zoomWheel(QWidget *widget, QWheelEvent *wheel);
+    bool areaZoomEnabled_ = false, zoomRestored_ = false;
+    QHash<QString, int> areaZooms_;
     void toggleMaximized();
     bool isTitleArea(QWidget *widget, const QPoint &globalPos) const;
     bool merged_ = false, edgeCursor_ = false;

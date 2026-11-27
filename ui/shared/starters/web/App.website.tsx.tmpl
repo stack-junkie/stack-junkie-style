@@ -1,16 +1,25 @@
 // App.tsx, exported from the Stack Junkie Style showcase with the {{presetLabel}} preset.
 // It imports the shared library instead of copying it, so every site stays on the same components.
-import { BrandMark, Prose, WebsiteLayout, type WebsitePage } from '@stack-junkie/ui-web';
+import { BrandMark, Prose, Stub, stub, WebsiteArticle, WebsiteArticleList, WebsiteHome, WebsiteLayout, type ArticleSummary, type WebsitePage } from '@stack-junkie/ui-web';{{logoImport}}
 
-// The Website preset uses WebsiteLayout, not the App frame: a header with navigation,
-// one reading column, a footer and a theme toggle. Only its theme and density choices apply.
-// Your site's pages, in navigation order. Give a page an href when the site has real addresses.
+// The Website preset uses WebsiteLayout, not the App frame: a header with the navigation and actions, one reading
+// column and a Site footer that links to every page. Every title, date, summary and text is a Stub:
+// `npm run build` stops and lists each one until it is replaced with the site's own.
+const articles: ArticleSummary[] = [
+{{articles}}
+];
+
+// The site's pages. Pages in a group (Articles) are listed in the sidebar and the Site footer, not in the top bar.
 const pages: WebsitePage[] = [
-  { id: 'home', label: 'Home', content: <Prose><h1>My site</h1><p>Start here.</p></Prose> },
-  { id: 'about', label: 'About', content: <Prose><h1>About</h1><p>Who runs this site.</p></Prose> },
+  { id: 'home', label: stub('Home'), content: <WebsiteHome featured={articles[0]} recent={articles.slice(1)} /> },
+  { id: 'articles', label: stub('Articles'), content: <Prose><h1><Stub>All articles</Stub></h1><WebsiteArticleList articles={articles} /></Prose> },
+  { id: 'about', label: stub('About'), content: <Prose><h1><Stub>About</Stub></h1><Stub block>Who runs this site and what it covers.</Stub></Prose> },
+  ...articles.map(article => ({ id: article.id, label: String(article.title), group: 'Articles', topBar: false,
+    content: <WebsiteArticle title={article.title} date={article.date}><Stub block>The article.</Stub></WebsiteArticle> })),
 ];
 
 export default function App() {
-  // Replace BrandMark with the site's own logo when it has one.
-  return <WebsiteLayout name="My site" logo={<BrandMark size={20} />} pages={pages} theme="{{theme}}" density="{{density}}" storageKey="my-site-theme" style={{ minHeight: '100dvh' }} />;
+  // The logo slot, top left: the site's own logo, or the interim SJ mark (BrandMark) until it has one. Clicking it goes Home.
+  return <WebsiteLayout name="My site" logo={{{logo}}} pages={pages} theme="{{theme}}" density="{{density}}"
+    navigation="{{siteNavigation}}" footer={{{siteFooter}}}{{headerSearch}}{{headerButton}} storageKey="my-site-theme" style={{ minHeight: '100dvh' }} />;
 }

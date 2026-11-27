@@ -8,6 +8,7 @@
 #include <QEvent>
 #include <QMenuBar>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QWindow>
 #ifdef Q_OS_WIN
 #ifndef NOMINMAX
@@ -31,9 +32,6 @@ void Workspace::setMergedTitleBar(bool merged) {
         const auto margins = layout->contentsMargins();
         layout->setContentsMargins(margins.left(), 0, merged ? 0 : margins.left(), 0);
     }
-#ifndef Q_OS_WIN
-    if (merged) qApp->installEventFilter(this); else qApp->removeEventFilter(this);
-#endif
     updateWindowButtons();
     if (shown) show();
 }
@@ -65,6 +63,7 @@ bool Workspace::isTitleArea(QWidget *widget, const QPoint &globalPos) const {
 
 void Workspace::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
+    restoreZoom();
 #ifdef Q_OS_WIN
     // Keep the native frame styles behind the frameless window so the system still resizes, snaps and animates it.
     if (merged_ && isWindow()) {
@@ -143,6 +142,11 @@ bool Workspace::nativeEvent(const QByteArray &eventType, void *message, qintptr 
 // Outside Windows: drag the title area to move, double-click it to maximize, and drag an edge to resize.
 bool Workspace::eventFilter(QObject *object, QEvent *event) {
     auto *widget = qobject_cast<QWidget *>(object);
+    if (event->type() == QEvent::Wheel && zoomWheel(widget, static_cast<QWheelEvent *>(event))) return true;
+#ifdef Q_OS_WIN
+    // On Windows the system moves and resizes the merged title bar's window (nativeEvent).
+    return QWidget::eventFilter(object, event);
+#else
     if (!merged_ || !widget || widget->window() != this || !windowHandle()) return QWidget::eventFilter(object, event);
     const auto type = event->type();
     if (type != QEvent::MouseMove && type != QEvent::MouseButtonPress && type != QEvent::MouseButtonDblClick) return QWidget::eventFilter(object, event);
@@ -170,5 +174,6 @@ bool Workspace::eventFilter(QObject *object, QEvent *event) {
     if (type == QEvent::MouseButtonDblClick) { toggleMaximized(); return true; }
     windowHandle()->startSystemMove();
     return true;
+#endif
 }
 }

@@ -1,4 +1,4 @@
-import { createContext, useContext, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
+import { createContext, useContext, type CSSProperties, type HTMLAttributes, type ReactNode, type Ref } from 'react';
 import tokens from '../../../shared/tokens.json';
 import { TipLayer, TipLayerScope, useTipLayered } from './tips';
 
@@ -14,7 +14,7 @@ const ThemeContext = createContext<{ direction: Direction; mode: ThemeMode }>({ 
 export const useTheme = () => useContext(ThemeContext);
 
 export function ThemeProvider({ direction = 'clean', mode = 'light', density = 'compact', children, className = '', style, ...props }:
-  HTMLAttributes<HTMLDivElement> & { direction?: Direction; mode?: ThemeMode; density?: Density; children: ReactNode }) {
+  HTMLAttributes<HTMLDivElement> & { direction?: Direction; mode?: ThemeMode; density?: Density; children: ReactNode; ref?: Ref<HTMLDivElement> }) {
   const theme = tokens.directions[direction] ?? tokens.directions.clean;
   const vars: Record<string, string | number> = {};
   for (const [key, value] of Object.entries(theme[mode])) vars[`--sj-${key}`] = value;

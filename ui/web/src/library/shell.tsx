@@ -1,11 +1,11 @@
-import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { ThemeProvider, type Direction, type ThemeMode } from './theme';
 import { SettingsRow, Workspace } from './layout';
 import { NavTree, SideNavigation, Tabs } from './navigation';
 import { IconButton, type IconName } from './core';
 import { tipProps } from './tips';
 import { readZoom, stepZoom, defaultZoom } from './zoom';
-import { Select } from './inputs';
+import { Select, Switch } from './inputs';
 import { AboutSection, SettingsSection, SettingsWindow, type AboutLinks, type SettingsWindowSection } from './settings';
 import { resolvePreset, type PresetChoices, type PresetId } from './presets';
 import { BottomPanel, MenuBar, StatusBar, type MenuBarMenu, type MenuEntry, type PanelTab } from './bars';
@@ -27,6 +27,19 @@ export function configChoices(config: ShellConfig): PresetChoices {
 const ShellChoices = createContext<PresetChoices | null>(null);
 /** The frame's resolved preset choices, for app parts the frame does not own yet, such as the command palette. */
 export const useShellChoices = () => useContext(ShellChoices);
+
+type AreaZoom = { enabled: boolean; setEnabled: (enabled: boolean) => void };
+const AreaZoomContext = createContext<AreaZoom | null>(null);
+/** The Settings row that turns per-area zoom on: Control and the mouse wheel then zoom only the area under the pointer.
+ * The frame's built-in Appearance section has it; an app that replaces Appearance adds it to its own. */
+export function AreaZoomSetting() {
+  const zoom = useContext(AreaZoomContext);
+  if (!zoom) return null;
+  return <><h3>Advanced</h3><SettingsRow label="Zoom only the area under the pointer" description="Control and the mouse wheel zoom the sidebar, the pages or the panel on its own, and each keeps its zoom. Off, the browser's own zoom applies.">
+    <Switch label="Zoom only the area under the pointer" checked={zoom.enabled} onChange={e => zoom.setEnabled(e.target.checked)} /></SettingsRow></>;
+}
+const areaNames = ['sidebar', 'content', 'panel'] as const;
+type AreaName = typeof areaNames[number];
 
 /** Follows the device's light or dark setting. */
 export function useSystemTheme(): ThemeMode {
@@ -131,6 +144,24 @@ export function AppShell({ name, description, version, logo, sections, config = 
   const zoom = controlledZoom ?? ownZoom;
   const setZoom = (z: number) => { if (controlledZoom === undefined) setOwnZoom(z); onZoomChange?.(z); };
   useEffect(() => { if (storageKey) try { localStorage.setItem(`${storageKey}:zoom`, String(ownZoom)); } catch { /* Optional storage. */ } }, [storageKey, ownZoom]);
+  // Per-area zoom: off by default, so the browser's own Control and wheel zoom is left alone.
+  const read = (key: string) => { try { return storageKey ? localStorage.getItem(`${storageKey}:${key}`) : null; } catch { return null; } };
+  const [areaZoomOn, setAreaZoomOn] = useState(() => read('area-zoom') === 'true');
+  const [areaZooms, setAreaZooms] = useState<Record<AreaName, number>>(() => Object.fromEntries(areaNames.map(a => [a, readZoom(read(`zoom:${a}`))])) as Record<AreaName, number>);
+  useEffect(() => { if (storageKey) try { localStorage.setItem(`${storageKey}:area-zoom`, String(areaZoomOn)); areaNames.forEach(a => localStorage.setItem(`${storageKey}:zoom:${a}`, String(areaZooms[a]))); } catch { /* Optional storage. */ } }, [storageKey, areaZoomOn, areaZooms]);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const node = root.current; if (!node || !areaZoomOn) return;
+    function wheel(e: WheelEvent) {
+      if (!e.ctrlKey || !e.deltaY) return;
+      const area = (e.target as Element | null)?.closest('[data-zoom-area]')?.getAttribute('data-zoom-area') as AreaName | undefined;
+      if (!area || !areaNames.includes(area) || !node!.contains(e.target as Node)) return;
+      e.preventDefault();
+      setAreaZooms(z => ({ ...z, [area]: stepZoom(z[area], e.deltaY < 0 ? 1 : -1) }));
+    }
+    node.addEventListener('wheel', wheel, { passive: false }); return () => node.removeEventListener('wheel', wheel);
+  }, [areaZoomOn]);
+  const areaZoom = areaZoomOn ? areaZooms : { sidebar: 100, content: 100, panel: 100 };
   const [panelShown, setPanelShown] = useState(true);
   const [panelHeight, setPanelHeight] = useState(() => { try { const value = Number(storageKey ? localStorage.getItem(`${storageKey}:panel`) : NaN); return Number.isFinite(value) && value > 0 ? value : 160; } catch { return 160; } });
   useEffect(() => { if (storageKey) try { localStorage.setItem(`${storageKey}:panel`, String(panelHeight)); } catch { /* Optional storage. */ } }, [storageKey, panelHeight]);
@@ -194,7 +225,7 @@ export function AppShell({ name, description, version, logo, sections, config = 
   }
 
   const builtIn: SettingsWindowSection[] = [
-    { id: 'appearance', label: 'Appearance', keywords: 'theme dark light mode color', content: <SettingsSection label="Appearance"><ThemeSetting mode={mode} onChange={setMode} /></SettingsSection> },
+    { id: 'appearance', label: 'Appearance', keywords: 'theme dark light mode color', content: <SettingsSection label="Appearance"><ThemeSetting mode={mode} onChange={setMode} /><AreaZoomSetting /></SettingsSection> },
     { id: 'about', label: 'About', keywords: 'version copyright', content: <AboutSection name={name} description={description} version={version} logo={logo} links={links}>{aboutChildren}</AboutSection> },
   ];
   const settingsSections = [...settings, ...builtIn.filter(b => !settings.some(s => s.id === b.id))];
@@ -218,20 +249,20 @@ export function AppShell({ name, description, version, logo, sections, config = 
   ]} /> : null;
   const statusBar = choices.statusBar && statusShown ? <StatusBar state={status?.state ?? section?.pages.find(p => p.id === pageOf(section))?.label} facts={status?.facts} /> : undefined;
   const work = (sidebarCollapsed: boolean) => panelOn && panelShown
-    ? <div className="sj-shell-work"><div className="sj-shell-work-main">{body(sidebarCollapsed)}</div><BottomPanel tabs={panels} height={panelHeight} onHeightChange={setPanelHeight} onClose={() => setPanelShown(false)} /></div>
+    ? <div className="sj-shell-work"><div className="sj-shell-work-main">{body(sidebarCollapsed)}</div><BottomPanel tabs={panels} zoom={areaZoom.panel} height={panelHeight} onHeightChange={setPanelHeight} onClose={() => setPanelShown(false)} /></div>
     : body(sidebarCollapsed);
 
   const gear = <IconButton icon="settings" label="Settings" variant="quiet" tooltipSide={choices.rail ? 'right' : 'below'} aria-haspopup="dialog" aria-expanded={settingsNow.open} onClick={() => setSettings({ ...settingsNow, open: true })} />;
   const home = brand ?? <button type="button" className="sj-button sj-button--quiet sj-shell-home" aria-label={`${name} home`} {...tipProps('Home')} onClick={() => navigate(visible[0]?.id ?? '')}>{logo}<strong>{name}</strong></button>;
 
-  return <ShellChoices.Provider value={choices}><ThemeProvider direction={config.direction} mode={mode} density={choices.density} className={`sj-shell ${className}`} style={style}>
+  return <ShellChoices.Provider value={choices}><AreaZoomContext.Provider value={{ enabled: areaZoomOn, setEnabled: setAreaZoomOn }}><ThemeProvider ref={root} direction={config.direction} mode={mode} density={choices.density} className={`sj-shell ${className}`} style={style}>
     {mainId && <a className="sj-skip-link" href={`#${mainId}`}>{skipLabel}</a>}
-    <Workspace zoom={zoom} contentOwnsHeader mainId={mainId} storageKey={storageKey} sidebarTitle={title} rail={rail} sidebar={sidebar} resizable={config.resizableSidebar} collapsible={config.collapsibleSidebar}
+    <Workspace zoom={zoom} areaZoom={areaZoom} contentOwnsHeader mainId={mainId} storageKey={storageKey} sidebarTitle={title} rail={rail} sidebar={sidebar} resizable={config.resizableSidebar} collapsible={config.collapsibleSidebar}
       sidebarCollapsed={sidebarCollapsed} onSidebarCollapsedChange={setSidebarCollapsed}
       header={menuBar ? <div className="sj-shell-title">{home}{menuBar}</div> : home} navigationFooter={gear} footer={statusBar}>
       {({ sidebarCollapsed }) => work(sidebarCollapsed)}
     </Workspace>
     <SettingsWindow open={settingsNow.open} onClose={() => setSettings({ ...settingsNow, open: false })} section={settingsNow.section} onSectionChange={id => setSettings({ ...settingsNow, section: id })} sections={settingsSections} />
     {typeof overlays === 'function' ? overlays(choices) : overlays}
-  </ThemeProvider></ShellChoices.Provider>;
+  </ThemeProvider></AreaZoomContext.Provider></ShellChoices.Provider>;
 }

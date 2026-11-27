@@ -29,6 +29,7 @@
 #include <QTextDocument>
 #include <QAbstractTextDocumentLayout>
 #include <QFontMetrics>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QShortcut>
 #include <QShowEvent>
@@ -709,6 +710,8 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     auto *closeTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), pageTabs_, nullptr, nullptr, Qt::WidgetShortcut);
     connect(closeTab, &QShortcut::activated, this, [this] { if (pageTabs_->tabsClosable() && pageTabs_->currentIndex() >= 0) closeDocument(pageTabs_->tabData(pageTabs_->currentIndex()).toInt()); });
     updateBars();
+    // Control and the wheel zoom, and outside Windows the merged title bar moves and resizes the window.
+    qApp->installEventFilter(this);
 }
 int Workspace::addSection(const QString &title, const QString &iconName) {
     const int section = sectionSelections_.size();
@@ -847,6 +850,8 @@ void Workspace::setZoom(int percent) {
     zoomResetAction_->setText(QStringLiteral("Reset zoom (%1%)\tCtrl+0").arg(next));
     applyDensity();
     if (property("sjDirection").isValid()) Theme::load(property("sjDirection").toString(), property("sjDark").toBool()).apply(this);
+    reapplyAreaZoom();
+    if (zoomRestored_) saveZoom();
     emit zoomChanged(next);
 }
 int Workspace::zoom() const { return Theme::globalZoom(); }
@@ -1077,6 +1082,7 @@ void AppShell::setDark(bool dark) {
     if (darkAction_) { QSignalBlocker blocker(darkAction_); darkAction_->setChecked(dark); }
     const auto theme = Theme::load(QStringLiteral("clean"), dark);
     theme.apply(this);
+    reapplyAreaZoom();
 }
 void AppShell::setPreset(const QString &presetId, const QVariantMap &overrides) {
     preset_ = Preset::find(presetId).id;
@@ -1100,7 +1106,14 @@ void AppShell::finishSettings() {
     // Picking a theme here ends following the device's color scheme.
     connect(mode, &QComboBox::currentIndexChanged, this, [this](int index) { disconnect(followSystem_); setDark(index == 0); });
     appearance->contentLayout()->addWidget(new Field(QStringLiteral("Theme"), mode, QStringLiteral("Choose the light or dark appearance.")));
-    settings_->addSection(QStringLiteral("Appearance"), appearance, QStringLiteral("theme dark light mode color"));
+    appearance->contentLayout()->addWidget(heading(QStringLiteral("Advanced")));
+    auto *areaZoom = new QCheckBox(QStringLiteral("Zoom only the area under the pointer"));
+    areaZoom->setProperty("sjVariant", "switch"); areaZoom->setChecked(areaZoomEnabled());
+    connect(areaZoom, &QCheckBox::toggled, this, &Workspace::setAreaZoomEnabled);
+    connect(this, &Workspace::areaZoomEnabledChanged, areaZoom, [areaZoom](bool on) { QSignalBlocker blocker(areaZoom); areaZoom->setChecked(on); });
+    appearance->contentLayout()->addWidget(areaZoom);
+    appearance->contentLayout()->addWidget(paragraph(QStringLiteral("Control and the mouse wheel then zoom the Sidebar, the pages or the panel on its own, and each keeps its zoom.")));
+    settings_->addSection(QStringLiteral("Appearance"), appearance, QStringLiteral("theme dark light mode color zoom area advanced"));
     QLabel *aboutLogo = nullptr;
     if (!logo().isNull()) { aboutLogo = new QLabel; aboutLogo->setPixmap(logo().scaled(52, 52, Qt::KeepAspectRatio, Qt::SmoothTransformation)); aboutLogo->setAccessibleName(name_); }
     auto *about = new AboutPage(name_, description_, version_, aboutLogo);

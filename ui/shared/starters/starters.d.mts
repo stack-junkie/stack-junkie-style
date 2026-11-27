@@ -5,7 +5,8 @@ export type StarterResult = { files: StarterFile[]; unsupported?: undefined } | 
 export type StarterKind = { label: string; description: string; files: Record<string, string>; presetFiles?: Record<string, Record<string, string>>; unsupported?: Record<string, string> };
 export type StarterPage = { id: string; label: string; content: string };
 export type StarterArea = { id: string; label: string; icon: string; pages: StarterPage[] };
-export type StarterManifest = { repository: string; structure: { note?: string; areas: StarterArea[] }; web: StarterKind; native: StarterKind };
+export type StarterArticle = { id: string; title: string; date: string; summary: string };
+export type StarterManifest = { repository: string; structure: { note?: string; areas: StarterArea[]; panels: StarterPage[] }; website: { note?: string; articles: StarterArticle[] }; web: StarterKind; native: StarterKind };
 export type StarterPresets = {
   choices: Record<string, { options: readonly (string | boolean)[] }>;
   presets: readonly { id: string; label: string; choices: Record<string, string | boolean> }[];
@@ -22,3 +23,5 @@ export const logoTypes: string[];
 export function logoFileName(name: string): { file: string; error?: undefined } | { file?: undefined; error: string };
 /** Generates a starter project, or says why the preset has none on that platform. Throws on a logo of the wrong type. */
 export function generateStarter(request: StarterRequest, source: StarterSource): StarterResult;
+/** The `new` command that creates the same starter, pinned to this version's tag. logoName is the logo file's name, if any. */
+export function starterCommand(request: { platform: StarterPlatform; preset: string; overrides?: StarterRequest['overrides']; version: string; logoName?: string; folder?: string }, source: Pick<StarterSource, 'manifest' | 'presets'>): string;

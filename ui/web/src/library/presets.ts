@@ -6,18 +6,29 @@ export type PresetId = 'web-app' | 'desktop-app' | 'document-editor' | 'website'
 export type SidebarChoice = 'tree' | 'list' | 'off';
 export type ThemeChoice = 'dark' | 'light' | 'system';
 export type DensityChoice = 'compact' | 'comfortable';
+export type SiteNavigationChoice = 'top' | 'sidebar';
 export type PresetChoices = {
   rail: boolean; sidebar: SidebarChoice; menuBar: boolean; statusBar: boolean; bottomPanel: boolean;
   documentTabs: boolean; commandPalette: boolean; theme: ThemeChoice; density: DensityChoice; dashboardHome: boolean;
+  /** Website choices: where the pages are listed, the Site footer, header search and the main header button. */
+  siteNavigation: SiteNavigationChoice; siteFooter: boolean; headerSearch: boolean; headerButton: boolean;
 };
 export type PresetChoice = keyof PresetChoices;
-export type Preset = { id: PresetId; label: string; description: string; choices: PresetChoices };
+export type Preset = { id: PresetId; label: string; description: string;
+  /** One line on what the preset is made for. */ madeFor: string; choices: PresetChoices };
+/** Which layout a choice applies to: the App frame, the Website layout, or both. */
+export type PresetChoiceGroup = 'app' | 'website' | 'shared';
 /** Label, description and allowed values of each choice, for building settings controls. */
 export type PresetChoiceInfo = { label: string; description: string; options: readonly (string | boolean)[] };
 
 export const presets = data.presets as Preset[];
 export const presetChoices = data.choices as Record<PresetChoice, PresetChoiceInfo>;
 export const presetIds = presets.map(p => p.id);
+export const presetChoiceGroups = data.groups as Record<PresetChoiceGroup, { label: string; description: string; choices: PresetChoice[] }>;
+/** The group a choice belongs to. */
+export const choiceGroup = (choice: PresetChoice): PresetChoiceGroup => (Object.keys(presetChoiceGroups) as PresetChoiceGroup[]).find(g => presetChoiceGroups[g].choices.includes(choice)) ?? 'shared';
+/** Whether a choice changes anything in a preset's layout: Website choices apply only to Website, App frame choices to the rest. */
+export const choiceApplies = (preset: PresetId, choice: PresetChoice) => { const group = choiceGroup(choice); return group === 'shared' || (group === 'website') === (preset === 'website'); };
 export const isPresetId = (id: unknown): id is PresetId => presetIds.includes(id as PresetId);
 
 /** The preset's choices with any overrides applied. Unknown ids fall back to Web app. */

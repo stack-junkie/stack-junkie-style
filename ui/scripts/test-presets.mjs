@@ -26,6 +26,19 @@ const expectedChoices = { sidebar: 'tree', statusBar: false, theme: 'light', den
 const readBack = parsePresetFile(webText, presets);
 result(readBack.preset && JSON.stringify(readBack.preset.choices) === JSON.stringify(expectedChoices) && readBack.preset.name === preset.name, 'web writes and reads a preset file', 'unchanged choices such as rail are dropped');
 
+// Every preset says what it is made for, and every choice belongs to exactly one group (App frame, Website or both).
+result(presets.presets.every(p => typeof p.madeFor === 'string' && p.madeFor.startsWith('Made for')), 'every preset has a "made for" note');
+const grouped = Object.values(presets.groups).flatMap(g => g.choices);
+result(Object.keys(presets.choices).every(c => grouped.filter(g => g === c).length === 1) && grouped.length === Object.keys(presets.choices).length, 'every choice is in one group');
+// A file from 3.0, before the Website choices, still reads; a Website preset with its own choices round trips.
+const older = JSON.stringify({ format: 'stack-junkie-preset', version: 1, name: 'From 3.0', base: 'document-editor', choices: { statusBar: false, theme: 'light' } }, null, 2);
+const olderRead = parsePresetFile(older, presets);
+result(!!olderRead.preset && olderRead.preset.base === 'document-editor' && JSON.stringify(olderRead.preset.choices) === '{"statusBar":false,"theme":"light"}', 'web reads a 3.0 preset file', olderRead.error);
+const site = { name: 'Docs site', base: 'website', choices: { siteNavigation: 'sidebar', siteFooter: false, headerButton: false, theme: 'dark' } };
+const siteText = presetFileText(site, presets);
+const siteRead = parsePresetFile(siteText, presets);
+result(!!siteRead.preset && JSON.stringify(siteRead.preset.choices) === JSON.stringify({ theme: 'dark', siteNavigation: 'sidebar', siteFooter: false, headerButton: false }), 'web writes and reads Website choices', 'in presets.json order');
+
 const bad = {
   'not JSON': '{ "format": ',
   'another format': JSON.stringify({ format: 'something-else', version: 1, name: 'X', base: 'web-app', choices: {} }),
@@ -45,7 +58,7 @@ for (const [label, text] of Object.entries(bad)) {
 // ---------- native ----------
 function newestShowcase() {
   const native = path.join(ui, 'native');
-  const found = readdirSync(native).filter(d => d.startsWith('build')).map(d => path.join(native, d, 'Release/StackJunkieShowcase.exe')).filter(existsSync);
+  const found = readdirSync(native).filter(d => d.startsWith('build')).flatMap(d => [path.join(native, d, 'Release/StackJunkieShowcase.exe'), path.join(native, d, 'StackJunkieShowcase')]).filter(existsSync);
   return found.sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0];
 }
 const showcase = option('--showcase') ?? process.env.STACKJUNKIE_SHOWCASE ?? newestShowcase();
@@ -64,6 +77,13 @@ else {
     result(nativeText === webText, 'native writes the same bytes as web', nativeText === webText ? '' : `\n${nativeText}`);
     const again = parsePresetFile(nativeText, presets);
     result(!!again.preset && JSON.stringify(again.preset) === JSON.stringify(readBack.preset), 'web reads the native file back unchanged');
+  }
+  for (const [label, text] of [['a 3.0 preset file', older], ['a Website preset file', siteText]]) {
+    const inFile = path.join(work, `${label.replace(/\W+/g, '-')}.json`); const outFile = `${inFile}.out`;
+    writeFileSync(inFile, text);
+    const r = run(['--import-preset', inFile, '--export-preset', outFile]);
+    const expected = presetFileText(parsePresetFile(text, presets).preset, presets);
+    result(r.status === 0 && existsSync(outFile) && readFileSync(outFile, 'utf8') === expected, `native reads ${label} and writes what web writes`, r.output);
   }
   const fromChoices = path.join(work, 'choices.preset.json');
   const choiceArgs = Object.entries(expectedChoices).flatMap(([k, v]) => ['--choice', `${k}=${v}`]);

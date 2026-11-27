@@ -9,7 +9,8 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateStarter } from '../shared/starters/starters.mjs';
+import { copyFileSync } from 'node:fs';
+import { generateStarter, starterCommand } from '../shared/starters/starters.mjs';
 
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const root = path.resolve(ui, '..');
@@ -46,6 +47,26 @@ for (const [i, c] of cases.entries()) {
   const written = listed(dir); const wanted = expected.files.map(f => f.path).sort();
   const differing = expected.files.filter(f => !written.includes(f.path) || !Buffer.from(f.data ?? f.text).equals(readFileSync(path.join(dir, f.path)))).map(f => f.path);
   result(JSON.stringify(written) === JSON.stringify(wanted) && !differing.length, `new ${c.name}`, differing.length ? `differs in ${differing.join(', ')}` : JSON.stringify(written) !== JSON.stringify(wanted) ? `wrote ${written.join(', ')}` : `${written.length} files match the generator`);
+}
+// The Builder copies a command for what it shows (starterCommand). Run that exact command here, beside the logo file,
+// and check it writes the generator's files too, so the zip and the command give the same starter.
+copyFileSync(logo, path.join(work, path.basename(logo)));
+const builderCases = [
+  { platform: 'web', preset: 'document-editor', overrides: { theme: 'light', bottomPanel: false } },
+  { platform: 'native', preset: 'desktop-app', overrides: { sidebar: 'tree' }, logo: true },
+  { platform: 'web', preset: 'website', overrides: { siteNavigation: 'sidebar', siteFooter: false }, logo: true },
+];
+for (const [i, c] of builderCases.entries()) {
+  const folder = `cmd${i}`;
+  const text = starterCommand({ platform: c.platform, preset: c.preset, overrides: c.overrides, version, logoName: c.logo ? path.basename(logo) : undefined, folder }, { manifest, presets });
+  const tokens = text.split(' ');
+  const pinned = tokens[1] === `github:stack-junkie/stack-junkie-style#v${version}` && tokens[2] === 'new' && tokens[3] === folder;
+  const r = runNew(folder, tokens.slice(4));
+  const expected = generateStarter({ platform: c.platform, preset: c.preset, overrides: c.overrides, version, logo: c.logo ? { name: path.basename(logo), data: readFileSync(logo) } : undefined }, source);
+  const dir = path.join(work, folder);
+  const same = r.status === 0 && JSON.stringify(listed(dir)) === JSON.stringify(expected.files.map(f => f.path).sort())
+    && expected.files.every(f => Buffer.from(f.data ?? f.text).equals(readFileSync(path.join(dir, f.path))));
+  result(pinned && same, `the Builder's command for ${c.platform} ${c.preset} writes the zip's files`, pinned ? (r.status === 0 ? text : r.stderr.trim()) : `not pinned to v${version}: ${text}`);
 }
 mkdirSync(path.join(work, 'taken')); writeFileSync(path.join(work, 'taken/notes.txt'), 'keep me\n');
 const refused = runNew('taken', []);
