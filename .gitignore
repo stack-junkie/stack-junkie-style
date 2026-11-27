@@ -1,0 +1,37 @@
+.env
+.env.*
+!.env.example
+credentials.json
+secrets.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+.claude/
+*.tmp
+*.log
+
+# Private design discussions and research collected for owner review.
+/docs/design-skill-revamp-history/
+/scripts/
+
+# Generated previews, builds and local tools.
+/ui/web/node_modules/
+/ui/web/dist/
+/ui/web/dist-library/
+/ui/web/dist-types/
+/ui/web/*.tsbuildinfo
+/ui/generated/
+/ui/native/build*/
+/ui/.tools/
+/ui/dist/
+/ui/apps/projects/node_modules/
+/ui/apps/projects/dist/
+/ui/apps/projects/data/
+/ui/apps/projects/*.tsbuildinfo

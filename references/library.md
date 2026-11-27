@@ -14,7 +14,7 @@ StackJunkieShowcase --export-starter my-app --starter native --preset desktop-ap
 
 **Existing project:** install from a tagged release of `github.com/stack-junkie/stack-junkie-style` ([ADR 0003](../docs/adr/0003-install-from-github-tags.md)), pinned to one version:
 
-- Web: a git dependency on `@stack-junkie/ui-web` pinned to the tag (`#v<version>`), plus `import '@stack-junkie/ui-web/styles.css'`.
+- Web: depend on the library file attached to the release, `https://github.com/stack-junkie/stack-junkie-style/releases/download/v<version>/stack-junkie-ui-web-<version>.tgz`, plus `import '@stack-junkie/ui-web/styles.css'`.
 - Native: `find_package(StackJunkie CONFIG REQUIRED)` and `target_link_libraries(my_app PRIVATE StackJunkie::Widgets)`, or FetchContent of the tag with `SOURCE_SUBDIR ui/native`.
 
 Upgrade by moving the pin on purpose. Publishing to npm is deferred.

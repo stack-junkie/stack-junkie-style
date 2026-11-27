@@ -71,7 +71,7 @@ function webCase(testCase) {
   const dir = path.join(work, `w-${slug(testCase.name)}`);
   writeFiles(dir, generated.files);
   const pkg = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8'));
-  const pinned = `git+${manifest.repository}.git#v${version}`;
+  const pinned = `${manifest.repository}/releases/download/v${version}/stack-junkie-ui-web-${version}.tgz`;
   if (pkg.dependencies['@stack-junkie/ui-web'] !== pinned) return result(false, label, `library dependency is ${pkg.dependencies['@stack-junkie/ui-web']}, expected ${pinned}`);
   const app = readFileSync(path.join(dir, 'src/App.tsx'), 'utf8');
   const layout = testCase.preset === 'website' ? 'WebsiteLayout' : 'AppShell';
