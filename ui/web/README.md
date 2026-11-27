@@ -1,6 +1,6 @@
 # Stack Junkie web UI
 
-Reusable React components and a local, interactive catalog. Clean utility is the only design direction. The showcase imports the same components exported to applications.
+Reusable React components and a local, interactive catalog. Clean is the only look. The showcase imports the same components exported to applications.
 
 ## Setup
 

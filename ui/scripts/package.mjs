@@ -20,7 +20,7 @@ await mkdir(target, { recursive: true });
 
 // Explicit inputs prevent private transcripts, toolchains or dependencies entering a bundle.
 const sources = [
-  'SKILL.md', 'VERSION', 'agents', 'references',
+  'SKILL.md', 'GLOSSARY.md', 'VERSION', 'agents', 'references', 'docs/adr',
   'ui/README.md', 'ui/CHANGELOG.md', 'ui/LICENSE', 'ui/THIRD_PARTY_NOTICES.md', 'ui/shared', 'ui/scripts',
   'ui/generated/version.json',
   'ui/web/src', 'ui/web/README.md', 'ui/web/index.html', 'ui/web/package.json', 'ui/web/package-lock.json',
@@ -52,5 +52,5 @@ try {
 } catch (error) { if (error.code !== 'ENOENT') throw error; }
 await cp(path.join(ui, 'LICENSE'), path.join(target, 'LICENSE'));
 await cp(path.join(ui, 'THIRD_PARTY_NOTICES.md'), path.join(target, 'THIRD_PARTY_NOTICES.md'));
-await writeFile(path.join(target, 'README.md'), `# Stack Junkie ${version}\n\nWorking comparison preview; visual selection and owner interaction review are pending.\n\n- Web: from this bundle directory run \`node ui/scripts/serve.mjs --root showcase-web\`, then open the printed localhost URL.\n- Web library: library-web contains the built reusable module and declarations.\n- Windows: ${windowsIncluded ? 'run showcase-windows/bin/StackJunkieShowcase.exe. Microsoft Visual C++ 2015-2022 x64 Runtime is required.' : 'not included in this bundle; build from ui/native.'}\n- Linux: build from ui/native with Qt 6 Widgets and Svg. Runtime verification remains environment-specific.\n- Skill and build commands: see SKILL.md and ui/README.md.\n\nPrivate design-history transcripts are excluded.\n`);
+await writeFile(path.join(target, 'README.md'), `# Stack Junkie Style ${version}\n\nThe Stack Junkie Style skill, the web library (React) and the native library (Qt 6 Widgets), with a showcase for each. One look, Clean: True black dark mode, white light mode, thin borders and a blue accent. Four Presets set the App frame: Web app, Desktop app, Document editor and Website.\n\n- Web: from this bundle directory run \`node ui/scripts/serve.mjs --root showcase-web\`, then open the printed localhost URL.\n- Web library: library-web contains the built reusable module and declarations.\n- Windows: ${windowsIncluded ? 'run showcase-windows/bin/StackJunkieShowcase.exe. Microsoft Visual C++ 2015-2022 x64 Runtime is required.' : 'not included in this bundle; build from ui/native.'}\n- Linux: build from ui/native with Qt 6 Widgets and Svg. The Linux showcase has not been checked at runtime.\n- Skill and build commands: see SKILL.md and ui/README.md.\n\nPrivate design-history transcripts are excluded.\n`);
 console.log(`Bundle: ${target}`);
