@@ -2,7 +2,7 @@
 
 One shared design source, reusable web and Qt components, and working examples built from those components. Version comes from the parent `VERSION` file.
 
-Both showcases run on the App frame: a rail, an adjustable sidebar and one tab row. **Clean** is the only look: True black dark mode, white light mode, thin borders and a blue accent, with the platform UI font. Stored theme choices are kept. The interim SJ mark (shared `brand/sj-transparent-mask.png`) maps S to the text color and J to the accent at render time. The Settings window's Layout section picks a Preset, switches each choice and exports a matching starter project. Rules for using all of this are in the [skill](../SKILL.md).
+Both showcases run on the App frame: a rail, an adjustable sidebar and one tab row. **Clean** is the only look: True black dark mode, white light mode, thin borders and a blue accent, with the platform UI font. Stored theme choices are kept. The interim SJ mark (shared `brand/sj-transparent-mask.png`) maps S to the text color and J to the accent at render time. The Builder ("Build an app") picks a Preset, switches each choice on a blank App frame and exports a matching starter project. Rules for using all of this are in the [skill](../SKILL.md).
 
 ## Run the web showcase
 
@@ -69,7 +69,8 @@ The shared inputs are:
 - `shared/tokens.json`: semantic design values for Clean.
 - `shared/catalog.json`: component entries, applicable variants/states and eight product layouts.
 - `shared/presets.json`: the four Presets and every App frame choice.
-- `shared/starters`: the starter templates and the one generator both Exports use.
+- `shared/starters`: the starter templates and the one generator the Builders, the `new` command and the tests use.
+- `shared/llms.mjs`: writes the showcase site's llms.txt from the Presets data at build time.
 - `shared/fonts` and `shared/icons.svg`: local assets for both implementations, with font licenses.
 - `../VERSION`: the only authored release version.
 
@@ -99,4 +100,4 @@ Apps use `AppShell`: supply `name`, `description`, `version`, `logo`, `sections`
 
 Import `AboutSection` and `ThemeSetting` only when replacing a built-in section. Supply the product name, description, logo and product version from that project's version source. Web exports systemVersion; native exposes STACKJUNKIE_VERSION. Both are generated from the parent VERSION file. Never replace the style version with the consuming application's version.
 
-Showcase-only controls are labeled and implemented under showcase, not exported from the component library. Settings > Layout > Export starter writes a web or native starter project for the chosen Preset and choices, installing the library from this version's tag.
+Showcase-only controls are labeled and implemented under showcase, not exported from the component library. The Builder writes a web or native starter project for the chosen Preset, choices and logo, installing the library from this version's tag, or copies the matching `new` command. Settings > Layout links to it.

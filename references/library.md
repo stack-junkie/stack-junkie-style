@@ -4,13 +4,15 @@ Two libraries share one design: React and TypeScript on web (`@stack-junkie/ui-w
 
 ## Install
 
-**New project:** Export a starter. In the showcase, Settings window > Layout > Export starter (web downloads a zip, native writes a folder). From the command line:
+**New project:** one command, straight from the GitHub repo (no npm registry):
 
 ```shell
-StackJunkieShowcase --export-starter my-app --starter native --preset desktop-app --choice sidebar=tree
+npx github:stack-junkie/stack-junkie-style#v<version> new my-app --platform native --preset desktop-app --choice sidebar=tree
 ```
 
-`--starter` is `web` or `native`; `--choice name=value` repeats. Both showcases fill the same templates in [ui/shared/starters](../ui/shared/starters/) through `starters.mjs`, so both write identical starters. The Website Preset has no native starter.
+`--platform` is `web` (default) or `native`; `--preset` or `--preset-file` (a custom preset file); `--choice name=value` repeats; `--logo` copies an image into the logo slot. It writes a new folder and refuses one that is not empty. The showcases' Builder exports the same starter as a zip (web) or folder (native) and copies the same command; the native showcase also writes one with `--export-starter <folder> --starter native --preset desktop-app`. All of them fill the templates in [ui/shared/starters](../ui/shared/starters/) the same way (`starters.mjs`, and `showcase/starter.cpp` for native), so they write identical files. The Website Preset has no native starter.
+
+A starter opens with two areas of three Stub pages each and a Stub bottom panel tab (the Website: Home, Articles, About and three Stub articles). Replace each with the app's own: release builds stop at every Stub that remains.
 
 **Existing project:** install from a tagged release of `github.com/stack-junkie/stack-junkie-style` ([ADR 0003](../docs/adr/0003-install-from-github-tags.md)), pinned to one version:
 
@@ -60,4 +62,4 @@ Hint text (an input's `placeholder` on web, `setPlaceholderText` on native) is a
 - The showcase imports the same component an app uses. Fix appearance or behavior in the library, never with a private fix in the example.
 - Examples show realistic, labeled demonstration content and every applicable state: default, hover, focus, selected, disabled, pending, empty, invalid, failed.
 - Bump [VERSION](../VERSION) once per delivered preview or release, not per planning edit, and add the change to [CHANGELOG](../ui/CHANGELOG.md).
-- Tests guard real behavior only: `npm run test:starters` (every Preset to a building starter), `npm run test:presets` (custom preset file round trip and rejection) and `npm run test:stub-guard` in `ui/web`, and `tests/stub-guard/run.ps1` in `ui/native`. Look and layout are checked with screenshots, not tests.
+- Tests guard real behavior only: `npm run test:starters` (every Preset to a building starter whose release build stops at its Stubs), `npm run test:new` (the `new` command and the Builder's command write the generator's files), `npm run test:presets` (custom preset file round trip and rejection) and `npm run test:stub-guard` in `ui/web`, and `tests/stub-guard/run.ps1` in `ui/native`. Look and layout are checked with screenshots, not tests.

@@ -20,7 +20,7 @@ A custom preset is a name, a base Preset and only the choices that differ from t
 | Field | Rule |
 |---|---|
 | `format` | Always `"stack-junkie-preset"`. |
-| `version` | Always `1`. Another version is rejected. |
+| `version` | Always `1`. Another version is rejected. The Website choices added in 3.1.0 are optional, so files written by 3.0 still read. |
 | `name` | 1 to 60 characters after trimming. No line breaks or control characters. |
 | `base` | A preset `id` from `presets.json`: `web-app`, `desktop-app`, `document-editor` or `website`. |
 | `choices` | An object. Each key is a choice name from `presets.json`, and each value one of that choice's `options`, with the same JSON type (`true`, not `"true"`). May be empty. |

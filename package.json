@@ -1,6 +1,6 @@
 {
   "name": "stack-junkie-style",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Creates a project from a Stack Junkie Style Preset: npx github:stack-junkie/stack-junkie-style new <folder>",
   "private": true,
   "type": "module",

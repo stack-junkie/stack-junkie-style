@@ -4,11 +4,11 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 
 ## Presets
 
-[presets.json](../ui/shared/presets.json) is the one source for the four Presets and every choice (rail, sidebar, menuBar, statusBar, bottomPanel, documentTabs, commandPalette, theme, density, dashboardHome). Read the values from it.
+[presets.json](../ui/shared/presets.json) is the one source for the four Presets, their "made for" notes and every choice. Its groups keep the App frame choices (rail, sidebar, menuBar, statusBar, bottomPanel, documentTabs, commandPalette, dashboardHome) apart from the Website choices (siteNavigation, siteFooter, headerSearch, headerButton); theme and density apply to both. Read the values from it.
 
 - Web app: browser tools. Desktop app: Windows tools. Document editor: editors. Website: reading sites.
 - Pass the Preset to `AppShell` and override single choices (web `preset` and `choices`; native `setPreset(id, overrides)`). Keep only the choices that differ from the Preset, so deleting one returns to the Preset.
-- The showcase Settings window's Layout section holds the Preset picker, every choice, and Export starter.
+- The showcases' Builder ("Build an app" on Home and the Rail, File > Export) is the one place for Presets, custom presets and Export: one toolbar row of choices over the starter's own blank frame, a "?" per choice with a live preview that outlines the element, and Export as a zip or folder or as the matching `new` command. Choices the Preset does not use are greyed out. Settings > Layout links to it.
 - A custom Preset is a name, a base Preset and its changed choices. The showcase saves, renames, updates, deletes, exports and imports them; one file format for web and native ([PRESET-FILE.md](../ui/shared/PRESET-FILE.md)), read with `parseCustomPresetFile` or `CustomPreset::parse`.
 - The frame does not own a command palette. An app that has one reads the `commandPalette` choice.
 
@@ -35,6 +35,10 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 
 **Pointer and tooltips.** Everything clickable shows the pointing hand; disabled controls keep the arrow. Tooltips sit against their element: beside Rail items, below toolbar buttons. Icon-only buttons take their tooltip from their label.
 
+**Title bar.** A native app's top row is its title bar: the logo, name and menus sit beside the window buttons, so the name shows once. Without the Menu bar the row holds logo and name. Dragging it moves the window, a double click maximizes it, and on Windows 11 the maximize button shows snap layouts (`AppShell` does this for a top-level window; `setMergedTitleBar`).
+
+**Zoom.** View > Appearance holds Zoom in, Zoom out and Reset zoom. Native apps also zoom with Control and the wheel, plus, minus and 0. Settings > Appearance > Advanced has "Zoom only the area under the pointer", off by default: Control and the wheel then zoom the Sidebar, the pages or the bottom panel on its own, and each keeps its zoom across restarts. On web the browser's own zoom is left alone unless that option is on.
+
 **Logo slot.** The app's logo and name sit top left; clicking them goes Home.
 
 **Menu bar.** Document editor Preset only. File, Edit, View, the app's menus, then Help. The frame owns Settings (File), About (Help) and View > Appearance: the Sidebar (Control B), Status bar and Panel (Control J) toggles, Zoom in, Zoom out, Reset zoom and Dark theme. The top of View stays free for the app's own views. Native apps zoom with Control plus, minus and 0; the web leaves the browser's own zoom keys alone. Edit holds only the app's items and is left out without them.
@@ -47,7 +51,7 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 
 ## Website
 
-The Website Preset uses `WebsiteLayout`, a separate component from the App frame: a header with the logo, site navigation and a dark/light toggle, one reading-width column, and a footer with site links and copyright. No Rail, Sidebar or Settings window. The default theme follows the device until the visitor picks one. Below 600 pixels the navigation folds into a menu button. It is web only; the Website Preset has no native starter.
+The Website Preset uses `WebsiteLayout`, a separate component from the App frame: a header with the logo, the navigation (`navigation="top"`, or `"sidebar"` beside the reading column), header actions (`onSearch`, one `mainAction` such as Subscribe) and a dark/light toggle; one reading-width column; and a Site footer that links to every page, grouped, with the copyright (`footer={false}` removes it). Pages can sit in a `group` (such as Articles) and leave the top bar (`topBar: false`). `WebsiteHome` shows a featured article and a recent list, `WebsiteArticleList` lists articles and `WebsiteArticle` lays out one. No Rail or Settings window. The default theme follows the device until the visitor picks one. Narrow, the navigation folds into a menu button. It is web only; the Website Preset has no native starter.
 
 ## Product layouts
 

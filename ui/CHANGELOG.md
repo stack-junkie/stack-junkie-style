@@ -1,5 +1,19 @@
 # Stack Junkie UI changelog
 
+## 3.1.0
+
+Starting a project takes one screen or one command, and the Website Preset can build a full article site.
+
+- The Builder, in the web and native showcases: "Build an app" on Home and the Rail (and File > Export) opens a full-window blank App frame or Website. A one-row toolbar holds the Preset, its "made for" note, every choice and the Logo; switching one changes the frame live. Each choice has a "?" with a live mini preview, and hovering or focusing it outlines the element in the frame. Choices a Preset does not use are greyed out. Export gives exactly what is shown: a zip (web) or folder (native), or one `new` command. Custom presets save, import and export here. Settings > Layout links to it; the Starter app page and the Export dialog are gone.
+- The `new` command: `npx github:stack-junkie/stack-junkie-style#v3.1.0 new <folder>` with `--platform`, `--preset` or `--preset-file`, repeated `--choice` and `--logo`. No npm registry. It uses the same generator as the Builders and refuses a folder that is not empty.
+- Starters open with two areas of three Stub pages each and a Stub bottom panel tab, so every Preset shows its shape. "Start here." is gone. Native gains `STACKJUNKIE_STUB_TEXT` for Stub names.
+- Each Preset carries a one-line "made for" note.
+- A Logo choice: the SJ mark by default, or an image file that Export and `new` copy into the starter and wire to the logo slot. Clicking the logo goes Home.
+- Website: navigation in a top bar or a sidebar, a Site footer listing every page (switchable), header search and one main button, and `WebsiteHome`, `WebsiteArticleList` and `WebsiteArticle` page templates. The four Website choices sit in their own group in presets.json; custom preset files stay at version 1 and 3.0 files still read.
+- Native apps merge the title bar into the frame's top row: logo, name, menus and window buttons, so the name shows once. Dragging, double-click to maximize, edge resizing and Windows 11 snap layouts keep working.
+- Zoom: Control and the mouse wheel zoom the whole native app. Settings > Appearance > Advanced adds "Zoom only the area under the pointer", off by default, on web and native; each area keeps its zoom across restarts. On web the browser's own zoom is left alone unless it is on.
+- llms.txt on the showcase site, generated from the Presets data at build time: the skill install command, the `new` command with examples, every Preset and choice, and links.
+
 ## 3.0.1
 
 Polish from the first look at exported starters, in the web and native libraries, so every starter picks it up.

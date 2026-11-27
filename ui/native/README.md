@@ -95,6 +95,8 @@ What the frame draws today:
 - `rail`: the section rail, or none. Without the rail the sidebar lists every page, grouped by section, and Settings moves to the sidebar or, with no sidebar, the end of the header.
 - `sidebar`: a `NavTree`, a flat list, or nothing. With no sidebar the pages become the one tab row: the current section's pages beside the rail, every page without it.
 - `documentTabs`: beside a sidebar, every page opened from it stays in one row of closable tabs until closed (Control W closes the focused one). With none open the work area says so.
+- Title bar: `AppShell` merges a top-level window's title bar into the frame's top row (`setMergedTitleBar`): logo, name, Menu bar and the minimize, maximize and close buttons. Dragging the row moves the window, a double click maximizes it and the edges resize it. On Windows the system hit-tests the row (`nativeEvent`), so Aero snap and the Windows 11 snap layouts on the maximize button work; elsewhere Qt's `startSystemMove` and `startSystemResize` do it.
+- Zoom: Control and the wheel, or Control plus, minus and 0, zoom the whole app (`setZoom`, `zoom`, `Theme::setZoom`; every size in the stylesheet follows it). `setAreaZoomEnabled` (Settings > Appearance > Advanced, off by default) zooms only the Sidebar, the pages or the bottom panel under the pointer (`setAreaZoom`, `areaZoom`). Both are saved per app with `QSettings` and return after a restart.
 - `theme`: `AppShell::setPreset` applies dark or light; `system` follows `QStyleHints::colorScheme` live until someone picks a theme in Settings. The offscreen platform reports no scheme, which counts as light.
 - `density`: compact or comfortable, both from the `density` tokens. `Theme::setDensityMode` holds one mode for the app; `setChoices` sets it, resizes the frame and re-applies the frame's theme. Content areas marked with the `sjContentPadding` property follow the padding.
 - `commandPalette`: the frame does not own a palette, so an app that has one reads `choices().commandPalette` or listens to `choicesChanged`.
@@ -152,11 +154,12 @@ The native showcase uses all three: the current component on the left of the Sta
 
 ## Export
 
-Settings > Layout > Export picks Web starter or Native starter, and Export starter writes that project into a folder you choose (it asks before replacing files). The starter matches the chosen preset and changed choices.
+The Builder ("Build an app" on Home and the Rail, File > Export, or Settings > Layout > Open the Builder) fills the window with the starter's own blank App frame: one toolbar row with the Preset, its "made for" note, every choice (a "?" beside each shows what it does with a mini preview and outlines it in the frame), the Logo and Export. Export writes the web or native starter into a new, empty folder, or copies the matching `new` command (the same text the web Builder copies). Choices the Preset does not use are greyed out; the Website preset shows that it has no native layout and exports the web starter. Custom presets stay in Settings > Layout.
 
 - Native starter: `CMakeLists.txt`, `main.cpp`, `.gitignore` and a short README. `CMakeLists.txt` uses an installed package through `find_package(StackJunkie)` when `CMAKE_PREFIX_PATH` finds one, and otherwise fetches this version's tag with FetchContent (`https://github.com/stack-junkie/stack-junkie-style.git`, `GIT_TAG v<version>`, `SOURCE_SUBDIR ui/native`, ADR 0003). `main.cpp` builds an `AppShell` and calls `AppShell::setPreset(id, choices)` with only the choices that differ from the preset.
 - Web starter: the same Vite, React and TypeScript project the web showcase exports (see the web README).
-- The Website preset has no native starter, because native has no Website layout; the row says so and Export starter is disabled.
+- The Website preset has no native starter, because native has no Website layout; Export says so for the native starter.
+- Both starters open with two areas of three Stub pages and a Stub bottom panel tab (`STACKJUNKIE_STUB` and `STACKJUNKIE_STUB_TEXT` on native). A Debug build shows them striped; a Release build stops at each one.
 
 The templates and file list live in `../shared/starters`; `showcase/starter.cpp` fills them exactly as `starters.mjs` does on web. For scripts and tests:
 
@@ -164,7 +167,7 @@ The templates and file list live in `../shared/starters`; `showcase/starter.cpp`
 StackJunkieShowcase --export-starter my-app --starter native --preset desktop-app --choice sidebar=tree
 ```
 
-`--export-starter <folder>` writes the starter and exits without opening a window (it uses the offscreen platform). `--starter` is `web` (the default) or `native`; `--preset` and `--choice` work as for `--export-preview`. Without `--preset` it uses the saved preset and choices. The website preset with `--starter native` exits with code 2 and says why. `npm run test:starters` in `../web` builds every starter (see the web README).
+`--logo <image>` copies an image into the starter's logo slot. `--print-command` prints the `new` command for the same `--starter`, `--preset`, `--choice` and `--logo` and exits. `--export-starter <folder>` writes the starter and exits without opening a window (it uses the offscreen platform). `--starter` is `web` (the default) or `native`; `--preset` and `--choice` work as for `--export-preview`. Without `--preset` it uses the saved preset and choices. The website preset with `--starter native` exits with code 2 and says why. `npm run test:starters` in `../web` builds every starter (see the web README).
 
 ## Stub
 
@@ -180,6 +183,7 @@ layout->addWidget(STACKJUNKIE_STUB(new QLabel(QStringLiteral("42 open items"))))
 - The guard is on when `NDEBUG` or `STACKJUNKIE_RELEASE` is defined. `StackJunkie::Widgets` adds `STACKJUNKIE_RELEASE` to consumers in Release, RelWithDebInfo and MinSizeRel, including through the installed CMake package, so removing `NDEBUG` does not bypass it.
 - `STACKJUNKIE_STUBS_ALLOWED` is 1 when Stubs compile.
 - The showcase's Content > Stub page (`--page content/stub`) builds the `Stub` class directly as its specimen, so it shows the striped look in a Release build too. Apps use only the macro.
+- `STACKJUNKIE_STUB_TEXT("Sample name")` marks plain text, such as a page or area name, the same way: a `QString` in development builds, a compile error at its line in release builds.
 - Hint text inside an empty input (`setPlaceholderText`) is not a Stub and is unaffected.
 
 `tests/stub-guard/run.ps1` builds a small sample app against the installed package in Release, with and without its Stubs. The first build must fail and name each Stub's line; the second must pass.
@@ -202,7 +206,10 @@ StackJunkieShowcase --export-preview settings-light.png --theme light --page set
 StackJunkieShowcase --export-preview inputs-narrow.png --page inputs --width 540 --height 900
 StackJunkieShowcase --export-preview website-light.png --theme light --page actions --preset website
 StackJunkieShowcase --export-preview layout-dark.png --theme dark --page settings/layout --height 900 --preset desktop-app --choice sidebar=tree
+StackJunkieShowcase --export-preview builder-dark.png --theme dark --page builder --preset document-editor --builder-help statusBar
 ```
+
+`--page builder` exports the Builder; `--builder-help <choice>` shows that choice's help card, `--builder-export` shows Export and `--builder-logo <image>` uses an image in the logo slot.
 
 Page IDs are the catalog family IDs, `family/component` (for example `navigation/tabs`), `home`, `settings` for the Settings window, or `settings/<section>` (`appearance`, `layout`, `keyboard`, `about`) for one section at the export height. `--preset <id>` starts from that preset alone, ignoring saved choices, and `--choice name=value` (repeatable) changes one choice the way Settings does. Exported previews capture the visible viewport, not every scroll position. Screenshot generation is a product artifact, not proof that all interactions work.
 

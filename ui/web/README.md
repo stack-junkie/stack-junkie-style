@@ -150,7 +150,7 @@ The Document editor preset turns all three on. `AppShell` draws them from the `m
   panels={[{ id: 'output', label: 'Output', content: <Output /> }, { id: 'problems', label: 'Problems', content: <Problems /> }]} />
 ```
 
-- Menu bar: File, Edit, View, the app's `menus`, then Help, in the header beside the app's name. The frame owns Settings… (File, Control comma), About (Help, opens Settings at About), and View > Appearance: the Sidebar (Control B), Status bar and Panel (Control J) toggles, Zoom in, Zoom out, Reset zoom and Dark theme. Zoom scales the whole frame (`zoom`, `onZoomChange`; remembered under `storageKey`) and leaves the browser's own zoom keys alone. A menu entry with `items` is a submenu. `menuItems` adds the app's items above the frame's; Edit holds only app items and is left out without them. An item's `shortcut` is shown text, so the app owns its own keys. Arrow keys move between menus and items, Enter or Space runs an item, Escape closes the menu. `MenuBar` also works on its own.
+- Menu bar: File, Edit, View, the app's `menus`, then Help, in the header beside the app's name. The frame owns Settings… (File, Control comma), About (Help, opens Settings at About), and View > Appearance: the Sidebar (Control B), Status bar and Panel (Control J) toggles, Zoom in, Zoom out, Reset zoom and Dark theme. Zoom scales the whole frame (`zoom`, `onZoomChange`; remembered under `storageKey`) and leaves the browser's own zoom keys alone. A menu entry with `items` is a submenu. Settings > Appearance > Advanced has "Zoom only the area under the pointer" (`AreaZoomSetting`, off by default): Control and the wheel then zoom the sidebar, the pages or the panel on its own, each remembered under `storageKey`. An app that replaces the Appearance section adds `<AreaZoomSetting />` to its own. `menuItems` adds the app's items above the frame's; Edit holds only app items and is left out without them. An item's `shortcut` is shown text, so the app owns its own keys. Arrow keys move between menus and items, Enter or Space runs an item, Escape closes the menu. `MenuBar` also works on its own.
 - Status bar: a thin bottom row with `status.state` on the left (the current page's name when omitted) and `status.facts` on the right. Never ads or tips. `StatusBar` also works on its own.
 - Bottom panel: a resizable panel under the work area with its own tab row of `panels`. Drag or arrow-key its top edge; the close control and View > Bottom panel hide it for the session. Its height is saved with `storageKey`. No panel is drawn without `panels`. `BottomPanel` also works on its own as the last child of a flex column.
 
@@ -158,7 +158,7 @@ The View toggles hide and show the parts for the session; the choices decide whe
 
 ### Website
 
-`WebsiteLayout` is the layout for reading sites and the one the Website preset uses. It is a separate component, not a mode of the App frame: a header with the logo, site navigation and a theme toggle, one reading-width column, and a footer with site links and a copyright line. It has no rail, sidebar or Settings window.
+`WebsiteLayout` is the layout for reading sites and the one the Website preset uses. It is a separate component, not a mode of the App frame: a header with the logo, the navigation, header actions and a theme toggle; one reading-width column; and a Site footer that links to every page. It has no rail or Settings window.
 
 ```tsx
 import { BrandMark, Prose, WebsiteLayout, type WebsitePage } from '@stack-junkie/ui-web';
@@ -174,8 +174,12 @@ const pages: WebsitePage[] = [
 - `pages` are the header navigation, in order. The current page is marked with `aria-current="page"`. A page without `href` switches in place; with one, the link is followed and `onNavigate` still reports it. `page` and `onNavigate` make the current page controlled, and `children` replace the current page's content.
 - The main column is limited to the reading measure (`readingMeasure` at the reading size) and uses the reading line height. Wrap text in `Prose` for headings, lists and quotes.
 - `theme` sets what a new visitor sees and defaults to `system`, which follows the device. The toggle switches dark and light and saves the choice under `storageKey` (default `sj-website`; an empty string keeps it for the visit only). Storage errors are ignored. `mode` and `onModeChange` make the theme controlled.
-- `density` defaults to `comfortable`. `footerLinks` replace the page links in the footer, and `copyright` replaces the default year and site name.
-- When the layout is narrower than 600 pixels, the navigation folds into a menu button and the gutters shrink to 16 pixels. It uses a container query, so it also folds inside a narrow frame.
+- `navigation` is `top` (the header lists the pages) or `sidebar` (a sidebar beside the column lists them, grouped). A page's `group` (such as Articles) heads it in the sidebar and footer, and `topBar: false` leaves it out of the top bar.
+- `footer` (default on) is the Site footer: every page, grouped, then the copyright. `footerLinks` replace the page links, and `copyright` replaces the default year and site name.
+- `onSearch` shows a search button in the header; `mainAction` (`{ label, href or onClick }`) is the one main button, such as Subscribe; `actions` adds more before it.
+- `WebsiteHome` shows a `featured` article and a `recent` list, `WebsiteArticleList` lists `articles`, and `WebsiteArticle` lays out one with its `title`, `date` and `byline`. Links to `#<page id>` inside the content switch pages like the navigation does.
+- `density` defaults to `comfortable`.
+- When the layout is narrower than 760 pixels, the navigation folds into a menu button and the gutters shrink to 16 pixels. It uses a container query, so it also folds inside a narrow frame.
 - The layout fills its parent and does not reset the page. Give `html` and `body` a zero margin in the site's own stylesheet.
 
 The declarations and built library do not require the source `shared` directory in consuming applications. Keep the distributed font licenses with the package. Check browser appearance and assistive-technology behavior by hand; a passing build does not cover them.

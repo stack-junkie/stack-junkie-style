@@ -69,7 +69,7 @@ function compareWithShowcase(label, platform, testCase, files) {
   // The native Builder copies the same command the web Builder does.
   const printed = run(showcase, ['--print-command', '--starter', platform, '--preset', testCase.preset, ...choiceArgs, ...(testCase.logo ? ['--logo', logoPath] : [])], { env: qtEnv });
   const wanted = starterCommand({ platform, preset: testCase.preset, overrides: testCase.overrides, version, logoName: testCase.logo ? path.basename(logoPath) : undefined }, { manifest, presets });
-  result(printed.ok && printed.output.trim().split(/\r?\n/).pop() === wanted, `${label}: native Builder copies the same command`, printed.ok ? '' : tail(printed.output));
+  result(printed.ok && printed.output.split(/\r?\n/).find(line => line.startsWith('npx ')) === wanted, `${label}: native Builder copies the same command`, printed.ok ? '' : tail(printed.output));
 }
 
 // What an app does with its Stubs: swap each for its own text. Here, the text inside it.
