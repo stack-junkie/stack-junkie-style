@@ -1,0 +1,348 @@
+#include <stackjunkie/theme.hpp>
+#include <stackjunkie/components.hpp>
+#include <QAbstractButton>
+#include <QApplication>
+#include <QFile>
+#include <QFontDatabase>
+#include <QHash>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QListWidget>
+#include <QPainter>
+#include <QSvgRenderer>
+#include <QXmlStreamReader>
+#include <QXmlStreamWriter>
+#include <algorithm>
+#include <QPalette>
+#include <QStyle>
+#include <QWidget>
+#include <stdexcept>
+
+static void registerStackJunkieResources() { Q_INIT_RESOURCE(stackjunkie_resources); }
+
+namespace StackJunkie {
+static QHash<QString, QString> registeredFamilies;
+void initializeResources() {
+    static bool initialized = false;
+    if (initialized) return;
+    registerStackJunkieResources();
+    for (const auto &font : {"Manrope", "Lora", "FiraCode"}) {
+        const QString fileName = QString::fromLatin1(font);
+        const int id = QFontDatabase::addApplicationFont(QStringLiteral(":/stackjunkie/fonts/%1.ttf").arg(fileName));
+        const auto families = QFontDatabase::applicationFontFamilies(id);
+        if (families.isEmpty()) throw std::runtime_error("Cannot register an embedded Stack Junkie font");
+        const QString tokenName = fileName == QStringLiteral("FiraCode") ? QStringLiteral("Fira Code") : fileName;
+        // Basic/offscreen and platform font databases can expose different family
+        // names for variable fonts. Use the actual registered family on each host.
+        registeredFamilies.insert(tokenName, families.contains(tokenName) ? tokenName : families.first());
+    }
+    initialized = true;
+}
+static QJsonObject document(const QString &file) {
+    initializeResources();
+    QFile input(QStringLiteral(":/stackjunkie/") + file);
+    if (!input.open(QIODevice::ReadOnly)) throw std::runtime_error("Missing embedded Stack Junkie resource");
+    QJsonParseError error;
+    const auto doc = QJsonDocument::fromJson(input.readAll(), &error);
+    if (error.error != QJsonParseError::NoError || !doc.isObject()) throw std::runtime_error("Invalid embedded Stack Junkie JSON");
+    return doc.object();
+}
+Theme Theme::load(const QString &direction, bool dark) {
+    Theme result;
+    const auto choices = document(QStringLiteral("tokens.json")).value(QStringLiteral("directions")).toObject();
+    if (!choices.contains(direction)) throw std::runtime_error("Unknown Stack Junkie design direction");
+    result.direction = direction;
+    result.dark = dark;
+    result.definition = choices.value(direction).toObject();
+    result.colors = result.definition.value(dark ? QStringLiteral("dark") : QStringLiteral("light")).toObject();
+    // Clean utility uses one true black (or white) ground with structure from thin borders, matching ui/web-next.
+    // Kept here until the shared tokens.json moves over, so the current native showcase stays unchanged.
+    if (direction == QStringLiteral("clean")) {
+        const QList<QPair<const char *, const char *>> overrides = dark
+            ? QList<QPair<const char *, const char *>>{{"canvas", "#000000"}, {"surface", "#000000"}, {"raised", "#0e0e0e"}, {"text", "#ededed"}, {"muted", "#8f8f8f"}, {"border", "#1f1f1f"}, {"selection", "#141414"}, {"onAccent", "#000000"}}
+            : QList<QPair<const char *, const char *>>{{"canvas", "#ffffff"}, {"surface", "#ffffff"}, {"raised", "#f4f5f7"}, {"border", "#d5dae1"}};
+        for (const auto &[key, value] : overrides) result.colors.insert(QLatin1String(key), QLatin1String(value));
+    }
+    return result;
+}
+QStringList Theme::directions() { return document(QStringLiteral("tokens.json")).value(QStringLiteral("directions")).toObject().keys(); }
+QJsonObject Theme::catalog() { return document(QStringLiteral("catalog.json")); }
+int Theme::spacing(int index) {
+    const auto values = document(QStringLiteral("tokens.json")).value(QStringLiteral("spacing")).toArray();
+    return index >= 0 && index < values.size() ? values.at(index).toInt(8) : 8;
+}
+int Theme::typeSize(const QString &role, int fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typeScale")).toObject().value(role).toInt(fallback); }
+int Theme::density(const QString &role, int fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("density")).toObject().value(role).toInt(fallback); }
+qreal Theme::typography(const QString &role, qreal fallback) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("typography")).toObject().value(role).toDouble(fallback); }
+int Theme::motionDuration(const QString &role) { return document(QStringLiteral("tokens.json")).value(QStringLiteral("motion")).toObject().value(role).toInt(0); }
+QColor Theme::color(const QString &name) const { return QColor(colors.value(name).toString()); }
+int Theme::metric(const QString &name, int fallback) const { return definition.value(QStringLiteral("metrics")).toObject().value(name).toInt(fallback); }
+QString Theme::font(const QString &role) const {
+    initializeResources();
+    const QString token = definition.value(QStringLiteral("fonts")).toObject().value(role).toString(QStringLiteral("Manrope"));
+    if (token == QStringLiteral("system-ui")) {
+        const auto available = QFontDatabase::families();
+        for (const auto &preferred : {QStringLiteral("Segoe UI Variable Text"), QStringLiteral("Segoe UI")})
+            if (available.contains(preferred, Qt::CaseInsensitive)) return preferred;
+        const auto general = QFontDatabase::systemFont(QFontDatabase::GeneralFont).family();
+        if (available.contains(general, Qt::CaseInsensitive) && !QFontDatabase::isFixedPitch(general)) return general;
+        return registeredFamilies.value(QStringLiteral("Manrope"), QStringLiteral("sans-serif"));
+    }
+    return registeredFamilies.value(token, token);
+}
+QString Theme::label() const { return definition.value(QStringLiteral("label")).toString(direction); }
+QString Theme::styleSheet() const {
+    QString css = QString::fromUtf8(R"CSS(
+QWidget { color: @text; font-family: "@ui"; font-size: @baseFontpx; font-weight: @regularWeight; selection-background-color: @selection; selection-color: @text; }
+QWidget[sjFontRole="editorial"] { font-family: "@editorial"; font-size: @readingpx; }
+QWidget[sjFontRole="mono"] { font-family: "@mono"; font-size: @codeSizepx; }
+QWidget[sjRoot="true"] { background: @canvas; }
+QLabel { background: transparent; }
+QLabel[sjRole="heading"] { font-size: @sectionpx; font-weight: @strongWeight; }
+QTextBrowser[sjRole="readingSurface"] { border: 0; padding: 0; background: @surface; }
+QLabel[sjRole="shellTitle"] { font-size: @labelSizepx; font-weight: @mediumWeight; }
+QLabel[sjRole="contextTitle"] { background: @surface; font-size: @labelSizepx; font-weight: @strongWeight; padding: @controlPaddingYpx @controlPaddingXpx; border-bottom: @metricBorderWidthpx solid @border; }
+QWidget[sjRole="shellHeader"] { background: @surface; border-bottom: @metricBorderWidthpx solid @border; }
+QWidget[sjRole="shellHeader"] QComboBox, QWidget[sjRole="shellHeader"] QPushButton, QWidget[sjRole="shellHeader"] QLabel[sjRole="muted"] { font-size: @chromepx; }
+QLabel[sjRole="muted"] { color: @muted; }
+QLabel[sjRole="attribution"] { color: @muted; font-size: @captionpx; }
+QFrame[sjRole="separator"] { border: 0; max-height: 1px; background: @border; }
+QLabel[sjRole="productTitle"] { font-size: @headingpx; font-weight: @strongWeight; }
+QLabel[sjRole="error"] { color: @danger; }
+QPushButton, QToolButton { background: @surface; border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; padding: @controlPaddingYpx @controlPaddingXpx; min-height: @innerHeightpx; }
+QToolButton[sjRole="iconTarget"] { padding: 0; min-width: 0; min-height: 0; }
+QToolButton[sjRole="railToggle"] { padding: 0; min-width: 0; min-height: @contextInnerHeightpx; max-height: @contextInnerHeightpx; }
+QPushButton:hover, QToolButton:hover { background: @raised; border-color: @accent; }
+QPushButton:pressed, QToolButton:pressed, QToolButton:checked { background: @selection; }
+QPushButton:focus, QToolButton:focus, QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QTimeEdit:focus, QTextEdit:focus, QPlainTextEdit:focus { border: 2px solid @focus; }
+QPushButton[sjVariant="primary"] { color: @onAccent; background: @accent; border-color: @accent; font-weight: @mediumWeight; }
+QPushButton[sjVariant="primary"]:hover { background: @accentHover; }
+QPushButton[sjVariant="danger"] { color: @danger; border-color: @danger; }
+QPushButton[sjVariant="quiet"], QToolButton[sjVariant="quiet"] { background: transparent; border-color: transparent; }
+QPushButton[sjVariant="quiet"]:hover, QToolButton[sjVariant="quiet"]:hover { background: @raised; }
+QPushButton:disabled, QToolButton:disabled { color: @muted; background: @surface; border-color: @border; }
+QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QTimeEdit { background: @surface; border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; padding: @controlPaddingYpx @controlPaddingXpx; min-height: @innerHeightpx; }
+QLineEdit:disabled, QComboBox:disabled, QSpinBox:disabled { color: @muted; background: @raised; }
+QComboBox, QSpinBox, QDoubleSpinBox, QDateEdit, QTimeEdit { padding-right: 28px; }
+QComboBox::drop-down, QDateEdit::drop-down { subcontrol-origin: border; subcontrol-position: top right; width: 24px; border-left: @metricBorderWidthpx solid @border; }
+QComboBox::down-arrow, QDateEdit::down-arrow { image: url(:/stackjunkie/chevron-down-@glyphTone.svg); width: 14px; height: 14px; }
+QSpinBox::up-button, QDoubleSpinBox::up-button, QDateEdit::up-button, QTimeEdit::up-button { subcontrol-origin: border; subcontrol-position: top right; width: 24px; height: @halfControlpx; border-left: @metricBorderWidthpx solid @border; }
+QSpinBox::down-button, QDoubleSpinBox::down-button, QDateEdit::down-button, QTimeEdit::down-button { subcontrol-origin: border; subcontrol-position: bottom right; width: 24px; height: @halfControlpx; border-left: @metricBorderWidthpx solid @border; }
+QSpinBox::up-button:hover, QSpinBox::down-button:hover, QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover, QTimeEdit::up-button:hover, QTimeEdit::down-button:hover { background: @selection; }
+QSpinBox::up-arrow, QDoubleSpinBox::up-arrow, QDateEdit::up-arrow, QTimeEdit::up-arrow { image: url(:/stackjunkie/chevron-up-@glyphTone.svg); width: 12px; height: 12px; }
+QSpinBox::down-arrow, QDoubleSpinBox::down-arrow, QDateEdit::down-arrow, QTimeEdit::down-arrow { image: url(:/stackjunkie/chevron-down-@glyphTone.svg); width: 12px; height: 12px; }
+QWidget[sjInvalid="true"] { border-color: @danger; }
+QComboBox QAbstractItemView { background: @surface; color: @text; selection-background-color: @selection; border: @metricBorderWidthpx solid @border; }
+QTextEdit, QPlainTextEdit { background: @surface; border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; padding: 8px; }
+QPlainTextEdit[sjRole="code"] { font-family: "@mono"; }
+QCheckBox, QRadioButton { spacing: 8px; min-height: @controlHeightpx; background: transparent; }
+QCheckBox::indicator, QRadioButton::indicator { width: 18px; height: 18px; border: @metricBorderWidthpx solid @muted; background: @surface; }
+QCheckBox::indicator { border-radius: 3px; }
+QCheckBox::indicator:checked { background: @accent; border-color: @accent; image: url(:/stackjunkie/check-@glyphTone.svg); }
+QCheckBox::indicator:indeterminate { background: @accent; border-color: @accent; image: url(:/stackjunkie/mixed-@glyphTone.svg); }
+QCheckBox::indicator:disabled, QRadioButton::indicator:disabled { border-color: @border; background: @raised; }
+QCheckBox::indicator:checked:disabled { background: @muted; }
+QCheckBox:focus, QRadioButton:focus { outline: 1px solid @focus; }
+QRadioButton::indicator { border-radius: 10px; }
+QRadioButton::indicator:checked { border: 6px solid @accent; width: 8px; height: 8px; background: @onAccent; }
+QCheckBox[sjVariant="switch"]::indicator { width: 32px; height: 18px; border-radius: 9px; background: @border; border: @metricBorderWidthpx solid @border; }
+QCheckBox[sjVariant="switch"]::indicator:checked { background: @accent; border-color: @accent; }
+QGroupBox { border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; margin-top: 12px; padding-top: 16px; }
+QGroupBox::title { subcontrol-origin: margin; left: 12px; padding: 0 4px; }
+QTabWidget::pane { border: @metricBorderWidthpx solid @border; background: @surface; }
+QTabBar::tab { background: @canvas; color: @muted; font-size: @chromepx; font-weight: @regularWeight; border-top: 2px solid transparent; border-bottom: 1px solid transparent; border-right: @metricBorderWidthpx solid @border; padding: 0 @controlPaddingXpx; min-height: @tabInnerHeightpx; margin: 0; }
+QTabBar::tab:selected { background: @surface; color: @text; border-top-color: @accent; border-bottom: 1px solid @surface; }
+QTabBar::tab:hover { background: @raised; }
+QListWidget, QTreeWidget, QTableWidget, QListView, QTreeView, QTableView { background: @surface; alternate-background-color: @raised; border: @metricBorderWidthpx solid @border; gridline-color: @border; selection-background-color: @selection; selection-color: @text; }
+QListWidget::item, QTreeView::item, QTableView::item { padding: 6px; min-height: 20px; }
+QListWidget::item:hover, QTreeView::item:hover { background: @raised; }
+QListWidget[sjRole="navigation"], QListWidget[sjRole="rail"] { background: @canvas; border: 0; outline: 0; }
+QListWidget[sjRole="navigation"] { font-size: @chromepx; }
+QListWidget[sjRole="navigation"]::item { padding: 0 @controlPaddingXpx; min-height: @navRowHeightpx; border-left: 3px solid transparent; }
+QListWidget[sjRole="rail"]::item { padding: 0; }
+QListWidget[sjRole="navigation"]::item:selected, QListWidget[sjRole="rail"]::item:selected { background: @selection; border-left: 3px solid @accent; }
+QTreeWidget[sjRole="navTree"] { background: @canvas; border: 0; outline: 0; font-size: @chromepx; }
+QTreeWidget[sjRole="navTree"]::item { min-height: @navRowHeightpx; padding: 0 4px; }
+QTreeWidget[sjRole="navTree"]::item:selected { background: @selection; color: @accent; }
+QHeaderView::section { background: @raised; color: @muted; border: 0; border-bottom: @metricBorderWidthpx solid @border; padding: 8px; text-align: left; }
+QScrollArea { border: 0; background: @surface; }
+QScrollArea > QWidget, QScrollArea > QWidget > QWidget { background: @surface; }
+QDialog { background: @surface; }
+QFrame[sjRole="settingsNav"] { background: @canvas; border: 0; border-right: 1px solid @border; }
+QToolButton[sjRole="tabClose"] { border: 0; padding: 0; min-height: 0; background: transparent; }
+QToolButton[sjRole="tabClose"]:hover { background: @raised; }
+QScrollBar:vertical { background: @canvas; width: 8px; margin: 0; }
+QScrollBar::handle:vertical { background: @border; min-height: 28px; border-radius: 4px; margin: 2px; }
+QScrollBar::handle:vertical:hover { background: @muted; }
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal { background: @canvas; height: 8px; margin: 0; }
+QScrollBar::handle:horizontal { background: @border; min-width: 28px; border-radius: 4px; margin: 2px; }
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }
+QSlider::groove:horizontal { height: 4px; background: @border; border-radius: 2px; }
+QSlider::handle:horizontal { background: @accent; width: 18px; margin: -7px 0; border-radius: 9px; }
+QSlider::sub-page:horizontal { background: @accent; }
+QSlider:focus { border: 1px solid @focus; }
+QProgressBar { border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; background: @raised; text-align: center; min-height: 20px; }
+QProgressBar::chunk { background: @accent; border-radius: @radiuspx; }
+QSplitter::handle { background: transparent; }
+QSplitter::handle:horizontal { border-left: 1px solid @border; }
+QSplitter::handle:vertical { border-top: 1px solid @border; }
+QSplitter::handle:hover { background: @accent; }
+QSplitter::handle:focus { background: @focus; border: 1px solid @text; }
+QMenu, QToolTip { background: @surface; color: @text; border: @metricBorderWidthpx solid @border; padding: 4px; }
+QMenu::item { padding: 7px 24px; }
+QMenu::item:selected { background: @selection; }
+QMenu::separator { height: 1px; background: @border; margin: 4px 8px; }
+QFrame[sjRole="panel"], QFrame[sjRole="help"], QFrame[sjRole="code"], QFrame[sjRole="disclosure"] { background: @surface; border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; }
+QFrame[sjRole="panel"][sjVariant="inset"] { background: @raised; }
+QFrame[sjRole="notice"] { background: @surface; border: @metricBorderWidthpx solid @border; border-left: 3px solid @accent; border-radius: @radiuspx; }
+QFrame[sjRole="notice"][sjTone="success"] { border-left-color: @success; }
+QFrame[sjRole="notice"][sjTone="warning"] { border-left-color: @warning; }
+QFrame[sjRole="notice"][sjTone="danger"] { border-left-color: @danger; }
+QLabel[sjRole="tag"] { background: @raised; color: @muted; border-radius: @radiuspx; padding: 3px 8px; }
+QLabel[sjRole="tag"][sjTone="success"] { color: @success; }
+QLabel[sjRole="tag"][sjTone="warning"] { color: @warning; }
+QLabel[sjRole="tag"][sjTone="danger"] { color: @danger; }
+QFrame[sjRole="separator"] { background: @border; max-height: 1px; border: 0; }
+)CSS");
+    // Replace longer token names first so @accent cannot consume @accentHover.
+    QStringList keys = colors.keys();
+    std::sort(keys.begin(), keys.end(), [](const QString &a, const QString &b) { return a.size() > b.size(); });
+    for (const auto &key : keys) css.replace(QStringLiteral("@") + key, colors.value(key).toString());
+    css.replace(QStringLiteral("@caption"), QString::number(typeSize(QStringLiteral("caption"), 12)));
+    css.replace(QStringLiteral("@contextInnerHeight"), QString::number(density(QStringLiteral("contextHeight"), 36) - 2 * metric(QStringLiteral("borderWidth"), 1)));
+    css.replace(QStringLiteral("@heading"), QString::number(typeSize(QStringLiteral("heading"), 22)));
+    css.replace(QStringLiteral("@section"), QString::number(typeSize(QStringLiteral("section"), 16)));
+    css.replace(QStringLiteral("@labelSize"), QString::number(typeSize(QStringLiteral("label"), 14)));
+    css.replace(QStringLiteral("@chrome"), QString::number(typeSize(QStringLiteral("chrome"), 13)));
+    css.replace(QStringLiteral("@regularWeight"), QString::number(typography(QStringLiteral("regularWeight"), 400)));
+    css.replace(QStringLiteral("@mediumWeight"), QString::number(typography(QStringLiteral("mediumWeight"), 500)));
+    css.replace(QStringLiteral("@strongWeight"), QString::number(typography(QStringLiteral("strongWeight"), 600)));
+    css.replace(QStringLiteral("@innerHeight"), QString::number(qMax(16, metric(QStringLiteral("controlHeight"), 32) - 2 * density(QStringLiteral("controlPaddingY"), 4) - 2 * metric(QStringLiteral("borderWidth"), 1))));
+    css.replace(QStringLiteral("@controlPaddingY"), QString::number(density(QStringLiteral("controlPaddingY"), 4)));
+    css.replace(QStringLiteral("@controlPaddingX"), QString::number(density(QStringLiteral("controlPaddingX"), 10)));
+    css.replace(QStringLiteral("@tabInnerHeight"), QString::number(density(QStringLiteral("tabHeight"), 32) - 3));
+    css.replace(QStringLiteral("@navRowHeight"), QString::number(density(QStringLiteral("navRowHeight"), 28)));
+    css.replace(QStringLiteral("@controlHeight"), QString::number(metric(QStringLiteral("controlHeight"), 36)));
+    css.replace(QStringLiteral("@halfControl"), QString::number(metric(QStringLiteral("controlHeight"), 36) / 2));
+    css.replace(QStringLiteral("@metricBorderWidth"), QString::number(metric(QStringLiteral("borderWidth"), 1)));
+    css.replace(QStringLiteral("@radius"), QString::number(metric(QStringLiteral("radius"), 6)));
+    css.replace(QStringLiteral("@glyphTone"), direction + (dark ? QStringLiteral("-dark") : QStringLiteral("-light")));
+    css.replace(QStringLiteral("@baseFont"), QString::number(metric(QStringLiteral("fontSize"), 14)));
+    css.replace(QStringLiteral("@reading"), QString::number(typeSize(QStringLiteral("reading"), 16)));
+    css.replace(QStringLiteral("@codeSize"), QString::number(typeSize(QStringLiteral("code"), 12)));
+    css.replace(QStringLiteral("@ui"), font(QStringLiteral("ui")));
+    css.replace(QStringLiteral("@editorial"), font(QStringLiteral("editorial")));
+    css.replace(QStringLiteral("@mono"), font(QStringLiteral("mono")));
+    return css;
+}
+void Theme::apply(QWidget *root) const {
+    root->setProperty("sjRoot", true);
+    root->setProperty("sjDirection", direction);
+    root->setProperty("sjDark", dark);
+    root->setAutoFillBackground(true);
+    QPalette p = root->palette();
+    p.setColor(QPalette::Window, color(QStringLiteral("canvas")));
+    p.setColor(QPalette::WindowText, color(QStringLiteral("text")));
+    p.setColor(QPalette::Base, color(QStringLiteral("surface")));
+    p.setColor(QPalette::AlternateBase, color(QStringLiteral("raised")));
+    p.setColor(QPalette::Text, color(QStringLiteral("text")));
+    p.setColor(QPalette::Button, color(QStringLiteral("surface")));
+    p.setColor(QPalette::ButtonText, color(QStringLiteral("text")));
+    p.setColor(QPalette::Highlight, color(QStringLiteral("selection")));
+    p.setColor(QPalette::HighlightedText, color(QStringLiteral("text")));
+    p.setColor(QPalette::PlaceholderText, color(QStringLiteral("muted")));
+    p.setColor(QPalette::Link, color(QStringLiteral("accent")));
+    p.setColor(QPalette::LinkVisited, color(QStringLiteral("accent")));
+    p.setColor(QPalette::Disabled, QPalette::Text, color(QStringLiteral("muted")));
+    root->setPalette(p);
+    QFont f(font(QStringLiteral("ui")));
+    f.setPixelSize(metric(QStringLiteral("fontSize"), 14));
+    f.setWeight(static_cast<QFont::Weight>(typography(QStringLiteral("regularWeight"), 400)));
+    root->setFont(f);
+    root->setStyleSheet(styleSheet());
+    if (auto *reading = dynamic_cast<ReadingView *>(root)) reading->applyTheme(*this);
+    for (auto *button : root->findChildren<QAbstractButton *>()) {
+        const auto name = button->property("sjIcon").toString();
+        if (!name.isEmpty()) button->setIcon(icon(name, color(QStringLiteral("text"))));
+    }
+    for (auto *list : root->findChildren<QListWidget *>()) {
+        for (int i = 0; i < list->count(); ++i) {
+            auto *item = list->item(i);
+            const auto name = item->data(Qt::UserRole + 10).toString();
+            if (!name.isEmpty()) item->setIcon(icon(name, color(QStringLiteral("text")), qMax(20, list->iconSize().width())));
+        }
+    }
+    for (auto *widget : root->findChildren<QWidget *>()) {
+        if (auto *label = qobject_cast<QLabel *>(widget); label && label->property("sjBrandSize").isValid()) label->setPixmap(brandMark(*this, label->property("sjBrandSize").toInt()));
+        if (auto *label = qobject_cast<QLabel *>(widget); label && label->property("sjAttributionHtml").isValid()) {
+            label->setText(label->property("sjAttributionHtml").toString().replace(QStringLiteral("<a "), QStringLiteral("<a style=\"color:%1\" ").arg(color(QStringLiteral("accent")).name())));
+        }
+        if (dynamic_cast<Drawer *>(widget) || widget->property("sjRole").toString() == QStringLiteral("help")) apply(widget);
+        if (auto *canvas = dynamic_cast<Canvas *>(widget)) canvas->applyTheme(*this);
+        if (auto *reading = dynamic_cast<ReadingView *>(widget)) reading->applyTheme(*this);
+        const auto role = widget->property("sjFontRole").toString();
+        if (!role.isEmpty()) {
+            QFont roleFont(font(role));
+            roleFont.setPixelSize(typeSize(role == QStringLiteral("mono") ? QStringLiteral("code") : QStringLiteral("reading"), 14));
+            widget->setFont(roleFont);
+        }
+        widget->style()->unpolish(widget);
+        widget->style()->polish(widget);
+    }
+}
+QPixmap brandMark(const Theme &theme, int size) {
+    initializeResources();
+    const QImage mask(QStringLiteral(":/stackjunkie/brand/sj-transparent-mask.png"));
+    if (mask.isNull()) throw std::runtime_error("Stack Junkie transparent logo resource missing");
+    auto tinted = mask.scaled(size * 2, size * 2, Qt::KeepAspectRatio, Qt::SmoothTransformation).convertToFormat(QImage::Format_ARGB32);
+    const auto text = theme.color(QStringLiteral("text"));
+    const auto accent = theme.color(QStringLiteral("accent"));
+    for (int y = 0; y < tinted.height(); ++y) {
+        auto *pixels = reinterpret_cast<QRgb *>(tinted.scanLine(y));
+        for (int x = 0; x < tinted.width(); ++x) {
+            const int amount = qRed(pixels[x]);
+            const auto mix = [amount](int a, int b) { return (a * (255 - amount) + b * amount + 127) / 255; };
+            pixels[x] = qRgba(mix(text.red(), accent.red()), mix(text.green(), accent.green()), mix(text.blue(), accent.blue()), qAlpha(pixels[x]));
+        }
+    }
+    return QPixmap::fromImage(tinted).scaled(size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+}
+QIcon icon(const QString &name, const QColor &color, int size) {
+    initializeResources();
+    QFile source(QStringLiteral(":/stackjunkie/icons.svg"));
+    if (!source.open(QIODevice::ReadOnly)) return {};
+    QXmlStreamReader reader(source.readAll());
+    QByteArray svg;
+    QXmlStreamWriter writer(&svg);
+    bool active = false;
+    int depth = 0;
+    while (!reader.atEnd()) {
+        reader.readNext();
+        if (reader.isStartElement()) {
+            if (!active && reader.name() == QStringLiteral("symbol") && reader.attributes().value(QStringLiteral("id")) == name) {
+                active = true;
+                writer.writeStartElement(QStringLiteral("svg"));
+                writer.writeDefaultNamespace(QStringLiteral("http://www.w3.org/2000/svg"));
+                for (const auto &a : reader.attributes()) if (a.name() != QStringLiteral("id")) writer.writeAttribute(a.name().toString(), a.value().toString().replace(QStringLiteral("currentColor"), color.name()));
+                depth = 1;
+            } else if (active) {
+                writer.writeStartElement(reader.name().toString());
+                for (const auto &a : reader.attributes()) writer.writeAttribute(a.name().toString(), a.value().toString().replace(QStringLiteral("currentColor"), color.name()));
+                ++depth;
+            }
+        } else if (reader.isEndElement() && active) {
+            writer.writeEndElement();
+            if (--depth == 0) break;
+        }
+    }
+    if (svg.isEmpty()) return {};
+    QPixmap image(size * 2, size * 2);
+    image.setDevicePixelRatio(2);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    QSvgRenderer renderer(svg);
+    renderer.render(&painter, QRectF(0, 0, size, size));
+    return QIcon(image);
+}
+}
