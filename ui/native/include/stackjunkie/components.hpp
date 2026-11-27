@@ -14,12 +14,19 @@
 #include <QTextBrowser>
 #include <QDialog>
 #include <QTreeWidget>
+#include <QKeySequence>
+#include <QHash>
 #include <functional>
 class QVBoxLayout;
 class QButtonGroup;
 class QListWidget;
 class QSplitterHandle;
 class QTabBar;
+class QMenuBar;
+class QShortcut;
+class QMenu;
+class QAction;
+class QHBoxLayout;
 #include <QTabWidget>
 class QGraphicsScene;
 class QGraphicsView;
@@ -238,6 +245,37 @@ class STACKJUNKIE_EXPORT AboutPage : public SettingsPage {
 public:
     AboutPage(const QString &productName, const QString &description, const QString &productVersion = {}, QWidget *productLogo = nullptr, QWidget *parent = nullptr);
 };
+// The thin bottom row of a desktop app: the current item's state on the left, small facts on the right. Never ads or tips.
+class STACKJUNKIE_EXPORT StatusBar : public QFrame {
+public:
+    explicit StatusBar(QWidget *parent = nullptr);
+    void setState(const QString &text);
+    QString state() const;
+    /** Replaces the small facts on the right, such as a version or a count. */ void setFacts(const QStringList &facts);
+    QStringList facts() const { return facts_; }
+private:
+    QLabel *state_;
+    QHBoxLayout *factsLayout_;
+    QStringList facts_;
+};
+// A panel under the work area with its own tab row, such as Output and Problems. In a Workspace it sits in a vertical
+// splitter, so people drag or arrow-key its top edge to resize it.
+class STACKJUNKIE_EXPORT BottomPanel : public QFrame {
+public:
+    explicit BottomPanel(QWidget *parent = nullptr);
+    /** Adds a view with the usual content padding. */ int addTab(QWidget *content, const QString &label);
+    int count() const;
+    int currentIndex() const;
+    void setCurrentIndex(int index);
+    /** Shows a close control in the tab row that calls this. Workspace uses it to hide the panel. */ void setCloseHandler(std::function<void()> handler);
+private:
+    QTabBar *tabBar_;
+    QStackedWidget *views_;
+    IconButton *close_;
+    std::function<void()> closeHandler_;
+    std::function<void()> tabsChanged_;
+    friend class Workspace;
+};
 class STACKJUNKIE_EXPORT Workspace : public QWidget {
     Q_OBJECT
 public:
@@ -263,10 +301,28 @@ public:
     /** Apply App frame choices, usually Preset::resolve(id, overrides). The frame draws the rail, the sidebar as a tree
         (NavTree), a list or nothing, closable document tabs and the density. Without the rail the sidebar lists every
         page; without a sidebar the pages become the one tab row. Theme and command palette belong to the app: AppShell
-        applies the theme, and an app that owns a palette reads choices().commandPalette. Menu bar, Status bar, bottom
-        panel and dashboard home are accepted but not drawn yet; they arrive with their components in #9. */
+        applies the theme, and an app that owns a palette reads choices().commandPalette. The Menu bar, Status bar and
+        bottom panel are drawn when their choices are on. Dashboard home is accepted but not drawn yet. */
     void setChoices(const PresetChoices &choices);
     PresetChoices choices() const { return choices_; }
+    /** The Menu bar: File, Edit, View, the app's menus, then Help, shown when choices().menuBar is on. File holds
+        Settings (which calls the settings handler) and Help holds About (the about handler). View holds the sidebar,
+        bottom panel and Status bar toggles. Edit holds only app items and is hidden without them. */
+    QMenuBar *menuBar() const { return menuBar_; }
+    QMenu *fileMenu() const { return fileMenu_; }
+    QMenu *editMenu() const { return editMenu_; }
+    QMenu *viewMenu() const { return viewMenu_; }
+    QMenu *helpMenu() const { return helpMenu_; }
+    /** Adds one of the app's own menus, between View and Help. */ QMenu *addMenu(const QString &title);
+    /** Adds an app item. In File, Edit, View or Help it sits above the frame's own items. The shortcut is shown in the
+        menu and works while the Menu bar is shown. */
+    QAction *addMenuItem(QMenu *menu, const QString &text, std::function<void()> run, const QKeySequence &shortcut = {});
+    /** Help > About calls this. AppShell opens its Settings window at About. */ void setAboutHandler(std::function<void()> handler);
+    /** Shown when choices().statusBar is on. The app sets its state and facts. */ StatusBar *statusBar() const { return statusBar_; }
+    /** Shown when choices().bottomPanel is on and the app has added a tab. */ BottomPanel *bottomPanel() const { return bottomPanel_; }
+    /** Hide or show the Status bar or bottom panel for this session, as the View menu does. The choices decide whether they exist. */
+    void setStatusBarShown(bool shown);
+    void setBottomPanelShown(bool shown);
 signals:
     void currentChanged(int index);
     void choicesChanged(const StackJunkie::PresetChoices &choices);protected:
@@ -279,7 +335,18 @@ private:
     void closeDocument(int page);
     void updateOpenState();
     void applyDensity();
+    void updateBars();
     bool listedSection(int section) const { return section != settingsSection_; }
+    QMenuBar *menuBar_ = nullptr;
+    QMenu *fileMenu_ = nullptr, *editMenu_ = nullptr, *viewMenu_ = nullptr, *helpMenu_ = nullptr;
+    /** The first of the frame's own items in each frame menu; app items go above it. */ QHash<QMenu *, QAction *> frameItems_;
+    QAction *settingsAction_ = nullptr, *aboutAction_ = nullptr, *sidebarAction_ = nullptr, *panelAction_ = nullptr, *statusAction_ = nullptr;
+    StatusBar *statusBar_ = nullptr;
+    BottomPanel *bottomPanel_ = nullptr;
+    QSplitter *workSplit_ = nullptr;
+    QShortcut *menuKey_ = nullptr;
+    bool statusShown_ = true, panelShown_ = true;
+    std::function<void()> aboutHandler_;
     QListWidget *navigation_;
     NavTree *tree_;
     QWidget *work_;
@@ -322,7 +389,8 @@ public:
         Applies the layout and density (see Workspace::setChoices) and the default theme, where "system" follows the
         device's color scheme until someone picks a theme in Settings. */
     void setPreset(const QString &presetId, const QVariantMap &overrides = {});
-    QString preset() const { return preset_; }protected:
+    QString preset() const { return preset_; }
+protected:
     void showEvent(QShowEvent *event) override;
 private:
     void finishSettings();
@@ -332,6 +400,8 @@ private:
     bool settingsFinished_ = false;
     QString preset_;
     QComboBox *mode_ = nullptr;
+    QAction *darkAction_ = nullptr;
+    int productSections_ = 0;
     QMetaObject::Connection followSystem_;
 };
 // Development stand-in content (sample text, fake data, unfinished labels). Create it only with

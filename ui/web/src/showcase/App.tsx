@@ -20,7 +20,7 @@ type Entry = typeof entries[number];
 type Layout = Pick<UI.ShellConfig, 'resizableSidebar' | 'collapsibleSidebar'>;
 const defaultLayout: Layout = { resizableSidebar: true, collapsibleSidebar: true };
 // Choices drawn by later components. The switch is kept so the preset is complete, and the note says what is missing.
-const notDrawnYet: Partial<Record<UI.PresetChoice, string>> = { menuBar: 'Drawn in a later preview.', statusBar: 'Drawn in a later preview.', bottomPanel: 'Drawn in a later preview.', dashboardHome: 'Drawn in a later preview.' };
+const notDrawnYet: Partial<Record<UI.PresetChoice, string>> = { dashboardHome: 'Drawn in a later preview.' };
 const optionLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 const defaultPages: Record<string, string> = { ...Object.fromEntries(families.map(f => [f.id, f.components[0].id])), layouts: 'workbench' };
 
@@ -47,6 +47,8 @@ export default function App() {
   const [section, setSection] = useState('home');
   const [pages, setPages] = useState<Record<string, string>>(() => savedJson('pages', defaultPages));
   const [query, setQuery] = useState(''); const [commands, setCommands] = useState(false);
+  // The bottom panel's Output tab lists the pages opened in this session, newest last.
+  const [opened, setOpened] = useState<string[]>([]);
   const [settings, setSettings] = useState<UI.SettingsState>({ open: false, section: 'appearance' }); const [exportOpen, setExportOpen] = useState(false);
   useEffect(() => { try { Object.entries({ mode, preset, choices: JSON.stringify(overrides), layout: JSON.stringify(layout), pages: JSON.stringify(pages) }).forEach(([k, v]) => localStorage.setItem(`${prefix}-${k}`, v)); } catch { /* Optional storage. */ } }, [mode, preset, overrides, layout, pages]);
   useEffect(() => { if (!choices.commandPalette) { setCommands(false); return; } function key(e: KeyboardEvent) { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setCommands(o => !o); } } document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key); }, [choices.commandPalette]);
@@ -61,6 +63,9 @@ export default function App() {
   }
 
   function navigate(sid: string, pid?: string) { setSection(sid); if (pid) setPages(p => ({ ...p, [sid]: pid })); else setQuery(''); }
+  const pageLabel = section === 'home' ? 'Home' : section === 'layouts' ? layoutPages.find(l => l.id === pages.layouts)?.label : entries.find(e => e.id === pages[section])?.label;
+  useEffect(() => { if (pageLabel) setOpened(o => o[o.length - 1] === pageLabel ? o : [...o.slice(-49), pageLabel]); }, [pageLabel]);
+  function findComponent() { if (section === 'home' || (choices.rail && !families.some(f => f.id === section))) navigate('foundations'); setTimeout(() => document.getElementById('catalog-search')?.focus()); }
   function select(id: string) { const entry = entries.find(c => c.id === id)!; navigate(entry.family, id); }
   const openSettings = (id?: string) => setSettings(s => ({ open: true, section: id ?? s.section }));
 
@@ -68,7 +73,7 @@ export default function App() {
   const found = needle ? entries.filter(c => `${c.label} ${c.usage} ${c.familyLabel}`.toLowerCase().includes(needle)): [];
   const isFamily = families.some(f => f.id === section);
   const searchHere = section !== 'home' && (!choices.rail || isFamily) && choices.sidebar !== 'off';
-  const search = <UI.TextInput label="Search components" type="search" placeholder="Search the library" value={query} onChange={e => setQuery(e.target.value)} />;
+  const search = <UI.TextInput id="catalog-search" label="Search components" type="search" placeholder="Search the library" value={query} onChange={e => setQuery(e.target.value)} />;
   const searchResults = <><UI.NavTree label="Search results" value={section === 'layouts' ? '' : pages[section] ?? ''} onChange={select} groups={families.map(f => ({ id: f.id, label: f.label, items: found.filter(e => e.family === f.id).map(e => ({ id: e.id, label: e.label })) })).filter(g => g.items.length)} /><p className="search-count" role="status">{found.length} matching components</p></>;
   const current = [...families, layoutsFamily].find(f => f.id === section);
   const sidebarTitle = section === 'home' ? 'Home' : searchHere && needle ? 'Search results' : !choices.rail ? 'Library' : current?.label;
@@ -88,6 +93,18 @@ export default function App() {
     mode={mode} onModeChange={setMode} settingsState={settings} onSettingsChange={setSettings}
     brand={<UI.Button variant="quiet" className="app-brand home-link" aria-label="Home" title="Home" onClick={() => navigate('home')}><SiteWordmark /></UI.Button>}
     sidebarHeader={searchHere ? search : null} sidebar={searchHere && needle ? searchResults : undefined} sidebarTitle={sidebarTitle}
+    menuItems={{
+      file: [{ id: 'export', label: 'Export app frame…', run: () => setExportOpen(true) }],
+      edit: [{ id: 'find', label: 'Find component', run: findComponent }, { id: 'copy-name', label: 'Copy component name', disabled: !pageLabel || section === 'home', run: () => { void navigator.clipboard?.writeText(pageLabel ?? ''); } }],
+      view: choices.commandPalette ? [{ id: 'commands', label: 'Command palette', shortcut: 'Ctrl+K', run: () => setCommands(true) }] : [],
+      help: [{ id: 'keyboard', label: 'Keyboard shortcuts', run: () => openSettings('keyboard') }],
+    }}
+    menus={[{ id: 'library', label: 'Library', items: [...catalog.families.map(f => ({ id: f.id, label: f.label, checked: section === f.id, run: () => navigate(f.id) }))] }]}
+    status={{ state: pageLabel, facts: [current && section !== 'home' ? current.label : 'Stack Junkie UI', UI.systemVersion] }}
+    panels={[
+      { id: 'output', label: 'Output', content: <UI.CodeBlock language="Opened" code={opened.map(label => `Opened ${label}`).join('\n') || 'Nothing opened yet.'} /> },
+      { id: 'problems', label: 'Problems', content: <p className="sj-muted">No problems in this view.</p> },
+    ]}
     aboutChildren={<UI.Disclosure label="About this showcase"><p>Web and native examples use the shared libraries. Your choices and example state remain while moving between views.</p></UI.Disclosure>}
     settings={[
       { id: 'appearance', label: 'Appearance', keywords: 'theme dark light mode color', content: <UI.SettingsSection label="Appearance">
@@ -108,7 +125,7 @@ export default function App() {
         <UI.SettingsRow label="Export" description="Download an App.tsx that imports the library at this version and uses this preset and these choices."><UI.Button variant="primary" onClick={() => setExportOpen(true)}>Export app frame</UI.Button></UI.SettingsRow>
         <div><UI.Button onClick={() => { navigate('layouts', 'starter'); setSettings(s => ({ ...s, open: false })); }}>Preview the starter app</UI.Button></div>
       </UI.SettingsSection> },
-      { id: 'keyboard', label: 'Keyboard', keywords: 'shortcuts keys resize command', content: <UI.SettingsSection label="Keyboard"><UI.Prose><p>Drag a sidebar divider to resize it. Arrow keys adjust a focused divider; Home and End use its available range.</p><p>Control K opens command search. Control comma opens Settings. In a row of open documents, Delete or Control W closes the focused tab.</p></UI.Prose></UI.SettingsSection> },
+      { id: 'keyboard', label: 'Keyboard', keywords: 'shortcuts keys resize command', content: <UI.SettingsSection label="Keyboard"><UI.Prose><p>Drag a sidebar divider to resize it. Arrow keys adjust a focused divider; Home and End use its available range.</p><p>Control K opens command search. Control comma opens Settings. In a row of open documents, Delete or Control W closes the focused tab.</p><p>With the Menu bar on, Control B shows or hides the sidebar and Control J the bottom panel. In the Menu bar, arrow keys move between menus and items and Escape closes the open menu.</p></UI.Prose></UI.SettingsSection> },
     ]}
     overlays={<>
       <UI.Dialog open={exportOpen} onClose={() => setExportOpen(false)} title="Export app frame" size="large" actions={<><UI.Button onClick={() => setExportOpen(false)}>Close</UI.Button><UI.Button variant="primary" onClick={() => { const url = URL.createObjectURL(new Blob([exportApp(frame)], { type: 'text/plain' })); const a = document.createElement('a'); a.href = url; a.download = 'App.tsx'; a.click(); URL.revokeObjectURL(url); }}>Download App.tsx</UI.Button></>}>

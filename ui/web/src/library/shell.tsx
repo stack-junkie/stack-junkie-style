@@ -6,6 +6,7 @@ import { IconButton, type IconName } from './core';
 import { Select } from './inputs';
 import { AboutSection, SettingsSection, SettingsWindow, type SettingsWindowSection } from './settings';
 import { resolvePreset, type PresetChoices, type PresetId } from './presets';
+import { BottomPanel, MenuBar, StatusBar, type MenuBarMenu, type MenuEntry, type PanelTab } from './bars';
 
 // The standard application frame every Stack Junkie product imports. Products supply their sections, pages and own settings;
 // the frame owns where navigation, Settings, theme and About go, so those details never drift between apps.
@@ -52,6 +53,8 @@ export type ShellSection = {
 };
 export type ShellLocation = { section: string; page: string };
 export type SettingsState = { open: boolean; section: string };
+/** The frame's own menus. Items an app adds to one of them sit above the frame's items. */
+export type ShellMenu = 'file' | 'edit' | 'view' | 'help';
 
 function renderPage(page: ShellPage, state: ShellPageState) { return typeof page.content === 'function' ? page.content(state): page.content; }
 
@@ -62,7 +65,8 @@ export function ThemeSetting({ mode, onChange }: { mode: ThemeMode; onChange: (m
 
 export function AppShell({ name, description, version, logo, sections, config = defaultShellConfig, preset, choices: overrides, settings = [], storageKey, style, className = '',
   location: controlledLocation, onNavigate, mode: controlledMode, onModeChange, settingsState, onSettingsChange,
-  brand, sidebar: sidebarOverride, sidebarHeader, sidebarTitle, overlays, mainId, skipLabel = 'Skip to content', aboutChildren, shortcuts = true }: {
+  brand, sidebar: sidebarOverride, sidebarHeader, sidebarTitle, overlays, mainId, skipLabel = 'Skip to content', aboutChildren, shortcuts = true,
+  menus = [], menuItems = {}, status, panels = [] }: {
   name: string; description: string; version: string; logo?: ReactNode; sections: ShellSection[];
   /** Sidebar resizing and collapsing. Without a preset or choices, its rail, sidebar and theme also set the layout. */ config?: ShellConfig;
   /** Starting set of App frame choices. Its rail, sidebar and theme replace the ones in config.
@@ -80,10 +84,16 @@ export function AppShell({ name, description, version, logo, sections, config = 
   sidebarTitle?: string;
   /** Extra dialogs and palettes, rendered inside the frame's theme. A function receives the resolved choices, such as whether to offer the command palette. */ overlays?: ReactNode | ((choices: PresetChoices) => ReactNode);
   mainId?: string; skipLabel?: string; aboutChildren?: ReactNode;
-  /** Control comma opens Settings. Turn off for a frame embedded inside another app, such as a preview. */ shortcuts?: boolean;
+  /** Control comma opens Settings, and with the Menu bar on, Control B toggles the sidebar and Control J the bottom panel.
+   * Turn off for a frame embedded inside another app, such as a preview. */ shortcuts?: boolean;
+  /** The app's own menus, drawn between View and Help when the Menu bar choice is on. */ menus?: MenuBarMenu[];
+  /** Items the app adds to File, Edit, View or Help. Edit holds only app items and is left out without them. */ menuItems?: Partial<Record<ShellMenu, MenuEntry[]>>;
+  /** Status bar content when the Status bar choice is on: the current item's state on the left, small facts on the right. Never ads or tips.
+   * Without a state the left side shows the current page's name. */
+  status?: { state?: ReactNode; facts?: ReactNode[] };
+  /** Bottom panel tabs, such as Output and Problems, when the Bottom panel choice is on. Without tabs no panel is drawn. */ panels?: PanelTab[];
 }) {
   const choices = preset !== undefined || overrides !== undefined ? resolvePreset(preset ?? 'web-app', overrides) : configChoices(config);
-  // Menu bar, Status bar and bottom panel are accepted as choices but not drawn yet; they arrive with their components in #9.
   const systemMode = useSystemTheme();
   const defaultMode = choices.theme === 'system' ? systemMode : choices.theme;
   const [ownMode, setOwnMode] = useState<ThemeMode>(defaultMode);
@@ -109,17 +119,30 @@ export function AppShell({ name, description, version, logo, sections, config = 
     onNavigate?.(sid, pid);
   }
 
+  // The View menu hides and shows the sidebar, Status bar and bottom panel for this session; the choices decide whether they exist.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => { try { return !!storageKey && localStorage.getItem(`${storageKey}:collapsed`) === 'true'; } catch { return false; } });
+  const [statusShown, setStatusShown] = useState(true);
+  const [panelShown, setPanelShown] = useState(true);
+  const [panelHeight, setPanelHeight] = useState(() => { try { const value = Number(storageKey ? localStorage.getItem(`${storageKey}:panel`) : NaN); return Number.isFinite(value) && value > 0 ? value : 160; } catch { return 160; } });
+  useEffect(() => { if (storageKey) try { localStorage.setItem(`${storageKey}:panel`, String(panelHeight)); } catch { /* Optional storage. */ } }, [storageKey, panelHeight]);
   const [ownSettings, setOwnSettings] = useState<SettingsState>({ open: false, section: settings[0]?.id ?? 'appearance' });
   const settingsNow = settingsState ?? ownSettings;
   const setSettings = (s: SettingsState) => { if (settingsState === undefined) setOwnSettings(s); onSettingsChange?.(s); };
   useEffect(() => {
     if (!shortcuts) return;
-    function key(e: KeyboardEvent) { if ((e.ctrlKey || e.metaKey) && e.key === ',') { e.preventDefault(); setSettings({ ...settingsNow, open: true }); } }
+    function key(e: KeyboardEvent) {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey) return;
+      if (e.key === ',') { e.preventDefault(); setSettings({ ...settingsNow, open: true }); }
+      else if (choices.menuBar && e.key.toLowerCase() === 'b' && canCollapse) { e.preventDefault(); setSidebarCollapsed(c => !c); }
+      else if (choices.menuBar && e.key.toLowerCase() === 'j' && panelOn) { e.preventDefault(); setPanelShown(s => !s); }
+    }
     document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key);
   });
 
   const railSections = visible.filter(s => s.rail !== false);
   const sidebarOn = choices.sidebar !== 'off';
+  const canCollapse = sidebarOn && config.collapsibleSidebar;
+  const panelOn = choices.bottomPanel && panels.length > 0;
   const rail = choices.rail ? <SideNavigation collapsed label="Sections" value={railSections.some(s => s.id === section.id) ? section.id : ''} onChange={id => navigate(id)} items={railSections.map(s => ({ id: s.id, label: s.label, icon: s.icon }))} /> : undefined;
   const header = typeof sidebarHeader === 'function' ? sidebarHeader(section): sidebarHeader;
   const openKey = (key: string) => { const [sid, pid] = key.split('/'); navigate(sid, pid); };
@@ -167,14 +190,32 @@ export function AppShell({ name, description, version, logo, sections, config = 
   ];
   const settingsSections = [...settings, ...builtIn.filter(b => !settings.some(s => s.id === b.id))];
 
+  // File, Edit, View, the app's menus, then Help. The frame owns Settings, About and the View toggles; apps add their own items above them.
+  const menuBar = choices.menuBar ? <MenuBar label={`${name} menu bar`} menus={[
+    { id: 'file', label: 'File', items: [...(menuItems.file ?? []), { id: 'frame-file', separator: true }, { id: 'settings', label: 'Settings…', shortcut: 'Ctrl+,', run: () => setSettings({ ...settingsNow, open: true }) }] },
+    { id: 'edit', label: 'Edit', items: menuItems.edit ?? [] },
+    { id: 'view', label: 'View', items: [...(menuItems.view ?? []), { id: 'frame-view', separator: true },
+      ...(canCollapse ? [{ id: 'sidebar', label: 'Sidebar', shortcut: 'Ctrl+B', checked: !sidebarCollapsed, run: () => setSidebarCollapsed(!sidebarCollapsed) }] : []),
+      ...(panelOn ? [{ id: 'bottom-panel', label: 'Bottom panel', shortcut: 'Ctrl+J', checked: panelShown, run: () => setPanelShown(!panelShown) }] : []),
+      ...(choices.statusBar ? [{ id: 'status-bar', label: 'Status bar', checked: statusShown, run: () => setStatusShown(!statusShown) }] : []),
+      { id: 'frame-theme', separator: true }, { id: 'dark-theme', label: 'Dark theme', checked: mode === 'dark', run: () => setMode(mode === 'dark' ? 'light' : 'dark') }] },
+    ...menus,
+    { id: 'help', label: 'Help', items: [...(menuItems.help ?? []), { id: 'frame-help', separator: true }, { id: 'about', label: `About ${name}`, run: () => setSettings({ open: true, section: 'about' }) }] },
+  ]} /> : null;
+  const statusBar = choices.statusBar && statusShown ? <StatusBar state={status?.state ?? section?.pages.find(p => p.id === pageOf(section))?.label} facts={status?.facts} /> : undefined;
+  const work = (sidebarCollapsed: boolean) => panelOn && panelShown
+    ? <div className="sj-shell-work"><div className="sj-shell-work-main">{body(sidebarCollapsed)}</div><BottomPanel tabs={panels} height={panelHeight} onHeightChange={setPanelHeight} onClose={() => setPanelShown(false)} /></div>
+    : body(sidebarCollapsed);
+
   const gear = <IconButton icon="settings" label="Settings" variant="quiet" aria-haspopup="dialog" aria-expanded={settingsNow.open} onClick={() => setSettings({ ...settingsNow, open: true })} />;
   const home = brand ?? <button type="button" className="sj-button sj-button--quiet sj-shell-home" aria-label={`${name} home`} title="Home" onClick={() => navigate(visible[0]?.id ?? '')}>{logo}<strong>{name}</strong></button>;
 
   return <ShellChoices.Provider value={choices}><ThemeProvider direction={config.direction} mode={mode} density={choices.density} className={`sj-shell ${className}`} style={style}>
     {mainId && <a className="sj-skip-link" href={`#${mainId}`}>{skipLabel}</a>}
     <Workspace contentOwnsHeader mainId={mainId} storageKey={storageKey} sidebarTitle={title} rail={rail} sidebar={sidebar} resizable={config.resizableSidebar} collapsible={config.collapsibleSidebar}
-      header={home} navigationFooter={gear}>
-      {({ sidebarCollapsed }) => body(sidebarCollapsed)}
+      sidebarCollapsed={sidebarCollapsed} onSidebarCollapsedChange={setSidebarCollapsed}
+      header={menuBar ? <div className="sj-shell-title">{home}{menuBar}</div> : home} navigationFooter={gear} footer={statusBar}>
+      {({ sidebarCollapsed }) => work(sidebarCollapsed)}
     </Workspace>
     <SettingsWindow open={settingsNow.open} onClose={() => setSettings({ ...settingsNow, open: false })} section={settingsNow.section} onSectionChange={id => setSettings({ ...settingsNow, section: id })} sections={settingsSections} />
     {typeof overlays === 'function' ? overlays(choices) : overlays}

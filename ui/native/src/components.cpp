@@ -11,6 +11,8 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QListWidget>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMouseEvent>
 #include <QPlainTextEdit>
 #include <QScreen>
@@ -435,6 +437,59 @@ AboutPage::AboutPage(const QString &productName, const QString &description, con
     credit->setProperty("sjAttributionHtml", credit->text());
     contentLayout()->addWidget(row({creditLogo, credit}));
 }
+StatusBar::StatusBar(QWidget *parent) : QFrame(parent) {
+    setProperty("sjRole", "statusBar");
+    setAccessibleName(QStringLiteral("Status bar"));
+    auto *layout = new QHBoxLayout(this);
+    layout->setContentsMargins(10, 2, 10, 2); layout->setSpacing(16);
+    state_ = new QLabel(this); state_->setProperty("sjRole", "statusState");
+    state_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    layout->addWidget(state_, 1);
+    factsLayout_ = new QHBoxLayout; factsLayout_->setSpacing(16);
+    layout->addLayout(factsLayout_);
+}
+void StatusBar::setState(const QString &text) { state_->setText(text); state_->setToolTip(text); state_->setAccessibleName(text); }
+QString StatusBar::state() const { return state_->text(); }
+void StatusBar::setFacts(const QStringList &facts) {
+    if (facts == facts_) return;
+    facts_ = facts;
+    while (auto *item = factsLayout_->takeAt(0)) { delete item->widget(); delete item; }
+    for (const auto &fact : facts) factsLayout_->addWidget(new QLabel(fact, this));
+}
+BottomPanel::BottomPanel(QWidget *parent) : QFrame(parent) {
+    setProperty("sjRole", "bottomPanel");
+    setAccessibleName(QStringLiteral("Bottom panel"));
+    auto *layout = new QVBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(0);
+    // The tab row matches the frame's page tab row; the close control sits at its right end.
+    auto *row = new QFrame(this); row->setProperty("sjRole", "pageTabRow");
+    auto *rowLayout = new QHBoxLayout(row); rowLayout->setContentsMargins(0, 0, 4, 0); rowLayout->setSpacing(0);
+    tabBar_ = new QTabBar(row);
+    tabBar_->setAccessibleName(QStringLiteral("Bottom panel views"));
+    tabBar_->setDocumentMode(true); tabBar_->setExpanding(false); tabBar_->setUsesScrollButtons(true); tabBar_->setDrawBase(false);
+    rowLayout->addWidget(tabBar_); rowLayout->addStretch();
+    close_ = new IconButton(QStringLiteral("close"), QStringLiteral("Hide bottom panel"), row);
+    close_->setProperty("sjVariant", "quiet"); close_->setFixedSize(24, 24); close_->setIconSize(QSize(14, 14)); close_->hide();
+    rowLayout->addWidget(close_, 0, Qt::AlignVCenter);
+    layout->addWidget(row);
+    views_ = new QStackedWidget(this);
+    layout->addWidget(views_, 1);
+    connect(tabBar_, &QTabBar::currentChanged, views_, &QStackedWidget::setCurrentIndex);
+    connect(close_, &QToolButton::clicked, this, [this] { if (closeHandler_) closeHandler_(); });
+}
+int BottomPanel::addTab(QWidget *content, const QString &label) {
+    auto *view = new QWidget;
+    auto *viewLayout = new QVBoxLayout(view); viewLayout->setContentsMargins(12, 8, 12, 8); viewLayout->setSpacing(0);
+    viewLayout->addWidget(content, 1);
+    if (!qobject_cast<QAbstractScrollArea *>(content)) viewLayout->addStretch();
+    views_->addWidget(view);
+    const int index = tabBar_->addTab(label);
+    if (tabsChanged_) tabsChanged_();
+    return index;
+}
+int BottomPanel::count() const { return tabBar_->count(); }
+int BottomPanel::currentIndex() const { return tabBar_->currentIndex(); }
+void BottomPanel::setCurrentIndex(int index) { tabBar_->setCurrentIndex(index); }
+void BottomPanel::setCloseHandler(std::function<void()> handler) { closeHandler_ = std::move(handler); close_->setVisible(bool(closeHandler_)); }
 Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     auto *outer = new QVBoxLayout(this);
     outer->setContentsMargins(0, 0, 0, 0);
@@ -450,6 +505,38 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     heading_ = new QLabel(QStringLiteral("Workspace"), toolbar_);
     heading_->setProperty("sjRole", "shellTitle");
     toolbarLayout->addWidget(heading_);
+    // The Menu bar sits in the header beside the app's name: File, Edit, View, the app's menus, then Help.
+    menuBar_ = new QMenuBar(toolbar_);
+    menuBar_->setNativeMenuBar(false);
+    menuBar_->setAccessibleName(QStringLiteral("Menu bar"));
+    menuBar_->hide();
+    fileMenu_ = menuBar_->addMenu(QStringLiteral("File"));
+    editMenu_ = menuBar_->addMenu(QStringLiteral("Edit"));
+    viewMenu_ = menuBar_->addMenu(QStringLiteral("View"));
+    helpMenu_ = menuBar_->addMenu(QStringLiteral("Help"));
+    // F10 opens the first menu; arrow keys then move between menus and items, and Escape closes them.
+    menuKey_ = new QShortcut(QKeySequence(Qt::Key_F10), this);
+    connect(menuKey_, &QShortcut::activated, this, [this] { if (menuBar_->isVisible()) menuBar_->setActiveAction(fileMenu_->menuAction()); });
+    // The frame's own items. Settings shows Control comma; the app's or AppShell's own shortcut opens it.
+    frameItems_.insert(fileMenu_, fileMenu_->addSeparator());
+    settingsAction_ = fileMenu_->addAction(QStringLiteral("Settings\u2026\tCtrl+,"), this, [this] {
+        if (settingsHandler_) settingsHandler_();
+        else if (settingsSection_ >= 0) { setCurrentSection(settingsSection_); setSidebarVisible(true); }
+    });
+    frameItems_.insert(editMenu_, nullptr);
+    frameItems_.insert(viewMenu_, viewMenu_->addSeparator());
+    sidebarAction_ = viewMenu_->addAction(QStringLiteral("Sidebar"));
+    sidebarAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
+    panelAction_ = viewMenu_->addAction(QStringLiteral("Bottom panel"));
+    panelAction_->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_J));
+    statusAction_ = viewMenu_->addAction(QStringLiteral("Status bar"));
+    for (auto *action : {sidebarAction_, panelAction_, statusAction_}) action->setCheckable(true);
+    connect(sidebarAction_, &QAction::triggered, this, [this](bool on) { setSidebarVisible(on); });
+    connect(panelAction_, &QAction::triggered, this, &Workspace::setBottomPanelShown);
+    connect(statusAction_, &QAction::triggered, this, &Workspace::setStatusBarShown);
+    frameItems_.insert(helpMenu_, helpMenu_->addSeparator());
+    aboutAction_ = helpMenu_->addAction(QStringLiteral("About Workspace"), this, [this] { if (aboutHandler_) aboutHandler_(); });
+    toolbarLayout->addWidget(menuBar_, 0, Qt::AlignVCenter);
     toolbarLayout->addStretch();
     outer->addWidget(toolbar_);
     auto *body = new QHBoxLayout;
@@ -503,23 +590,38 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     work_->setMinimumWidth(0);
     work_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
     auto *workLayout = new QVBoxLayout(work_); workLayout->setContentsMargins(0, 0, 0, 0); workLayout->setSpacing(0);
-    tabRow_ = new QFrame(work_); tabRow_->setProperty("sjRole", "pageTabRow"); tabRow_->hide();
+    // The editor area (tab row, pages) above the bottom panel, in a vertical splitter.
+    auto *editor = new QWidget;
+    editor->setMinimumWidth(0); editor->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
+    auto *editorLayout = new QVBoxLayout(editor); editorLayout->setContentsMargins(0, 0, 0, 0); editorLayout->setSpacing(0);
+    tabRow_ = new QFrame(editor); tabRow_->setProperty("sjRole", "pageTabRow"); tabRow_->hide();
     auto *tabRowLayout = new QHBoxLayout(tabRow_); tabRowLayout->setContentsMargins(0, 0, 0, 0); tabRowLayout->setSpacing(0);
     pageTabs_ = new QTabBar(tabRow_);
     pageTabs_->setAccessibleName(QStringLiteral("Pages"));
     pageTabs_->setDocumentMode(true); pageTabs_->setExpanding(false); pageTabs_->setUsesScrollButtons(true); pageTabs_->setDrawBase(false);
     tabRowLayout->addWidget(pageTabs_); tabRowLayout->addStretch();
-    workLayout->addWidget(tabRow_);
-    pages_ = new QStackedWidget(work_);
+    editorLayout->addWidget(tabRow_);
+    pages_ = new QStackedWidget(editor);
     pages_->setMinimumWidth(0);
     pages_->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Expanding);
-    workLayout->addWidget(pages_, 1);
-    emptyPages_ = new QLabel(QStringLiteral("No open pages. Choose one in the sidebar."), work_);
+    editorLayout->addWidget(pages_, 1);
+    emptyPages_ = new QLabel(QStringLiteral("No open pages. Choose one in the sidebar."), editor);
     emptyPages_->setProperty("sjRole", "muted"); emptyPages_->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     const int emptyPadding = Theme::density(QStringLiteral("contentPadding"), 20);
     emptyPages_->setContentsMargins(emptyPadding, emptyPadding, emptyPadding, emptyPadding);
     emptyPages_->setProperty("sjContentPadding", true); emptyPages_->hide();
-    workLayout->addWidget(emptyPages_, 1);
+    editorLayout->addWidget(emptyPages_, 1);
+    workSplit_ = new SplitPane(Qt::Vertical, work_);
+    workSplit_->setHandleWidth(5);
+    workSplit_->addWidget(editor);
+    bottomPanel_ = new BottomPanel;
+    bottomPanel_->hide();
+    bottomPanel_->setCloseHandler([this] { setBottomPanelShown(false); });
+    bottomPanel_->tabsChanged_ = [this] { updateBars(); };
+    workSplit_->addWidget(bottomPanel_);
+    workSplit_->setStretchFactor(0, 1);
+    workSplit_->setSizes({600, 160});
+    workLayout->addWidget(workSplit_, 1);
     splitter_->addWidget(sidebar_);
     splitter_->addWidget(work_);
     splitter_->setCollapsible(0, true);
@@ -527,6 +629,9 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     splitter_->setSizes({220, 800});
     body->addWidget(splitter_, 1);
     outer->addLayout(body, 1);
+    statusBar_ = new StatusBar(this);
+    statusBar_->hide();
+    outer->addWidget(statusBar_);
     connect(collapse_, &QToolButton::clicked, this, [this] { setSidebarVisible(collapse_->isChecked()); });
     connect(navigation_, &QListWidget::currentRowChanged, this, [this](int row) { if (auto *item = navigation_->item(row)) setCurrentPage(item->data(Qt::UserRole).toInt()); });
     connect(rail_, &QListWidget::currentRowChanged, this, &Workspace::setCurrentSection);
@@ -536,6 +641,7 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     connect(pageTabs_, &QTabBar::tabCloseRequested, this, [this](int tab) { closeDocument(pageTabs_->tabData(tab).toInt()); });
     auto *closeTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), pageTabs_, nullptr, nullptr, Qt::WidgetShortcut);
     connect(closeTab, &QShortcut::activated, this, [this] { if (pageTabs_->tabsClosable() && pageTabs_->currentIndex() >= 0) closeDocument(pageTabs_->tabData(pageTabs_->currentIndex()).toInt()); });
+    updateBars();
 }
 int Workspace::addSection(const QString &title, const QString &iconName) {
     const int section = sectionSelections_.size();
@@ -555,6 +661,7 @@ void Workspace::setSettingsSection(int section) {
 void Workspace::setSettingsHandler(std::function<void()> handler) {
     settingsHandler_ = std::move(handler);
     settingsButton_->setCheckable(!settingsHandler_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
+    updateBars();
 }
 void Workspace::setResizable(bool resizable) {
     splitter_->setHandleWidth(resizable ? 5 : 1);
@@ -564,6 +671,7 @@ void Workspace::setCollapsible(bool collapsible) {
     collapsible_ = collapsible;
     collapse_->setVisible(collapsible && choices_.sidebar != QStringLiteral("off"));
     if (!collapsible) setSidebarVisible(true);
+    updateBars();
 }
 void Workspace::setSectionVisible(int section, bool visible) {
     if (section >= 0 && section < rail_->count()) rail_->item(section)->setHidden(!visible);
@@ -638,9 +746,10 @@ void Workspace::setSidebarVisible(bool visible) {
     collapse_->setAccessibleName(visible ? QStringLiteral("Hide navigation") : QStringLiteral("Show navigation"));
     collapse_->setToolTip(collapse_->accessibleName());
     for (auto *label : pageLabels_) if (label) label->setVisible(!visible);
+    if (sidebarAction_) { QSignalBlocker blocker(sidebarAction_); sidebarAction_->setChecked(visible); }
 }
 bool Workspace::sidebarVisible() const { return !sidebar_->isHidden(); }
-void Workspace::setHeader(const QString &title) { heading_->setText(title); }
+void Workspace::setHeader(const QString &title) { heading_->setText(title); aboutAction_->setText(QStringLiteral("About ") + title); }
 void Workspace::restoreSettings(const QString &key) {
     QSettings settings;
     savedWidth_ = qMax(0, settings.value(key + QStringLiteral("/sidebarWidth"), 220).toInt());
@@ -663,7 +772,6 @@ void Workspace::saveSettings(const QString &key) const {
 void Workspace::setChoices(const PresetChoices &choices) {
     const bool wasOff = choices_.sidebar == QStringLiteral("off");
     choices_ = choices;
-    // Menu bar, Status bar, bottom panel and dashboard home are accepted but not drawn yet; they arrive with their components in #9.
     setRailVisible(choices.rail);
     if (choices.sidebar == QStringLiteral("off")) setSidebarVisible(false);
     else if (wasOff) setSidebarVisible(true);
@@ -672,6 +780,7 @@ void Workspace::setChoices(const PresetChoices &choices) {
     refreshNavigation();
     if (choices.documentTabs && choices.sidebar != QStringLiteral("off") && currentPage() >= 0) openDocument(currentPage());
     updateOpenState();
+    updateBars();
     if (choices.density != Theme::densityMode()) {
         Theme::setDensityMode(choices.density);
         applyDensity();
@@ -794,6 +903,46 @@ void Workspace::applyDensity() {
         else widget->setContentsMargins(padding, padding, padding, padding);
     }
 }
+QMenu *Workspace::addMenu(const QString &title) {
+    auto *menu = new QMenu(title, menuBar_);
+    menuBar_->insertMenu(helpMenu_->menuAction(), menu);
+    return menu;
+}
+QAction *Workspace::addMenuItem(QMenu *menu, const QString &text, std::function<void()> run, const QKeySequence &shortcut) {
+    auto *action = new QAction(text, menu);
+    action->setShortcut(shortcut);
+    connect(action, &QAction::triggered, this, [run] { if (run) run(); });
+    if (auto *before = frameItems_.value(menu)) menu->insertAction(before, action); else menu->addAction(action);
+    updateBars();
+    return action;
+}
+void Workspace::setAboutHandler(std::function<void()> handler) { aboutHandler_ = std::move(handler); updateBars(); }
+void Workspace::setStatusBarShown(bool shown) { statusShown_ = shown; updateBars(); }
+void Workspace::setBottomPanelShown(bool shown) {
+    if (!shown && bottomPanel_->isAncestorOf(QApplication::focusWidget())) pages_->setFocus();
+    panelShown_ = shown;
+    updateBars();
+}
+// The choices decide whether the Menu bar, Status bar and bottom panel exist; the View menu hides and shows them for the session.
+void Workspace::updateBars() {
+    if (!menuBar_) return;
+    menuBar_->setVisible(choices_.menuBar);
+    menuKey_->setEnabled(choices_.menuBar);
+    settingsAction_->setVisible(settingsHandler_ || settingsSection_ >= 0);
+    aboutAction_->setVisible(bool(aboutHandler_));
+    editMenu_->menuAction()->setVisible(!editMenu_->actions().isEmpty());
+    const bool sidebar = choices_.sidebar != QStringLiteral("off") && collapsible_;
+    const bool panel = choices_.bottomPanel && bottomPanel_->count() > 0;
+    sidebarAction_->setVisible(sidebar); sidebarAction_->setEnabled(sidebar);
+    panelAction_->setVisible(panel); panelAction_->setEnabled(panel);
+    statusAction_->setVisible(choices_.statusBar);
+    {
+        QSignalBlocker a(sidebarAction_), b(panelAction_), c(statusAction_);
+        sidebarAction_->setChecked(sidebarVisible()); panelAction_->setChecked(panelShown_); statusAction_->setChecked(statusShown_);
+    }
+    statusBar_->setVisible(choices_.statusBar && statusShown_);
+    bottomPanel_->setVisible(panel && panelShown_);
+}
 void Workspace::resizeEvent(QResizeEvent *event) {
     QWidget::resizeEvent(event);
 }
@@ -803,11 +952,19 @@ AppShell::AppShell(const QString &name, const QString &description, const QStrin
     setSettingsHandler([this] { finishSettings(); settings_->show(); settings_->raise(); });
     auto *open = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), this);
     connect(open, &QShortcut::activated, this, [this] { finishSettings(); settings_->show(); settings_->raise(); });
+    // Help > About opens Settings at About, the last built-in section.
+    setAboutHandler([this] { finishSettings(); settings_->showSection(productSections_ + 1); settings_->show(); settings_->raise(); });
+    viewMenu()->addSeparator();
+    darkAction_ = viewMenu()->addAction(QStringLiteral("Dark theme"));
+    darkAction_->setCheckable(true); darkAction_->setChecked(dark_);
+    // Picking a theme here ends following the device's color scheme, as in Settings.
+    connect(darkAction_, &QAction::triggered, this, [this](bool on) { disconnect(followSystem_); setDark(on); });
 }
-void AppShell::addSettingsSection(const QString &label, QWidget *content, const QString &keywords) { settings_->addSection(label, content, keywords); }
+void AppShell::addSettingsSection(const QString &label, QWidget *content, const QString &keywords) { settings_->addSection(label, content, keywords); ++productSections_; }
 void AppShell::setDark(bool dark) {
     dark_ = dark;
     if (mode_) { QSignalBlocker blocker(mode_); mode_->setCurrentIndex(dark ? 0 : 1); }
+    if (darkAction_) { QSignalBlocker blocker(darkAction_); darkAction_->setChecked(dark); }
     const auto theme = Theme::load(QStringLiteral("clean"), dark);
     theme.apply(this);
 }

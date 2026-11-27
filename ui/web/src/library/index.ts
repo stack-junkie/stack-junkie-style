@@ -11,5 +11,6 @@ import './styles.css';
 export * from './BrandMark';
 export * from './settings';
 export * from './shell';
+export * from './bars';
 export * from './presets';
 export * from './website';

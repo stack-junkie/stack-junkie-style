@@ -16,7 +16,12 @@
 #include <QImage>
 #include <QJsonArray>
 #include <QListWidget>
+#include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPlainTextEdit>
+#include <QClipboard>
 #include <QSettings>
 #include <QTimer>
 #include <QShortcut>
@@ -53,6 +58,7 @@ int main(int argc, char *argv[]) {
     parser.addOption({QStringLiteral("export-preview"), QStringLiteral("Render a PNG using the offscreen platform, then exit."), QStringLiteral("file")});
     parser.addOption({QStringLiteral("theme"), QStringLiteral("light or dark"), QStringLiteral("theme")});
     parser.addOption({QStringLiteral("page"), QStringLiteral("Family ID, family/component ID, home, settings or settings/<section>"), QStringLiteral("page")});
+    parser.addOption({QStringLiteral("menu"), QStringLiteral("Show one Menu bar menu open in the export: file, edit, view, library or help."), QStringLiteral("menu")});
     parser.addOption({QStringLiteral("choice"), QStringLiteral("Change one preset choice, such as sidebar=list, the same way Settings does. Repeatable."), QStringLiteral("name=value")});
     parser.addOption({QStringLiteral("preset"), QStringLiteral("App frame preset: web-app, desktop-app, document-editor or website. Saved choices are not used."), QStringLiteral("id")});    parser.addOption({QStringLiteral("width"), QStringLiteral("Export width, at least 480 pixels."), QStringLiteral("pixels"), QStringLiteral("1440")});
     parser.addOption({QStringLiteral("height"), QStringLiteral("Export height, at least 460 pixels."), QStringLiteral("pixels"), QStringLiteral("1000")});
@@ -80,7 +86,7 @@ int main(int argc, char *argv[]) {
         brandIcon->setAttribute(Qt::WA_TransparentForMouseEvents); homeBrandLayout->addWidget(brandIcon);
         toolbar->insertWidget(0, homeButton);
 
-        QStringList pageIds;
+        QStringList pageIds, pageNames, pageFamilies;
         const auto families = Theme::catalog().value(QStringLiteral("families")).toArray();
         for (const auto &value : families) {
             const auto family = value.toObject();
@@ -96,6 +102,7 @@ int main(int argc, char *argv[]) {
                 const int page = window.addPage(spec.value(QStringLiteral("label")).toString(), makeFamily(one), QStringLiteral("file"), section);
                 Q_UNUSED(page);
                 pageIds << familyId + QStringLiteral("/") + id;
+                pageNames << spec.value(QStringLiteral("label")).toString(); pageFamilies << family.value(QStringLiteral("label")).toString();
             }
         }
         // Settings is a window over the app, never a page: section list and search, changes apply immediately.
@@ -107,11 +114,14 @@ int main(int argc, char *argv[]) {
         settingsWindow->addSection(QStringLiteral("Layout"), layoutPage, QStringLiteral("preset rail sidebar menu status panel tabs command palette theme density dashboard"));        auto *keyboardPage = new SettingsPage(QStringLiteral("Keyboard"));
         keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Drag a sidebar divider to resize it. Arrow keys adjust a focused divider.")));
         keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("Control comma opens Settings. In a row of open documents, Control W closes the current tab.")));
+        keyboardPage->contentLayout()->addWidget(paragraph(QStringLiteral("With the Menu bar on, F10 opens the first menu and arrow keys move through the menus. Control B shows or hides the sidebar and Control J the bottom panel.")));
         settingsWindow->addSection(QStringLiteral("Keyboard"), keyboardPage, QStringLiteral("shortcuts keys resize"));
         auto *aboutLogo = new QLabel; aboutLogo->setFixedSize(44, 44); aboutLogo->setProperty("sjBrandSize", 44); aboutLogo->setAccessibleName(QStringLiteral("Stack Junkie"));
         settingsWindow->addSection(QStringLiteral("About"), new AboutPage(QStringLiteral("Stack Junkie UI"), QStringLiteral("A living collection of reusable interface components, layouts and interactions."), QStringLiteral(STACKJUNKIE_VERSION), aboutLogo), QStringLiteral("version copyright"));
         auto openSettings = [settingsWindow] { settingsWindow->show(); settingsWindow->raise(); settingsWindow->activateWindow(); };
         window.setSettingsHandler(openSettings);
+        // Help > About opens Settings at About; Help > Keyboard shortcuts at Keyboard.
+        window.setAboutHandler([settingsWindow, openSettings] { settingsWindow->showSection(3); openSettings(); });
         QObject::connect(new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), &window), &QShortcut::activated, &window, openSettings);
         const int homeSection = window.addSection(QStringLiteral("Home"));
         window.setSectionVisible(homeSection, false);
@@ -123,7 +133,7 @@ int main(int argc, char *argv[]) {
             QObject::connect(openFamily, &QPushButton::clicked, &window, [&window, familyIndex] { window.setCurrentSection(familyIndex); });
         }
         const int homeIndex = window.addPage(QStringLiteral("Overview"), homePage, QStringLiteral("grid"), homeSection);
-        pageIds << QStringLiteral("home");
+        pageIds << QStringLiteral("home"); pageNames << QStringLiteral("Home"); pageFamilies << QStringLiteral("Stack Junkie UI");
 #if STACKJUNKIE_STUBS_ALLOWED
         // Development builds only. A release build refuses to compile a Stub, so the release showcase has none.
         auto *stubPage = new SettingsPage(QStringLiteral("Stub"));
@@ -134,10 +144,32 @@ int main(int argc, char *argv[]) {
         stubPage->contentLayout()->addWidget(new Field(QStringLiteral("Project name"), hinted, QStringLiteral("Hint text is not a Stub: it stays plain.")));
         stubPage->contentLayout()->addStretch();
         window.addPage(QStringLiteral("Stub"), stubPage, QStringLiteral("file"), homeSection);
-        pageIds << QStringLiteral("stub");
+        pageIds << QStringLiteral("stub"); pageNames << QStringLiteral("Stub"); pageFamilies << QStringLiteral("Stack Junkie UI");
 #endif
         QObject::connect(homeButton, &QPushButton::clicked, &window, [&window, homeIndex] { window.setCurrentPage(homeIndex); });
+        // Menu bar items the showcase adds: the frame already owns Settings, About and the View toggles.
+        window.addMenuItem(window.editMenu(), QStringLiteral("Copy component name"), [&window, &pageNames] { QGuiApplication::clipboard()->setText(pageNames.value(window.currentPage())); });
+        auto *libraryMenu = window.addMenu(QStringLiteral("Library"));
+        for (int familyIndex = 0; familyIndex < families.size(); ++familyIndex)
+            window.addMenuItem(libraryMenu, families[familyIndex].toObject().value(QStringLiteral("label")).toString(), [&window, familyIndex] { window.setCurrentSection(familyIndex); });
+        window.addMenuItem(window.helpMenu(), QStringLiteral("Keyboard shortcuts"), [settingsWindow, openSettings] { settingsWindow->showSection(2); openSettings(); });
+        window.viewMenu()->addSeparator();
+        auto *darkTheme = window.viewMenu()->addAction(QStringLiteral("Dark theme")); darkTheme->setCheckable(true);
+        QObject::connect(darkTheme, &QAction::triggered, mode, [mode](bool on) { mode->setCurrentIndex(on ? 1 : 0); });
+        QObject::connect(mode, &QComboBox::currentIndexChanged, darkTheme, [darkTheme](int index) { darkTheme->setChecked(index == 1); });
+        // Status bar: the current component on the left, its family and the library version on the right.
+        // Bottom panel: the pages opened this session, and problems (none in a showcase page).
+        auto *output = new QPlainTextEdit; output->setReadOnly(true); output->setProperty("sjFontRole", "mono"); output->setAccessibleName(QStringLiteral("Output"));
+        window.bottomPanel()->addTab(output, QStringLiteral("Output"));
+        window.bottomPanel()->addTab(paragraph(QStringLiteral("No problems in this view.")), QStringLiteral("Problems"));
+        auto showCurrent = [&window, &pageNames, &pageFamilies, output](int index) {
+            window.statusBar()->setState(pageNames.value(index));
+            window.statusBar()->setFacts({pageFamilies.value(index), QStringLiteral(STACKJUNKIE_VERSION)});
+            output->appendPlainText(QStringLiteral("Opened ") + pageNames.value(index));
+        };
+        QObject::connect(&window, &Workspace::currentChanged, &window, showCurrent);
         window.setCurrentPage(homeIndex);
+        if (window.statusBar()->state().isEmpty()) showCurrent(homeIndex);
         if (!exporting) {
             window.restoreSettings(QStringLiteral("workspace"));
             // The previous preview stored a family index rather than a component index.
@@ -201,8 +233,7 @@ int main(int argc, char *argv[]) {
         QLabel *presetHelp = nullptr;
         layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Preset"), Preset::find(presetId).description, presetBox, &presetHelp));
         // Choices drawn by later components keep their switch so the preset is complete, and the note says what is missing.
-        const QHash<QString, QString> notes{{QStringLiteral("menuBar"), QStringLiteral("Drawn in a later preview.")}, {QStringLiteral("statusBar"), QStringLiteral("Drawn in a later preview.")},
-            {QStringLiteral("bottomPanel"), QStringLiteral("Drawn in a later preview.")}, {QStringLiteral("dashboardHome"), QStringLiteral("Drawn in a later preview.")},
+        const QHash<QString, QString> notes{{QStringLiteral("dashboardHome"), QStringLiteral("Drawn in a later preview.")},
             {QStringLiteral("commandPalette"), QStringLiteral("Apps read this choice; the native showcase has no command palette yet.")}};
         QHash<QString, QWidget *> controls;
         std::function<void(const QString &, const QVariant &)> setChoice;
@@ -279,8 +310,23 @@ int main(int argc, char *argv[]) {
                 settingsWindow->showSection(settingsSection);
                 settingsWindow->show();
             }
-            QTimer::singleShot(150, &window, [&window, destination, &app, settingsWindow, exportSettings] {
-                const bool saved = (exportSettings ? settingsWindow->grab() : window.grab()).save(destination, "PNG");
+            QMenu *openMenu = nullptr;
+            if (parser.isSet(QStringLiteral("menu"))) {
+                for (auto *action : window.menuBar()->actions())
+                    if (action->menu() && action->isVisible() && action->text().compare(parser.value(QStringLiteral("menu")), Qt::CaseInsensitive) == 0) openMenu = action->menu();
+                if (!openMenu || !window.menuBar()->isVisible()) { std::fprintf(stderr, "Unknown or hidden menu\n"); return 2; }
+            }
+            QTimer::singleShot(100, &window, [&window, openMenu] {
+                if (!openMenu) return;
+                window.menuBar()->setActiveAction(openMenu->menuAction());
+            });
+            QTimer::singleShot(300, &window, [&window, destination, &app, settingsWindow, exportSettings, openMenu] {
+                QPixmap image = exportSettings ? settingsWindow->grab() : window.grab();
+                if (openMenu && openMenu->isVisible()) {
+                    QPainter painter(&image);
+                    painter.drawPixmap(openMenu->pos() - window.mapToGlobal(QPoint(0, 0)), openMenu->grab());
+                }
+                const bool saved = image.save(destination, "PNG");
                 if (!saved) std::fprintf(stderr, "Cannot save preview PNG\n");
                 app.exit(saved ? 0 : 3);
             });

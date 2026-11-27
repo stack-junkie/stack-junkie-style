@@ -43,7 +43,20 @@ export function NavigationDemo({ id }: { id: string }) {
   if (id === 'tabs') return <UI.Stack gap={24}><div><h3>Peer views</h3><UI.Tabs label="Example settings" value={tab} onChange={setTab} tabs={[{ id: 'general', label: 'General', content: <UI.TextInput label="Document name" defaultValue="Component study" /> }, { id: 'appearance', label: 'Appearance', content: <UI.Checkbox label="Show line numbers" defaultChecked /> }, { id: 'unavailable', label: 'Unavailable', content: null, disabled: true }]} /></div><div><h3>Grouped in one row</h3><GroupedTabsDemo /></div><div><h3>Open documents</h3><ClosableTabsDemo /></div></UI.Stack>;
   if (id === 'pagination') return <UI.Pagination page={page} pages={6} onChange={setPage} />;
   if (id === 'breadcrumbs') return <UI.Breadcrumbs items={[{ label: 'Library', onClick: () => setCrumb('Library') }, { label: 'Components', onClick: () => setCrumb('Components') }, { label: crumb }]} />;
+  if (id === 'menu-bar') return <MenuBarDemo />;
   return <UI.Stack><UI.Button onClick={() => setCollapsed(!collapsed)} aria-expanded={!collapsed}>{collapsed ? 'Expand navigation' : 'Collapse navigation'}</UI.Button><UI.SideNavigation collapsed={collapsed} value={selected} onChange={setSelected} label="Example pages" items={[{ id: 'files', label: 'Files', icon: 'folder' }, { id: 'editor', label: 'Editor', icon: 'code' }, { id: 'settings', label: 'Settings', icon: 'settings' }]} /><p className="sj-muted" role="status">Selected: {selected}</p></UI.Stack>;
+}
+
+// Shortcuts in a menu are shown text; the app that owns the menu also owns the keys.
+function MenuBarDemo() {
+  const [last, setLast] = useState('Choose a menu item'); const [wrap, setWrap] = useState(true);
+  const item = (id: string, label: string, shortcut?: string) => ({ id, label, shortcut, run: () => setLast(`${label.replace('…', '')} chosen`) });
+  return <UI.Stack><div className="demo-menubar"><UI.MenuBar label="Example menu bar" menus={[
+    { id: 'file', label: 'File', items: [item('new', 'New document', 'Ctrl+N'), item('open', 'Open…', 'Ctrl+O'), { id: 'file-frame', separator: true }, item('settings', 'Settings…', 'Ctrl+,')] },
+    { id: 'edit', label: 'Edit', items: [item('undo', 'Undo', 'Ctrl+Z'), { ...item('redo', 'Redo', 'Ctrl+Y'), disabled: true }] },
+    { id: 'view', label: 'View', items: [{ id: 'wrap', label: 'Word wrap', checked: wrap, run: () => setWrap(!wrap) }] },
+    { id: 'help', label: 'Help', items: [item('about', 'About this example')] },
+  ]} /></div><p role="status" className="sj-muted">{last}</p></UI.Stack>;
 }
 
 // Groups live inside one tab row (like browser tab groups). A second tab row under the first is not allowed.
@@ -69,6 +82,10 @@ export function ContainerDemo({ id }: { id: string }) {
   if (id === 'panel') return <div className="demo-grid"><UI.Panel title="Document"><p>Related content in a quiet surface.</p></UI.Panel><UI.Panel title="Inset region" className="demo-inset"><p>A nearby tone can separate secondary work.</p></UI.Panel></div>;
   if (id === 'disclosure') return <UI.Disclosure label="Advanced export options"><UI.Checkbox label="Include timestamps" defaultChecked /><UI.TextInput label="Filename prefix" defaultValue="study" /></UI.Disclosure>;
   if (id === 'split-pane') return <UI.SplitPane primary={<UI.TextArea label="Working document" defaultValue="Resize the inspector with its divider. Collapse and restore it without losing this text." />} secondary={<UI.Stack><h3>Inspector</h3><UI.TextInput label="Label" defaultValue="Selected item" /><UI.Checkbox label="Visible" defaultChecked /></UI.Stack>} />;
+  if (id === 'bottom-panel') return <div className="demo-bottom-panel"><div className="demo-bottom-panel-work"><p className="sj-muted">Work area</p></div><UI.BottomPanel label="Example panel" initialHeight={150} tabs={[
+    { id: 'output', label: 'Output', content: <UI.CodeBlock language="Output" code={'Opened Spacing study\nOpened Layout notes'} /> },
+    { id: 'problems', label: 'Problems', content: <p className="sj-muted">No problems.</p> },
+  ]} /></div>;
   if (id === 'settings-row') return <UI.SettingsRow label="Line numbers" description="Show a line reference alongside the document."><UI.Switch label="Line numbers enabled" checked={checked} onChange={e => setChecked(e.target.checked)} /></UI.SettingsRow>;
   return <UI.Stack><UI.Toolbar label="Related controls"><UI.Button>First action</UI.Button><UI.Button>Second action</UI.Button><UI.Badge>Wrapping row</UI.Badge></UI.Toolbar><UI.Separator /><p>A separator separates related regions without adding a panel.</p></UI.Stack>;
 }
@@ -89,6 +106,7 @@ export function FeedbackDemo({ id }: { id: string }) {
   if (id === 'alert') return <UI.Stack><UI.Alert title="This is a local specimen">No information is sent to a service.</UI.Alert><UI.Alert title="Changes applied" tone="success" /><UI.Alert title="Review the selected items" tone="warning">Removing them cannot be undone in this example.</UI.Alert>{error ? <UI.Alert tone="danger" title="Example operation failed" action={<UI.Button onClick={() => setError(false)}>Retry</UI.Button>}>Your input is preserved. Retry to show recovery.</UI.Alert> : <UI.Alert title="Recovery completed" tone="success" action={<UI.Button onClick={() => setError(true)}>Show error</UI.Button>} />}</UI.Stack>;
   if (id === 'progress') return <UI.Stack><UI.Progress label={`Local demonstration: ${status}`} value={progress} /><UI.Toolbar label="Progress controls"><UI.Button variant="primary" onClick={() => { if (progress === 100) setProgress(0); setRunning(!running); setStatus(running ? 'Paused' : 'Running'); }}>{running ? 'Pause' : progress === 100 ? 'Restart' : 'Start'}</UI.Button><UI.Button onClick={() => { setRunning(false); setProgress(0); setStatus('Cancelled'); }}>Cancel</UI.Button></UI.Toolbar><UI.Progress label="Indeterminate progress specimen" /></UI.Stack>;
   if (id === 'toast') return <UI.Stack><UI.Button onClick={() => setToast(true)}>Show notification</UI.Button>{toast && <UI.Toast onDismiss={() => setToast(false)}>Example preference saved.</UI.Toast>}</UI.Stack>;
+  if (id === 'status-bar') return <div className="demo-status-bar"><UI.StatusBar label="Example status bar" state="Spacing study, saved" facts={['12 sections', 'Compact']} /></div>;
   if (id === 'loading') return <UI.Stack><UI.Toolbar label="Loading indicator"><UI.Spinner label="Loading example" /><span>Loading example</span></UI.Toolbar><UI.Skeleton label="Loading example text" /></UI.Stack>;
   return <UI.Stack>{empty ? <UI.EmptyState title="No documents yet" description="Create a local specimen document to try this state." action={<UI.Button onClick={() => setEmpty(false)}>Create example</UI.Button>} /> : <UI.List label="Created documents" items={[{ id: 'new', title: 'Untitled document', detail: 'Created in this example' }]} />}<UI.EmptyState title="No matches" description="Try a shorter search term." /><UI.Alert title="Service unavailable" tone="warning">This example has no remote connection.</UI.Alert></UI.Stack>;
 }

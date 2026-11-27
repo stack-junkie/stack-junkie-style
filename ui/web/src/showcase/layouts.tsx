@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import * as UI from '../library';
 import { chartData, CollectionDemo, ContentDemo, FeedbackDemo } from './demos';
 import catalog from '../../../shared/catalog.json';
@@ -27,8 +27,7 @@ function Workbench() {
   const [area, setArea] = useState('explorer'); const [query, setQuery] = useState('');
   const [open, setOpen] = useState(['spacing', 'notes']); const [active, setActive] = useState('spacing');
   const [views, setViews] = useState<Record<string, 'preview' | 'source'>>({});
-  const [panel, setPanel] = useState(true); const [panelTab, setPanelTab] = useState('output'); const [panelHeight, setPanelHeight] = useState(140);
-  const editor = useRef<HTMLDivElement>(null);
+  const [panel, setPanel] = useState(true);
   function openDocument(id: string) { setOpen(o => o.includes(id) ? o : [...o, id]); setActive(id); }
   function close(id: string) { const index = open.indexOf(id); const next = open.filter(d => d !== id); setOpen(next); if (active === id && next.length) setActive(next[Math.min(index, next.length - 1)]); }
   const matches = Object.entries(documents).filter(([, d]) => `${d.label} ${d.source}`.toLowerCase().includes(query.trim().toLowerCase()));
@@ -39,20 +38,15 @@ function Workbench() {
       <div className="wb-sidebar-body" hidden={area !== 'explorer'}><UI.NavTree label="Workbench pages" value={active} onChange={openDocument} groups={documentGroups.map(g => ({ id: g.id, label: g.label, items: Object.entries(documents).filter(([, d]) => d.group === g.id).map(([id, d]) => ({ id, label: d.label, icon: 'file' as const })) }))} /></div>
       <div className="wb-sidebar-body" hidden={area !== 'search'}><UI.TextInput label="Search documents" type="search" value={query} onChange={e => setQuery(e.target.value)} /><UI.SideNavigation label="Search results" value={active} onChange={openDocument} items={matches.map(([id, d]) => ({ id, label: d.label }))} />{matches.length === 0 && <p className="sj-muted">No documents match.</p>}</div>
     </aside>
-    <div className="wb-main" ref={editor} style={{ gridTemplateRows: panel ? `minmax(0,1fr) 5px ${panelHeight}px` : 'minmax(0,1fr)' }}>
+    <div className="wb-main">
       <div className="wb-editor">{open.length ? <UI.Tabs label="Open documents" value={active} onChange={setActive} onCloseTab={close} tabs={open.map(id => {
         const view = views[id] ?? 'preview';
         return { id, label: documents[id].label, content: <div className="wb-document"><UI.Toolbar label={`${documents[id].label} view`}><UI.ToggleButton pressed={view === 'preview'} onPressedChange={() => setViews(v => ({ ...v, [id]: 'preview' }))}>Preview</UI.ToggleButton><UI.ToggleButton pressed={view === 'source'} onPressedChange={() => setViews(v => ({ ...v, [id]: 'source' }))}>Source</UI.ToggleButton><span className="wb-spacer" /><UI.Button variant="quiet" aria-expanded={panel} onClick={() => setPanel(!panel)}>{panel ? 'Hide panel' : 'Show panel'}</UI.Button></UI.Toolbar>{view === 'preview' ? <UI.Prose><h2>{documents[id].label}</h2>{documents[id].source.split('\n').slice(1).map((line, i) => <p key={i}>{line.trim()}</p>)}</UI.Prose> : <UI.CodeBlock language="Outline" code={documents[id].source} />}</div> };
       })} /> : <UI.EmptyState title="No open documents" description="Open a page from the Explorer tree." />}</div>
-      {panel && <div className="wb-panel-resize" role="separator" tabIndex={0} aria-orientation="horizontal" aria-label="Resize bottom panel" aria-valuenow={panelHeight} aria-valuemin={0}
-        onKeyDown={e => { if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); setPanelHeight(h => Math.max(0, h + (e.key === 'ArrowUp' ? 16 : -16))); } }}
-        onPointerDown={e => { e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); }}
-        onPointerMove={e => { if (e.currentTarget.hasPointerCapture(e.pointerId) && editor.current) { const rect = editor.current.getBoundingClientRect(); setPanelHeight(Math.max(0, Math.min(rect.height - 40, rect.bottom - e.clientY))); } }}
-        onPointerUp={e => { if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId); }} />}
-      {panel && <section className="wb-panel" aria-label="Bottom panel"><UI.Tabs label="Panel views" value={panelTab} onChange={setPanelTab} tabs={[
+      {panel && <UI.BottomPanel initialHeight={140} onClose={() => setPanel(false)} tabs={[
         { id: 'output', label: 'Output', content: <UI.CodeBlock language="Local fixture" code={'Opened ' + open.map(id => documents[id].label).join(', ')} /> },
         { id: 'problems', label: 'Problems', content: <p className="sj-muted">No problems in the open documents.</p> },
-      ]} /></section>}
+      ]} />}
     </div>
   </div>;
 }

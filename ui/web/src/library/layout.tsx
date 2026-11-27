@@ -1,14 +1,19 @@
 import { useEffect, useId, useRef, useState, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import { Button, Icon } from './core';
 
-export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, children, navigationFooter, storageKey, mainId, initialSidebarWidth = 228, contentOwnsHeader = false, resizable = true, collapsible = true }: {
+export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, children, navigationFooter, footer, storageKey, mainId, initialSidebarWidth = 228, contentOwnsHeader = false, resizable = true, collapsible = true, sidebarCollapsed, onSidebarCollapsedChange }: {
   header: ReactNode; rail?: ReactNode; sidebar?: ReactNode; sidebarTitle: string; toolbar?: ReactNode; children: ReactNode | ((state: { sidebarCollapsed: boolean }) => ReactNode); navigationFooter?: ReactNode; storageKey?: string; mainId?: string; initialSidebarWidth?: number; contentOwnsHeader?: boolean;
   /** Let people drag the contextual sidebar to any width. */ resizable?: boolean;
   /** Let people hide the contextual sidebar with the menu control. */ collapsible?: boolean;
+  /** A full-width row under the body, such as a StatusBar. */ footer?: ReactNode;
+  /** Controlled sidebar collapse, for a frame that also toggles it from a menu. Without it the workspace remembers it itself. */ sidebarCollapsed?: boolean;
+  onSidebarCollapsedChange?: (collapsed: boolean) => void;
 }) {
   const uid = useId(); const toggle = useRef<HTMLButtonElement>(null); const body = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(() => { try { const stored = storageKey ? localStorage.getItem(`${storageKey}:width`) : null; const value = Number(stored); return stored !== null && Number.isFinite(value) ? Math.max(0, value) : initialSidebarWidth; } catch { return initialSidebarWidth; } });
-  const [collapsedState, setCollapsed] = useState(() => { try { return !!storageKey && localStorage.getItem(`${storageKey}:collapsed`) === 'true'; } catch { return false; } });
+  const [ownCollapsed, setOwnCollapsed] = useState(() => { try { return !!storageKey && localStorage.getItem(`${storageKey}:collapsed`) === 'true'; } catch { return false; } });
+  const collapsedState = sidebarCollapsed ?? ownCollapsed;
+  const setCollapsed = (value: boolean) => { if (sidebarCollapsed === undefined) setOwnCollapsed(value); onSidebarCollapsedChange?.(value); };
   const [maximum, setMaximum] = useState(initialSidebarWidth);
   const hasSidebar = sidebar !== undefined && sidebar !== null && sidebar !== false;
   const collapsed = collapsible ? collapsedState : false;
@@ -45,6 +50,7 @@ export function Workspace({ header, rail, sidebar, sidebarTitle, toolbar, childr
       </main>
     </div>
     {!rail && !shown && navigationFooter && <footer className="sj-navigation-footer">{navigationFooter}</footer>}
+    {footer}
   </div>;
 }
 

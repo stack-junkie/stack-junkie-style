@@ -209,6 +209,18 @@ QMenu, QToolTip { background: @surface; color: @text; border: @metricBorderWidth
 QMenu::item { padding: 7px 24px; }
 QMenu::item:selected { background: @selection; }
 QMenu::separator { height: 1px; background: @border; margin: 4px 8px; }
+QMenu { font-size: @chromepx; }
+QMenu::item:disabled { color: @muted; }
+QMenu::indicator { width: 14px; height: 14px; left: 5px; }
+QMenu::indicator:checked { background: @accent; border-radius: 3px; image: url(:/stackjunkie/check-@glyphTone.svg); }
+QMenuBar { background: transparent; border: 0; font-size: @chromepx; spacing: 0; }
+QMenuBar::item { background: transparent; color: @text; padding: 3px 8px; border-radius: @radiuspx; }
+QMenuBar::item:selected, QMenuBar::item:pressed { background: @raised; }
+QFrame[sjRole="statusBar"] { background: @canvas; border: 0; border-top: @metricBorderWidthpx solid @border; }
+QFrame[sjRole="statusBar"] QLabel { color: @muted; font-size: @captionpx; }
+QFrame[sjRole="statusBar"] QLabel[sjRole="statusState"] { color: @text; }
+QFrame[sjRole="bottomPanel"] { background: @surface; border: 0; }
+QFrame[sjRole="bottomPanel"] QStackedWidget { background: @surface; }
 QFrame[sjRole="panel"], QFrame[sjRole="help"], QFrame[sjRole="code"], QFrame[sjRole="disclosure"] { background: @surface; border: @metricBorderWidthpx solid @border; border-radius: @radiuspx; }
 QFrame[sjRole="panel"][sjVariant="inset"] { background: @raised; }
 QFrame[sjRole="notice"] { background: @surface; border: @metricBorderWidthpx solid @border; border-left: 3px solid @accent; border-radius: @radiuspx; }

@@ -96,11 +96,31 @@ What the frame draws today:
 - `theme`: `AppShell::setPreset` applies dark or light; `system` follows `QStyleHints::colorScheme` live until someone picks a theme in Settings. The offscreen platform reports no scheme, which counts as light.
 - `density`: compact or comfortable, both from the `density` tokens. `Theme::setDensityMode` holds one mode for the app; `setChoices` sets it, resizes the frame and re-applies the frame's theme. Content areas marked with the `sjContentPadding` property follow the padding.
 - `commandPalette`: the frame does not own a palette, so an app that has one reads `choices().commandPalette` or listens to `choicesChanged`.
-- `menuBar`, `statusBar`, `bottomPanel` and `dashboardHome` are accepted but drawn in a later preview (#9).
+- `menuBar`, `statusBar`, `bottomPanel`: the Menu bar, Status bar and bottom panel (below).
+- `dashboardHome` is accepted but drawn in a later preview.
 
 When the frame shows its own tab row, a page that is itself a `QTabWidget` has its tab row hidden, so tab rows never stack.
 
 In the showcase, Settings > Layout holds the preset picker and one control per choice, generated from `presets.json`. Changes apply to the showcase at once and are saved in `QSettings`; "Reset to" the preset appears once a choice differs.
+
+### Menu bar, Status bar and bottom panel
+
+The Document editor preset turns all three on. `Workspace` draws them from the choices; the app supplies their content:
+
+```cpp
+shell.addMenuItem(shell.fileMenu(), QStringLiteral("Open\u2026"), [] { /* open */ }, QKeySequence(Qt::CTRL | Qt::Key_O));
+auto *format = shell.addMenu(QStringLiteral("Format"));
+shell.addMenuItem(format, QStringLiteral("Bold"), [] { /* bold */ });
+shell.statusBar()->setState(QStringLiteral("Notes.md, saved"));
+shell.statusBar()->setFacts({QStringLiteral("Ln 12, Col 4"), QStringLiteral("UTF-8")});
+shell.bottomPanel()->addTab(output, QStringLiteral("Output"));
+```
+
+- Menu bar: a `QMenuBar` in the header beside the app's name, styled by the theme: File, Edit, View, the app's menus (`addMenu`), then Help. The frame owns Settings (File, calls the settings handler), About (Help, calls `setAboutHandler`; `AppShell` opens Settings at About) and in View the Sidebar (Control B), Bottom panel (Control J) and Status bar toggles. `AppShell` adds Dark theme. `addMenuItem` puts an app item above the frame's items; its shortcut works while the Menu bar is shown. Edit holds only app items and is hidden without them. F10 opens the first menu; arrow keys and Escape work as usual.
+- `StatusBar`: a thin bottom row with `setState` on the left and `setFacts` on the right. Never ads or tips.
+- `BottomPanel`: a panel under the work area in a vertical splitter, with its own tab row (`addTab`) and a close control. It is drawn only once it has a tab. View > Bottom panel or `setBottomPanelShown` hides it for the session, as `setStatusBarShown` does for the Status bar.
+
+The native showcase uses all three: the current component on the left of the Status bar, its family and the library version on the right, and Output and Problems in the bottom panel. Export one menu open with `--menu file|edit|view|library|help`.
 ## Stub
 
 A Stub marks development stand-in content: sample text, fake data, unfinished labels. Create one only with the macro, which records its file and line:

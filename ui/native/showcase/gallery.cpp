@@ -23,6 +23,7 @@
 #include <QJsonArray>
 #include <QListWidget>
 #include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPlainTextEdit>
@@ -319,6 +320,24 @@ QWidget *component(const QString &id) {
         return vertical({heading(QStringLiteral("Page tabs")), tabs(), heading(QStringLiteral("Grouped in one row")), groups, heading(QStringLiteral("Open documents")), open});
     }
     if (id == "breadcrumbs") { auto *home = new Button(QStringLiteral("Library"), ButtonVariant::Quiet); auto *project = new Button(QStringLiteral("Project"), ButtonVariant::Quiet); auto *status = new QLabel(QStringLiteral("Current: Document")); QObject::connect(home, &QPushButton::clicked, status, [status] { status->setText(QStringLiteral("Current: Library")); }); QObject::connect(project, &QPushButton::clicked, status, [status] { status->setText(QStringLiteral("Current: Project")); }); return vertical({row({home, new QLabel(QStringLiteral("/")), project, new QLabel(QStringLiteral("/ Document"))}), status}); }
+    if (id == "menu-bar") {
+        // Shortcuts in a menu are shown text; the app that owns the menu also owns the keys.
+        auto *bar = new QMenuBar; bar->setNativeMenuBar(false); bar->setAccessibleName(QStringLiteral("Example menu bar"));
+        auto *state = new QLabel(QStringLiteral("Choose a menu item")); state->setProperty("sjRole", "muted");
+        auto add = [state](QMenu *menu, const QString &name, const QString &shortcut) {
+            auto *action = menu->addAction(name + QStringLiteral("\t") + shortcut);
+            QObject::connect(action, &QAction::triggered, state, [state, name] { state->setText(QString(name).remove(QChar(0x2026)) + QStringLiteral(" chosen")); });
+            return action;
+        };
+        auto *file = bar->addMenu(QStringLiteral("File"));
+        add(file, QStringLiteral("New document"), QStringLiteral("Ctrl+N")); add(file, QStringLiteral("Open\u2026"), QStringLiteral("Ctrl+O"));
+        file->addSeparator(); add(file, QStringLiteral("Settings\u2026"), QStringLiteral("Ctrl+,"));
+        auto *edit = bar->addMenu(QStringLiteral("Edit"));
+        add(edit, QStringLiteral("Undo"), QStringLiteral("Ctrl+Z")); add(edit, QStringLiteral("Redo"), QStringLiteral("Ctrl+Y"))->setEnabled(false);
+        auto *wrapAction = bar->addMenu(QStringLiteral("View"))->addAction(QStringLiteral("Word wrap")); wrapAction->setCheckable(true); wrapAction->setChecked(true);
+        add(bar->addMenu(QStringLiteral("Help")), QStringLiteral("About this example"), QString());
+        return vertical({bar, state});
+    }
     if (id == "pagination") { auto *page = new QSpinBox; page->setRange(1, 12); page->setAccessibleName(QStringLiteral("Current page")); auto *previous = new Button(QStringLiteral("Previous")); auto *next = new Button(QStringLiteral("Next")); QObject::connect(previous, &QPushButton::clicked, page, [page] { page->setValue(page->value() - 1); }); QObject::connect(next, &QPushButton::clicked, page, [page] { page->setValue(page->value() + 1); }); auto update = [=](int n) { previous->setEnabled(n > 1); next->setEnabled(n < 12); }; QObject::connect(page, &QSpinBox::valueChanged, page, update); update(1); return row({previous, page, new QLabel(QStringLiteral("of 12")), next}); }
     if (id == "panel") {
         auto *panel = new QFrame; panel->setProperty("sjRole", "panel"); auto *v = new QVBoxLayout(panel);
@@ -343,6 +362,15 @@ QWidget *component(const QString &id) {
         auto *result = vertical({paragraph(QStringLiteral("Vertical stack")), new Field(QStringLiteral("First name"), first), new Field(QStringLiteral("Last name"), last), paragraph(QStringLiteral("Horizontal actions")), row({save, status}), paragraph(QStringLiteral("Wrapping options")), wrap({new QCheckBox(QStringLiteral("Include notes")), new QCheckBox(QStringLiteral("Include metadata")), new QCheckBox(QStringLiteral("Remember choices"))})});
         QObject::connect(save, &QPushButton::clicked, result, [=] { status->setText(QStringLiteral("Saved locally: ") + (first->text() + QStringLiteral(" ") + last->text()).trimmed()); }); return result;
     }
+    if (id == "bottom-panel") {
+        auto *split = new SplitPane(Qt::Vertical);
+        auto *work = new QLabel(QStringLiteral("Work area")); work->setProperty("sjRole", "muted"); work->setAlignment(Qt::AlignLeft | Qt::AlignTop); work->setContentsMargins(12, 12, 12, 12);
+        auto *panel = new BottomPanel; panel->setAccessibleName(QStringLiteral("Example panel"));
+        panel->addTab(new CodeBlock(QStringLiteral("Opened Spacing study\nOpened Layout notes")), QStringLiteral("Output"));
+        panel->addTab(paragraph(QStringLiteral("No problems.")), QStringLiteral("Problems"));
+        split->addWidget(work); split->addWidget(panel); split->setSizes({110, 230}); split->setMinimumHeight(340);
+        return split;
+    }
     if (id == "settings-row") return vertical({paragraph(QStringLiteral("Inline setting")), row({new QLabel(QStringLiteral("Keep a local history")), new HelpButton(QStringLiteral("About local history"), QStringLiteral("Only edits made inside this preview are affected.")), new QCheckBox(QStringLiteral("Enabled"))}), paragraph(QStringLiteral("Stacked setting")), new Field(QStringLiteral("Collection name"), new QLineEdit(QStringLiteral("Local notes")), QStringLiteral("A stacked setting gives longer values a full line."))});
     if (id == "list") { auto *list = new QListWidget; list->addItems({"Notes", "Palette", "Controls", "Layout"}); list->setAccessibleName(QStringLiteral("Local documents")); list->setMinimumHeight(160); auto *empty = new QCheckBox(QStringLiteral("Show empty collection")); auto *message = new QLabel(QStringLiteral("No documents in this collection.")); message->hide(); QObject::connect(empty, &QCheckBox::toggled, list, [=](bool isEmpty) { list->clear(); if (!isEmpty) list->addItems({"Notes", "Palette", "Controls", "Layout"}); message->setVisible(isEmpty); }); return vertical({empty, list, message}); }
     if (id == "table") return table();
@@ -359,6 +387,11 @@ QWidget *component(const QString &id) {
         QObject::connect(mode, &QComboBox::currentIndexChanged, result, [=](int index) { const QStringList titles{"No notes yet", "No matching notes", "Source unavailable", "Could not load notes"}; const QStringList details{"Create a note to start this local collection.", "Clear the search to see all notes.", "The local sample source is disconnected.", "The local sample operation did not finish."}; const QStringList actions{"Create local note", "Clear search", "Reconnect", "Retry"}; title->setText(titles[index]); detail->setText(details[index]); action->setText(actions[index]); action->setEnabled(true); });
         QObject::connect(action, &QPushButton::clicked, result, [=] { title->setText(QStringLiteral("Local sample ready")); detail->setText(QStringLiteral("The demonstration action completed.")); action->setEnabled(false); });
         return result;
+    }
+    if (id == "status-bar") {
+        auto *bar = new StatusBar; bar->setAccessibleName(QStringLiteral("Example status bar"));
+        bar->setState(QStringLiteral("Spacing study, saved")); bar->setFacts({QStringLiteral("12 sections"), QStringLiteral("Compact")});
+        return bar;
     }
     if (id == "loading") { auto *bar = new QProgressBar; bar->setRange(0, 0); bar->setAccessibleName(QStringLiteral("Indeterminate local loading preview")); auto *toggle = new QCheckBox(QStringLiteral("Show loading preview")); toggle->setChecked(true); auto *skeleton = new QFrame; skeleton->setProperty("sjRole", "panel"); auto *sl = new QVBoxLayout(skeleton); for (int i = 0; i < 3; ++i) { auto *line = new QLabel(QStringLiteral("Loading row %1").arg(i + 1)); line->setProperty("sjRole", "tag"); sl->addWidget(line); } QObject::connect(toggle, &QCheckBox::toggled, bar, &QWidget::setVisible); QObject::connect(toggle, &QCheckBox::toggled, skeleton, &QWidget::setVisible); return vertical({toggle, bar, skeleton, paragraph(QStringLiteral("Loading local preview. Duration unknown."))}); }
     if (id == "dialog") return vertical({confirmation(false), confirmation(true)});

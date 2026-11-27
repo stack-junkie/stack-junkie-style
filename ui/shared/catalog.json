@@ -426,6 +426,22 @@
             "disabled"
           ],
           "usage": "Keep result and page counts consistent."
+        },
+        {
+          "id": "menu-bar",
+          "label": "Menu bar",
+          "variants": [
+            "frame",
+            "standalone"
+          ],
+          "states": [
+            "default",
+            "open",
+            "focus",
+            "checked",
+            "disabled"
+          ],
+          "usage": "File, Edit, View, the app's menus, then Help. Settings sits under File and About under Help."
         }
       ],
       "icon": "menu"
@@ -509,6 +525,19 @@
             "disabled"
           ],
           "usage": "Keep the setting label, control and consequential explanation together."
+        },
+        {
+          "id": "bottom-panel",
+          "label": "Bottom panel",
+          "variants": [
+            "tabbed"
+          ],
+          "states": [
+            "default",
+            "resizing",
+            "hidden"
+          ],
+          "usage": "Output, problems or a terminal under the work area, with its own tab row."
         }
       ],
       "icon": "folder"
@@ -668,6 +697,17 @@
             "default"
           ],
           "usage": "Label the operation without inventing progress."
+        },
+        {
+          "id": "status-bar",
+          "label": "Status bar",
+          "variants": [
+            "state and facts"
+          ],
+          "states": [
+            "default"
+          ],
+          "usage": "The current item's state on the left and small facts on the right. Never ads or tips."
         }
       ],
       "icon": "alert"
