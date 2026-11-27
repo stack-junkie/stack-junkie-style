@@ -6,7 +6,7 @@ import { tipProps, type TipSide } from './tips';
 // data URLs, which SVG <use> does not support in current browsers.
 const symbols = Object.fromEntries([...sprite.matchAll(/<symbol\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/symbol>/g)].map(match => [match[1], match[2]]));
 
-export type IconName = 'search' | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'close' | 'menu' | 'sun' | 'moon' | 'check' | 'plus' | 'help' | 'settings' | 'grid' | 'code' | 'copy' | 'folder' | 'file' | 'alert' | 'play' | 'pause' | 'layout' | 'sidebar';
+export type IconName = 'search' | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'close' | 'menu' | 'sun' | 'moon' | 'check' | 'plus' | 'help' | 'settings' | 'grid' | 'code' | 'copy' | 'folder' | 'file' | 'alert' | 'play' | 'pause' | 'layout' | 'sidebar' | 'window-minimize' | 'window-maximize' | 'window-restore';
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><g dangerouslySetInnerHTML={{ __html: symbols[name] || '' }} /></svg>; }
 export function Button({ variant = 'secondary', busy = false, children, className = '', disabled, type = 'button', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; busy?: boolean }) {
   return <button {...props} type={type} disabled={disabled || busy} aria-busy={busy || undefined} className={`sj-button sj-button--${variant} ${className}`}>{busy && <Spinner label="Working" />}{children}</button>;

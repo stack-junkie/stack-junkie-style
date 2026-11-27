@@ -585,6 +585,22 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     aboutAction_ = helpMenu_->addAction(QStringLiteral("About Workspace"), this, [this] { if (aboutHandler_) aboutHandler_(); });
     toolbarLayout->addWidget(menuBar_, 0, Qt::AlignVCenter);
     toolbarLayout->addStretch();
+    // The window's own buttons, shown when the title bar is merged into this row.
+    windowButtons_ = new QWidget(toolbar_);
+    auto *buttonsLayout = new QHBoxLayout(windowButtons_); buttonsLayout->setContentsMargins(0, 0, 0, 0); buttonsLayout->setSpacing(0);
+    const QList<QPair<QString, QString>> buttons{{QStringLiteral("window-minimize"), QStringLiteral("Minimize")}, {QStringLiteral("window-maximize"), QStringLiteral("Maximize")}, {QStringLiteral("close"), QStringLiteral("Close")}};
+    for (const auto &[iconName, label] : buttons) {
+        auto *button = new IconButton(iconName, label, windowButtons_);
+        button->setProperty("sjTarget", false); button->setProperty("sjRole", "windowButton");
+        if (iconName == QStringLiteral("close")) button->setProperty("sjVariant", "close");
+        button->setFocusPolicy(Qt::NoFocus); button->setFixedSize(46, Theme::density(QStringLiteral("headerHeight"), 40)); button->setIconSize(QSize(16, 16));
+        buttonsLayout->addWidget(button);
+        if (iconName == QStringLiteral("window-minimize")) connect(button, &QToolButton::clicked, this, [this] { showMinimized(); });
+        else if (iconName == QStringLiteral("close")) connect(button, &QToolButton::clicked, this, [this] { close(); });
+        else { maxButton_ = button; connect(button, &QToolButton::clicked, this, [this] { toggleMaximized(); }); }
+    }
+    windowButtons_->hide();
+    toolbarLayout->addWidget(windowButtons_, 0, Qt::AlignTop);
     outer->addWidget(toolbar_);
     auto *body = new QHBoxLayout;
     body->setSpacing(0);
@@ -796,7 +812,9 @@ void Workspace::setSidebarVisible(bool visible) {
     if (railContainer_->isHidden()) {
         // With neither rail nor sidebar, Settings sits at the end of the header.
         auto *target = visible ? qobject_cast<QBoxLayout *>(sidebar_->layout()) : off ? qobject_cast<QBoxLayout *>(toolbar_->layout()) : qobject_cast<QBoxLayout *>(layout());
-        target->addWidget(settingsButton_); settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
+        // In the header, the gear sits at the end of the row, before any window buttons.
+        if (target == toolbar_->layout()) target->insertWidget(target->indexOf(windowButtons_), settingsButton_); else target->addWidget(settingsButton_);
+        settingsButton_->setVisible(settingsHandler_ || settingsSection_ >= 0);
     }
     collapse_->setChecked(visible);
     if (visible) splitter_->setSizes({savedWidth_, qMax(0, splitter_->width() - savedWidth_)});
@@ -974,6 +992,7 @@ void Workspace::applyDensity() {
     const int railWidth = Theme::density(QStringLiteral("railWidth"), 48);
     const int context = Theme::density(QStringLiteral("contextHeight"), 36);
     toolbar_->setMinimumHeight(Theme::density(QStringLiteral("headerHeight"), 40));
+    for (auto *button : windowButtons_->findChildren<QToolButton *>()) button->setFixedSize(Theme::load().scaled(46), Theme::density(QStringLiteral("headerHeight"), 40));
     rail_->setFixedWidth(railWidth);
     collapse_->setFixedSize(railWidth - 8, context);
     settingsButton_->setFixedSize(railWidth - 8, context);
@@ -1037,6 +1056,9 @@ AppShell::AppShell(const QString &name, const QString &description, const QStrin
     : Workspace(parent), settings_(new SettingsWindow(this)), name_(name), description_(description), version_(version) {
     initializeResources();
     setHeader(name);
+    setWindowTitle(name);
+    // A top-level app window gets one top row: the title bar merged with the logo, name and menus.
+    if (!parent) setMergedTitleBar(true);
     setSettingsHandler([this] { finishSettings(); settings_->show(); settings_->raise(); });
     auto *open = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_Comma), this);
     connect(open, &QShortcut::activated, this, [this] { finishSettings(); settings_->show(); settings_->raise(); });

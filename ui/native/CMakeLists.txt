@@ -68,7 +68,7 @@ endforeach()
 configure_file(resources/stackjunkie_resources.qrc.in "${CMAKE_CURRENT_BINARY_DIR}/stackjunkie_resources.qrc" @ONLY)
 configure_file(include/stackjunkie/version.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/include/stackjunkie/version.hpp" @ONLY)
 qt_add_resources(STACKJUNKIE_RESOURCES "${CMAKE_CURRENT_BINARY_DIR}/stackjunkie_resources.qrc")
-add_library(stackjunkie_widgets src/theme.cpp src/components.cpp src/advanced.cpp src/presets.cpp include/stackjunkie/components.hpp include/stackjunkie/presets.hpp ${STACKJUNKIE_RESOURCES})
+add_library(stackjunkie_widgets src/theme.cpp src/components.cpp src/advanced.cpp src/presets.cpp src/titlebar.cpp include/stackjunkie/components.hpp include/stackjunkie/presets.hpp ${STACKJUNKIE_RESOURCES})
 add_library(StackJunkie::Widgets ALIAS stackjunkie_widgets)
 set_target_properties(stackjunkie_widgets PROPERTIES EXPORT_NAME Widgets VERSION ${STACKJUNKIE_PACKAGE_VERSION} SOVERSION ${STACKJUNKIE_VERSION_MAJOR})
 generate_export_header(stackjunkie_widgets EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/include/stackjunkie/export.hpp" EXPORT_MACRO_NAME STACKJUNKIE_EXPORT)
@@ -77,6 +77,10 @@ target_include_directories(stackjunkie_widgets PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(stackjunkie_widgets PUBLIC Qt6::Widgets Qt6::Svg)
+# The merged title bar keeps the native frame behind a frameless window on Windows.
+if(WIN32)
+  target_link_libraries(stackjunkie_widgets PRIVATE dwmapi user32)
+endif()
 # Release builds of consumers refuse to compile while any STACKJUNKIE_STUB remains, even without NDEBUG.
 # Compare $<CONFIG> by name: $<CONFIG:...> on an imported target also matches its mapped configuration,
 # which would block Stubs in a Debug app linking a Release-only package.

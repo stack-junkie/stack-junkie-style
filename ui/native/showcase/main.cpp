@@ -148,6 +148,7 @@ int main(int argc, char *argv[]) {
         Workspace window;
         window.setWindowTitle(QStringLiteral("Stack Junkie Components %1").arg(QStringLiteral(STACKJUNKIE_VERSION)));
         window.setHeader(QStringLiteral("Stack Junkie UI"));
+        window.setMergedTitleBar(true);
         window.resize(1280, 900);
         window.setMinimumSize(480, 460);
         QSettings settings;

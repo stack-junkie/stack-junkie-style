@@ -335,6 +335,9 @@ QLabel[sjRole="versionChip"] { background: @raised; color: @muted; border: @metr
 QLabel[sjRole="aboutLinks"] { font-size: @labelSizepx; }
 QToolButton[sjRole="home"] { background: transparent; border: 0; padding: 2px 6px 2px 2px; font-size: @chromepx; font-weight: @mediumWeight; min-height: 0; }
 QToolButton[sjRole="home"]:hover { background: @raised; }
+QToolButton[sjRole="windowButton"] { background: transparent; border: 0; border-radius: 0; padding: 0; min-height: @headerHeightpx; max-height: @headerHeightpx; min-width: 46px; max-width: 46px; }
+QToolButton[sjRole="windowButton"]:hover, QToolButton[sjRole="windowButton"][sjHover="true"] { background: @raised; }
+QToolButton[sjRole="windowButton"][sjVariant="close"]:hover { background: @danger; }
 )CSS");
     // Replace longer token names first so @accent cannot consume @accentHover.
     QStringList keys = colors.keys();
@@ -342,6 +345,7 @@ QToolButton[sjRole="home"]:hover { background: @raised; }
     for (const auto &key : keys) css.replace(QStringLiteral("@") + key, colors.value(key).toString());
     css.replace(QStringLiteral("@caption"), QString::number(rawTypeSize(QStringLiteral("caption"), 12)));
     css.replace(QStringLiteral("@contextInnerHeight"), QString::number(rawDensity(QStringLiteral("contextHeight"), 36) - 2 * metric(QStringLiteral("borderWidth"), 1)));
+    css.replace(QStringLiteral("@headerHeight"), QString::number(rawDensity(QStringLiteral("headerHeight"), 40)));
     css.replace(QStringLiteral("@heading"), QString::number(rawTypeSize(QStringLiteral("heading"), 22)));
     css.replace(QStringLiteral("@section"), QString::number(rawTypeSize(QStringLiteral("section"), 16)));
     css.replace(QStringLiteral("@labelSize"), QString::number(rawTypeSize(QStringLiteral("label"), 14)));

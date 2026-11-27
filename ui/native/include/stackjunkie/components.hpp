@@ -313,6 +313,11 @@ public:
     /** Zoom the whole app, 50 to 200 percent, as View > Appearance and Control plus, minus and 0 do. */
     void setZoom(int percent);
     int zoom() const;
+    /** One top row for the window: the logo, name and menus sit in the title bar with the window's own buttons, so the
+        name shows once. Dragging the row moves the window, a double click maximizes it, the edges resize it, and on
+        Windows 11 the maximize button shows snap layouts. AppShell turns it on for a top-level window. */
+    void setMergedTitleBar(bool merged);
+    bool mergedTitleBar() const { return merged_; }
     /** View > Appearance: the Sidebar, Status bar and Panel toggles and the zoom commands. */
     QMenu *appearanceMenu() const { return appearanceMenu_; }
     void restoreSettings(const QString &key);
@@ -349,7 +354,17 @@ signals:
     void logoChanged();
 protected:
     void resizeEvent(QResizeEvent *event) override;
+    void changeEvent(QEvent *event) override;
+    void showEvent(QShowEvent *event) override;
+    bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
+    bool eventFilter(QObject *object, QEvent *event) override;
 private:
+    void updateWindowButtons();
+    void toggleMaximized();
+    bool isTitleArea(QWidget *widget, const QPoint &globalPos) const;
+    bool merged_ = false, edgeCursor_ = false;
+    QWidget *windowButtons_ = nullptr;
+    QToolButton *maxButton_ = nullptr;
     void refreshNavigation();
     void refreshTabRow();
     void syncNavigation();
