@@ -1,49 +1,43 @@
 # Product UX rules
 
-Use this reference for content, disclosure, feedback and interaction. Choose structure with [layouts](layouts.md) and reuse the [components](components.md) that implement the behavior.
+Structure comes from the [App frame](app-frame.md); text follows [no slop](no-slop.md).
 
-## Preserve the requested result
+## Build what was asked
 
-Reconcile the requested outcome, existing operations, approved mockup details and later amendments. Separate owner choices from assistant proposals. Preserve capability when simplifying and keep platform-specific scope intact. A mobile change is not permission to redesign desktop behavior.
+- Build exactly the requested result: add nothing, remove nothing. Propose anything extra and wait for Chris's yes.
+- Before a material redesign, show something Chris can look at (a coded mockup or the change in the real app) and wait for approval. Match the approved mockup, including placement and state behavior.
+- Never regress. Simplifying keeps every existing operation, control and fixed behavior. A change on one platform stays on that platform.
+- A prototype, an app and a packaged release are different requests; deliver the one asked for.
 
-An approved composition includes placement and state behavior. A collapsed context field must actually be absent when that is the chosen behavior. A prototype, application and packaged deliverable are different requests; deliver the one requested at the required interaction depth.
+## What stays visible
 
-## Visible content and optional detail
+- Show only what the core task needs: the current object, required input, next action, consequential state and blocking information. Everything else goes in tabs, Settings or a small circled "?" help control.
+- Per-run choices sit beside their operation; persistent defaults go in the Settings window.
+- Put things where people expect them. Follow platform conventions.
+- A quiet empty area beats invented content. Empty states name what is missing and offer a real next action. Distinguish an empty collection, no filter matches, an unavailable capability and a failed operation.
 
-Keep the current object, required input, next action, consequential state and blocking information visible. Place per-run choices beside their operation; persistent defaults belong in Settings. Make secondary operations discoverable without competing with the primary task.
+## Dashboards
 
-Do not invent metrics, activity, categories, controls or filler copy to complete a layout. A quiet empty area is preferable to invented content. Empty states explain the missing object and a real next action. Distinguish an empty collection, no filtered matches, unavailable capability and failed operation.
+A Dashboard is allowed only when each tile shows a real number that answers a question the user actually asks and links to where they act on it. No Preset turns `dashboardHome` on by default, so a Dashboard is always a deliberate choice. No big summary cards on top of ordinary pages. The reference is the Projects dashboard in [ui/apps/projects](../ui/apps/projects/).
 
-### Standalone titles
+## Help
 
-Titles stand alone by default. Do not automatically add subtitles, eyebrow labels, taglines or introductory paragraphs. Supporting text must add necessary context, a consequence or help with acting. If navigation already names the page, a duplicate heading needs a separate purpose. Do not promote the selected object into a large title merely to fill a summary panel.
+- A named "?" control sits where a real explanation helps. Hover or keyboard focus previews it; click or tap pins it; Escape or an outside click dismisses it and returns focus sensibly.
+- Pinned or interactive help is a nonmodal popover; a tooltip is brief and noninteractive. Essential instructions, state and errors are visible on the page, never only in either.
+- Help never just repeats the visible label.
 
-Keep labels, values, prerequisites, errors, warnings and recovery instructions visible when they matter. Disclose occasional explanations or advanced controls through a predictable label. Avoid unnecessary nested disclosures. Removing a redundant summary must leave its actual controls and consequences available.
+## Operations and feedback
 
-## Contextual help
+- Every action gets a response matched to its duration: local changes show themselves; longer work shows busy or progress state and offers Cancel.
+- Persistent status and Stop or Cancel come from the running operation, not the selected page.
+- On failure, keep the input, explain the failure next to its cause and offer recovery. Block duplicate submission while pending.
+- Confirm only destructive actions that cannot be undone. Routine actions, including closing a tab, never ask "Are you sure?".
+- Distinguish paused, failed, disconnected and completed.
 
-Provide a named question-mark control where a real explanation is useful. Hover or keyboard focus previews help; click or tap pins it. Escape or an outside click dismisses it. Keep it available while the pointer enters the help and inside the available window. Restore focus appropriately after dismissal. Clicking another meaningful control should keep focus on that control.
+## Containers
 
-Use a nonmodal popover for pinned, linked or interactive help. A simple tooltip is supplemental and noninteractive. Never put essential instructions, state or errors only in either surface. Do not repeat a visible label as its entire explanation. Support keyboard and touch without requiring hover. Give the control a usable target even when the symbol is small.
+Tooltip for brief extra text, popover for contextual help, inspector for persistent secondary controls, modal for a blocking decision, page for long material. Overlays and notices always have a visible way to close them and never cover controls without one.
 
-## Operations, feedback and recovery
+## Accessibility
 
-An action needs a perceivable response proportionate to its duration. Local changes can confirm themselves; longer work needs busy or progress state and appropriate cancellation. Preserve input on failure, explain the failure near its consequence and offer recovery. Prevent duplicate submission while the operation is pending. Reserve confirmation for consequential, hard-to-reverse actions.
-
-Derive persistent status and Stop or Cancel from the running operation. Switching pages or tabs must not change the reported operation, input ownership or stop action. A page named Hold cannot claim the pointer is free while foreground playback is using it. Keep operation state separate from the selected view.
-
-Preserve edits, selections, filters, scroll position and relevant pane state across navigation and disclosure. Resolve unsaved work before discarding it. Failed saves preserve the draft and prevent pending navigation that would lose it. Distinguish paused, failed, disconnected and completed states.
-
-## Reflow, text and access
-
-At narrow sizes, reduce excess spacing, wrap text, collapse secondary navigation or stack regions before making controls unreadable. Keep primary actions, important state and a route to secondary capabilities available. Scroll the appropriate content region. A no-scroll requirement belongs to the product that requested it; plots, maps and data grids may need two-dimensional navigation.
-
-Wrap natural language at word boundaries. Break long identifiers only when necessary. Do not truncate primary actions, errors or required instructions. Constrained paths and table values may use ellipsis if the full value is reachable through focus, selection or detail. Exercise long names and larger text through permitted checks and owner review.
-
-Use semantic controls with accessible names, roles, values and state. Preserve keyboard activation, logical focus order, visible focus, text scaling and reduced motion. Do not rely on color or sound alone. Native widgets must expose native accessibility semantics. Do not claim screen-reader or keyboard acceptance from source inspection alone.
-
-## Containers and inspection
-
-Choose a tooltip for brief supplemental text, a popover for contextual help, an inspector for persistent secondary controls, a modal for a blocking decision, and a page for long material. Modal focus and dismissal must be intentional. Avoid visually competing background controls when a true modal is active.
-
-Explain hierarchy and narrow behavior briefly before a material redesign. Use permitted source, API and CLI checks. The owner operates the GUI; do not use browser or desktop automation. Report unreviewed appearance, keyboard, assistive-technology or native behavior accurately. Do not add reports, validators or checking infrastructure to ordinary UI work.
+Semantic controls with accessible names, roles, values and state. Keyboard activation, logical focus order, visible focus, text scaling and reduced motion all work. Native widgets keep native accessibility. Never rely on color or sound alone. Sizing and contrast rules are in [look](look.md). Report screen-reader and keyboard behavior you did not actually exercise as unchecked.
