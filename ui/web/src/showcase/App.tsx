@@ -5,7 +5,7 @@ import { LayoutPage, layoutPages, type FrameSettings } from './layouts';
 import catalog from '../../../shared/catalog.json';
 import './showcase.css';
 import { SiteWordmark } from './SiteWordmark';
-import { exportApp } from './exportApp';
+import { ExportDialog } from './ExportDialog';
 
 const demoFamilies: Record<string, React.ComponentType<{ id: string }>> = { foundations: FoundationDemo, actions: ActionDemo, inputs: InputDemo, navigation: NavigationDemo, containers: ContainerDemo, collections: CollectionDemo, feedback: FeedbackDemo, overlays: OverlayDemo, content: ContentDemo };
 const prefix = 'sj-v3';
@@ -94,7 +94,7 @@ export default function App() {
     brand={<UI.Button variant="quiet" className="app-brand home-link" aria-label="Home" title="Home" onClick={() => navigate('home')}><SiteWordmark /></UI.Button>}
     sidebarHeader={searchHere ? search : null} sidebar={searchHere && needle ? searchResults : undefined} sidebarTitle={sidebarTitle}
     menuItems={{
-      file: [{ id: 'export', label: 'Export app frame…', run: () => setExportOpen(true) }],
+      file: [{ id: 'export', label: 'Export starter…', run: () => setExportOpen(true) }],
       edit: [{ id: 'find', label: 'Find component', run: findComponent }, { id: 'copy-name', label: 'Copy component name', disabled: !pageLabel || section === 'home', run: () => { void navigator.clipboard?.writeText(pageLabel ?? ''); } }],
       view: choices.commandPalette ? [{ id: 'commands', label: 'Command palette', shortcut: 'Ctrl+K', run: () => setCommands(true) }] : [],
       help: [{ id: 'keyboard', label: 'Keyboard shortcuts', run: () => openSettings('keyboard') }],
@@ -122,15 +122,13 @@ export default function App() {
         {Object.keys(overrides).length > 0 && <div><UI.Button onClick={() => choosePreset(preset)}>Reset to {UI.presets.find(p => p.id === preset)?.label}</UI.Button></div>}
         {([['resizableSidebar', 'Resizable sidebar', 'Drag the sidebar edge to any width.'], ['collapsibleSidebar', 'Collapsible sidebar', 'The menu button hides and shows the sidebar.']] as const).map(([key, label, description]) =>
           <UI.SettingsRow key={key} label={label} description={description}><UI.Switch label={label} checked={layout[key]} disabled={choices.sidebar === 'off'} onChange={e => setLayout(l => ({ ...l, [key]: e.target.checked }))} /></UI.SettingsRow>)}
-        <UI.SettingsRow label="Export" description="Download an App.tsx that imports the library at this version and uses this preset and these choices."><UI.Button variant="primary" onClick={() => setExportOpen(true)}>Export app frame</UI.Button></UI.SettingsRow>
+        <UI.SettingsRow label="Export" description="Download a web or native starter project that installs the library at this version and uses this preset and these choices."><UI.Button variant="primary" onClick={() => setExportOpen(true)}>Export starter</UI.Button></UI.SettingsRow>
         <div><UI.Button onClick={() => { navigate('layouts', 'starter'); setSettings(s => ({ ...s, open: false })); }}>Preview the starter app</UI.Button></div>
       </UI.SettingsSection> },
       { id: 'keyboard', label: 'Keyboard', keywords: 'shortcuts keys resize command', content: <UI.SettingsSection label="Keyboard"><UI.Prose><p>Drag a sidebar divider to resize it. Arrow keys adjust a focused divider; Home and End use its available range.</p><p>Control K opens command search. Control comma opens Settings. In a row of open documents, Delete or Control W closes the focused tab.</p><p>With the Menu bar on, Control B shows or hides the sidebar and Control J the bottom panel. In the Menu bar, arrow keys move between menus and items and Escape closes the open menu.</p></UI.Prose></UI.SettingsSection> },
     ]}
     overlays={<>
-      <UI.Dialog open={exportOpen} onClose={() => setExportOpen(false)} title="Export app frame" size="large" actions={<><UI.Button onClick={() => setExportOpen(false)}>Close</UI.Button><UI.Button variant="primary" onClick={() => { const url = URL.createObjectURL(new Blob([exportApp(frame)], { type: 'text/plain' })); const a = document.createElement('a'); a.href = url; a.download = 'App.tsx'; a.click(); URL.revokeObjectURL(url); }}>Download App.tsx</UI.Button></>}>
-        <div className="export-body"><p className="showcase-only-note">Showcase only. The file imports the library pinned to {UI.systemVersion}; it copies no components or styles.</p><UI.CodeBlock language="App.tsx" code={exportApp(frame)} /></div>
-      </UI.Dialog>
-      {choices.commandPalette && <UI.CommandPalette open={commands} onClose={() => setCommands(false)} commands={[...catalog.families.map(f => ({ id: f.id, label: `Open ${f.label.toLowerCase()}`, run: () => navigate(f.id) })), { id: 'settings', label: 'Open Settings', run: () => openSettings() }, { id: 'export', label: 'Export app frame', run: () => setExportOpen(true) }, { id: 'theme', label: `Use ${mode === 'dark' ? 'light' : 'dark'} theme`, run: () => setMode(mode === 'dark' ? 'light' : 'dark') }]} />}
+      <ExportDialog open={exportOpen} onClose={() => setExportOpen(false)} preset={preset} overrides={overrides} />
+      {choices.commandPalette && <UI.CommandPalette open={commands} onClose={() => setCommands(false)} commands={[...catalog.families.map(f => ({ id: f.id, label: `Open ${f.label.toLowerCase()}`, run: () => navigate(f.id) })), { id: 'settings', label: 'Open Settings', run: () => openSettings() }, { id: 'export', label: 'Export starter', run: () => setExportOpen(true) }, { id: 'theme', label: `Use ${mode === 'dark' ? 'light' : 'dark'} theme`, run: () => setMode(mode === 'dark' ? 'light' : 'dark') }]} />}
     </>} />;
 }

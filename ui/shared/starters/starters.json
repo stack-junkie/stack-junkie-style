@@ -1,0 +1,33 @@
+{
+  "repository": "https://github.com/stack-junkie/stack-junkie-style",
+  "web": {
+    "label": "Web starter",
+    "description": "A Vite, React and TypeScript project.",
+    "files": {
+      "package.json": "web/package.json.tmpl",
+      "index.html": "web/index.html.tmpl",
+      "src/main.tsx": "web/main.tsx.tmpl",
+      "src/App.tsx": "web/App.tsx.tmpl",
+      "vite.config.ts": "web/vite.config.ts.tmpl",
+      "tsconfig.json": "web/tsconfig.json.tmpl",
+      ".gitignore": "web/gitignore.tmpl",
+      "README.md": "web/README.md.tmpl"
+    },
+    "presetFiles": {
+      "website": { "src/App.tsx": "web/App.website.tsx.tmpl" }
+    }
+  },
+  "native": {
+    "label": "Native starter",
+    "description": "A CMake project for Qt 6 Widgets.",
+    "files": {
+      "CMakeLists.txt": "native/CMakeLists.txt.tmpl",
+      "main.cpp": "native/main.cpp.tmpl",
+      ".gitignore": "native/gitignore.tmpl",
+      "README.md": "native/README.md.tmpl"
+    },
+    "unsupported": {
+      "website": "The Website preset has no native starter: the native library has no Website layout. Export a web starter instead."
+    }
+  }
+}

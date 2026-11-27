@@ -103,7 +103,19 @@ Pass a preset to `AppShell`, and override single choices with `choices`:
 
 What the frame draws today: the rail; the sidebar as a tree, a flat list or nothing; closable document tabs (beside a sidebar); the default theme, where `system` follows the device; and compact or comfortable density. The frame does not own a command palette, so `overlays` can be a function that receives the choices, and `useShellChoices()` reads them anywhere inside the frame. The Menu bar, Status bar and bottom panel are drawn when their choices are on (see below). The Website preset is not drawn by `AppShell`; use `WebsiteLayout` (below). Given `preset="website"`, `AppShell` only turns its rail and sidebar off.
 
-In the showcase, Settings > Layout holds the preset picker and every choice. Changes apply to the showcase frame at once, are saved in local storage, and Export writes them into `App.tsx`. For the Website preset, Export writes an `App.tsx` that uses `WebsiteLayout`, and Preview the starter app shows it.
+In the showcase, Settings > Layout holds the preset picker and every choice. Changes apply to the showcase frame at once, are saved in local storage, and Export writes them into a starter project (see Export below). Preview the starter app shows the frame a starter gets, including the Website layout.
+
+### Export
+
+Settings > Layout > Export starter writes a new project that matches the chosen preset and changed choices, as one zip (`my-app-web-starter.zip` or `my-app-native-starter.zip`). Pick Web starter or Native starter and preview any file before downloading.
+
+- Web starter: a Vite, React and TypeScript project. `package.json` depends on `@stack-junkie/ui-web` as a git dependency pinned to this version's tag (`git+https://github.com/stack-junkie/stack-junkie-style.git#v<version>`, ADR 0003). It has `index.html`, `src/main.tsx`, `src/App.tsx` (`AppShell` with the preset and choices, or `WebsiteLayout` for the Website preset), `vite.config.ts` with `stackJunkieStubGuard()`, `tsconfig.json`, `.gitignore` and a short README.
+- Native starter: `CMakeLists.txt` and `main.cpp` (see the native README). The Website preset has no native starter, and the dialog says so.
+- `src/App.tsx` lists only the choices that differ from the preset, so deleting one goes back to the preset.
+
+The file list and templates live in `../shared/starters`. `starters.mjs` beside them is the one generator: given a platform, a preset id and overrides, it returns the files. The native showcase fills the same templates the same way, so both Exports write identical starters.
+
+`npm run test:starters` is the preset-to-starter test. It builds the library (`npm run build:library`), then for every preset generates the web starter into a temporary folder and typechecks and builds it against the local package (the dependency is pointed at this folder with `file:`). For the three app presets it builds and installs the native library into a temporary prefix, then configures, builds and starts (offscreen) each native starter with CMake, plus once through the FetchContent fallback with a local source. A desktop-app case with custom choices checks they reach the starter, and every starter is compared with the native showcase's `--export-starter` output. Each case prints PASS or FAIL; any failure exits non-zero. Native cases need CMake, Visual Studio 2022 C++ tools and Qt 6: pass `-- --qt <prefix>`, set `STACKJUNKIE_QT`, or keep Qt in `../.tools/Qt/6.8.3/msvc2022_64`. `-- --only web` or `-- --only native` runs one side, and `-- --keep` keeps the generated starters.
 
 ### Menu bar, Status bar and bottom panel
 

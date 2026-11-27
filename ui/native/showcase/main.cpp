@@ -1,4 +1,5 @@
 #include "gallery.hpp"
+#include "starter.hpp"
 #include <stackjunkie/components.hpp>
 #include <stackjunkie/version.hpp>
 #include <QApplication>
@@ -11,6 +12,7 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QDir>
+#include <QFileDialog>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QImage>
@@ -45,7 +47,8 @@ static QWidget *settingsRow(const QString &label, const QString &description, QW
 }
 int main(int argc, char *argv[]) {
     bool exporting = false;
-    for (int i = 1; i < argc; ++i) if (std::strcmp(argv[i], "--export-preview") == 0 || std::strncmp(argv[i], "--export-preview=", 17) == 0) exporting = true;
+    for (int i = 1; i < argc; ++i) if (std::strcmp(argv[i], "--export-preview") == 0 || std::strncmp(argv[i], "--export-preview=", 17) == 0
+        || std::strcmp(argv[i], "--export-starter") == 0 || std::strncmp(argv[i], "--export-starter=", 17) == 0) exporting = true;
     if (exporting && qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
     app.setOrganizationName(QStringLiteral("StackJunkie"));
@@ -56,6 +59,8 @@ int main(int argc, char *argv[]) {
     parser.setApplicationDescription(QStringLiteral("Stack Junkie native component library showcase"));
     parser.addHelpOption(); parser.addVersionOption();
     parser.addOption({QStringLiteral("export-preview"), QStringLiteral("Render a PNG using the offscreen platform, then exit."), QStringLiteral("file")});
+    parser.addOption({QStringLiteral("export-starter"), QStringLiteral("Write the starter project for the preset and choices into a folder, then exit."), QStringLiteral("folder")});
+    parser.addOption({QStringLiteral("starter"), QStringLiteral("Starter for --export-starter: web or native."), QStringLiteral("platform"), QStringLiteral("web")});
     parser.addOption({QStringLiteral("theme"), QStringLiteral("light or dark"), QStringLiteral("theme")});
     parser.addOption({QStringLiteral("page"), QStringLiteral("Family ID, family/component ID, home, settings or settings/<section>"), QStringLiteral("page")});
     parser.addOption({QStringLiteral("menu"), QStringLiteral("Show one Menu bar menu open in the export: file, edit, view, library or help."), QStringLiteral("menu")});
@@ -65,6 +70,22 @@ int main(int argc, char *argv[]) {
     parser.process(app);
     try {
         initializeResources();
+        if (parser.isSet(QStringLiteral("export-starter"))) {
+            // The same starter Settings > Layout > Export writes: --preset alone, or the saved preset and choices, then each --choice.
+            QSettings saved;
+            const QString id = parser.isSet(QStringLiteral("preset")) ? parser.value(QStringLiteral("preset")) : saved.value(QStringLiteral("layout/preset"), QStringLiteral("web-app")).toString();
+            if (!Preset::exists(id)) { std::fprintf(stderr, "Unknown preset\n"); return 2; }
+            auto choices = Preset::resolve(id, parser.isSet(QStringLiteral("preset")) ? QVariantMap() : saved.value(QStringLiteral("layout/choices")).toMap());
+            for (const auto &assignment : parser.values(QStringLiteral("choice")))
+                if (!choices.setValue(assignment.section(QLatin1Char('='), 0, 0), assignment.section(QLatin1Char('='), 1))) { std::fprintf(stderr, "Unknown choice or value\n"); return 2; }
+            const auto starter = generateStarter(parser.value(QStringLiteral("starter")), id, Preset::overrides(id, choices));
+            if (!starter.error.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(starter.error)); return 2; }
+            if (!starter.unsupported.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(starter.unsupported)); return 2; }
+            const QString error = writeStarter(starter, parser.value(QStringLiteral("export-starter")));
+            if (!error.isEmpty()) { std::fprintf(stderr, "%s\n", qPrintable(error)); return 3; }
+            std::printf("Wrote %d files to %s\n", int(starter.files.size()), qPrintable(QDir::toNativeSeparators(QFileInfo(parser.value(QStringLiteral("export-starter"))).absoluteFilePath())));
+            return 0;
+        }
         Workspace window;
         window.setWindowTitle(QStringLiteral("Stack Junkie Components %1").arg(QStringLiteral(STACKJUNKIE_VERSION)));
         window.setHeader(QStringLiteral("Stack Junkie UI"));
@@ -255,6 +276,16 @@ int main(int argc, char *argv[]) {
         }
         auto *reset = new Button(QString());
         layoutPage->contentLayout()->addWidget(row({reset}));
+        // Export writes a starter project for this preset and these choices into a folder the user picks.
+        auto *starterBox = new QComboBox; starterBox->setMinimumWidth(180);
+        for (const auto &platform : {QStringLiteral("web"), QStringLiteral("native")}) starterBox->addItem(starterLabel(platform), platform);
+        QLabel *exportHelp = nullptr;
+        const QString exportDescription = QStringLiteral("Write a starter project that installs the library at this version and uses this preset and these choices.");
+        layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Export"), exportDescription, starterBox, &exportHelp));
+        auto *exportButton = new Button(QStringLiteral("Export starter..."), ButtonVariant::Primary);
+        auto *exportResult = new QLabel; exportResult->setProperty("sjRole", "muted"); exportResult->setWordWrap(true); exportResult->setVisible(false);
+        layoutPage->contentLayout()->addWidget(row({exportButton}));
+        layoutPage->contentLayout()->addWidget(exportResult);
         auto syncLayout = [&] {
             const auto choices = Preset::resolve(presetId, overrides);
             { QSignalBlocker blocker(presetBox); presetBox->setCurrentIndex(presetBox->findData(presetId)); }
@@ -266,6 +297,9 @@ int main(int argc, char *argv[]) {
             }
             reset->setText(QStringLiteral("Reset to ") + Preset::find(presetId).label);
             reset->setVisible(!overrides.isEmpty());
+            const QString unsupported = generateStarter(starterBox->currentData().toString(), presetId, overrides).unsupported;
+            exportHelp->setText(unsupported.isEmpty() ? exportDescription : unsupported);
+            exportButton->setEnabled(unsupported.isEmpty());
         };
         auto applyLayout = [&] {
             window.setChoices(Preset::resolve(presetId, overrides));
@@ -284,6 +318,20 @@ int main(int argc, char *argv[]) {
         };
         QObject::connect(presetBox, &QComboBox::currentIndexChanged, &window, [&](int) { choosePreset(presetBox->currentData().toString()); });
         QObject::connect(reset, &QPushButton::clicked, &window, [&] { choosePreset(presetId); });
+        QObject::connect(starterBox, &QComboBox::currentIndexChanged, &window, [&](int) { syncLayout(); exportResult->setVisible(false); });
+        QObject::connect(exportButton, &QPushButton::clicked, &window, [&] {
+            const QString platform = starterBox->currentData().toString();
+            const auto starter = generateStarter(platform, presetId, overrides);
+            if (!starter.error.isEmpty() || !starter.unsupported.isEmpty()) return;
+            const QString folder = QFileDialog::getExistingDirectory(settingsWindow, QStringLiteral("Export %1 to a folder").arg(starterLabel(platform).toLower()));
+            if (folder.isEmpty()) return;
+            QStringList existing;
+            for (const auto &file : starter.files) if (QFileInfo::exists(QDir(folder).filePath(file.path))) existing << file.path;
+            if (!existing.isEmpty() && QMessageBox::question(settingsWindow, QStringLiteral("Replace files?"), QStringLiteral("The folder already has %1. Replace them?").arg(existing.join(QStringLiteral(", ")))) != QMessageBox::Yes) return;
+            const QString error = writeStarter(starter, folder);
+            exportResult->setText(error.isEmpty() ? QStringLiteral("Wrote %1 files to %2.").arg(starter.files.size()).arg(QDir::toNativeSeparators(folder)) : error);
+            exportResult->setVisible(true);
+        });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, &window, [&] { if (Preset::resolve(presetId, overrides).theme == QStringLiteral("system")) showTheme(QStringLiteral("system")); });
 #endif

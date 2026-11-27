@@ -121,6 +121,23 @@ shell.bottomPanel()->addTab(output, QStringLiteral("Output"));
 - `BottomPanel`: a panel under the work area in a vertical splitter, with its own tab row (`addTab`) and a close control. It is drawn only once it has a tab. View > Bottom panel or `setBottomPanelShown` hides it for the session, as `setStatusBarShown` does for the Status bar.
 
 The native showcase uses all three: the current component on the left of the Status bar, its family and the library version on the right, and Output and Problems in the bottom panel. Export one menu open with `--menu file|edit|view|library|help`.
+
+## Export
+
+Settings > Layout > Export picks Web starter or Native starter, and Export starter writes that project into a folder you choose (it asks before replacing files). The starter matches the chosen preset and changed choices.
+
+- Native starter: `CMakeLists.txt`, `main.cpp`, `.gitignore` and a short README. `CMakeLists.txt` uses an installed package through `find_package(StackJunkie)` when `CMAKE_PREFIX_PATH` finds one, and otherwise fetches this version's tag with FetchContent (`https://github.com/stack-junkie/stack-junkie-style.git`, `GIT_TAG v<version>`, `SOURCE_SUBDIR ui/native`, ADR 0003). `main.cpp` builds an `AppShell` and calls `AppShell::setPreset(id, choices)` with only the choices that differ from the preset.
+- Web starter: the same Vite, React and TypeScript project the web showcase exports (see the web README).
+- The Website preset has no native starter, because native has no Website layout; the row says so and Export starter is disabled.
+
+The templates and file list live in `../shared/starters`; `showcase/starter.cpp` fills them exactly as `starters.mjs` does on web. For scripts and tests:
+
+```sh
+StackJunkieShowcase --export-starter my-app --starter native --preset desktop-app --choice sidebar=tree
+```
+
+`--export-starter <folder>` writes the starter and exits without opening a window (it uses the offscreen platform). `--starter` is `web` (the default) or `native`; `--preset` and `--choice` work as for `--export-preview`. Without `--preset` it uses the saved preset and choices. The website preset with `--starter native` exits with code 2 and says why. `npm run test:starters` in `../web` builds every starter (see the web README).
+
 ## Stub
 
 A Stub marks development stand-in content: sample text, fake data, unfinished labels. Create one only with the macro, which records its file and line:
