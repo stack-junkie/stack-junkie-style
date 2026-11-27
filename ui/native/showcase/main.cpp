@@ -106,6 +106,18 @@ int main(int argc, char *argv[]) {
         }
         const int homeIndex = window.addPage(QStringLiteral("Overview"), homePage, QStringLiteral("grid"), homeSection);
         pageIds << QStringLiteral("home");
+#if STACKJUNKIE_STUBS_ALLOWED
+        // Development builds only. A release build refuses to compile a Stub, so the release showcase has none.
+        auto *stubPage = new SettingsPage(QStringLiteral("Stub"));
+        stubPage->contentLayout()->addWidget(paragraph(QStringLiteral("Development stand-in content is striped. Release builds refuse to finish while any Stub remains.")));
+        stubPage->contentLayout()->addWidget(STACKJUNKIE_STUB(QStringLiteral("Release notes go here once the first release exists.")));
+        stubPage->contentLayout()->addWidget(STACKJUNKIE_STUB(new Field(QStringLiteral("Owner"), new QLineEdit(QStringLiteral("Sample owner")))));
+        auto *hinted = new QLineEdit; hinted->setPlaceholderText(QStringLiteral("e.g. Field notes"));
+        stubPage->contentLayout()->addWidget(new Field(QStringLiteral("Project name"), hinted, QStringLiteral("Hint text is not a Stub: it stays plain.")));
+        stubPage->contentLayout()->addStretch();
+        window.addPage(QStringLiteral("Stub"), stubPage, QStringLiteral("file"), homeSection);
+        pageIds << QStringLiteral("stub");
+#endif
         QObject::connect(homeButton, &QPushButton::clicked, &window, [&window, homeIndex] { window.setCurrentPage(homeIndex); });
         window.setCurrentPage(homeIndex);
         if (!exporting) {

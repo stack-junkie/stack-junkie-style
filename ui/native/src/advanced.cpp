@@ -3,6 +3,7 @@
 #include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QEvent>
+#include <QFileInfo>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -277,5 +278,40 @@ void Canvas::synchronizeSelection() {
 bool Canvas::eventFilter(QObject *object, QEvent *event) {
     if (object == view_->viewport() && (event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::KeyRelease)) QTimer::singleShot(0, this, &Canvas::synchronizeSelection);
     return QWidget::eventFilter(object, event);
+}
+Stub::Stub(Site site, const QString &text, QWidget *parent): QFrame(parent) {
+    auto *label = new QLabel(text); label->setWordWrap(true); label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    auto *layout = new QVBoxLayout(this); layout->setContentsMargins(Theme::spacing(3), Theme::spacing(2), Theme::spacing(3), Theme::spacing(2));
+    layout->addWidget(label);
+    mark(site);
+}
+Stub::Stub(Site site, QWidget *content, QWidget *parent): QFrame(parent) {
+    // A wrapped widget paints its own background, so the stripes show as a band around it.
+    auto *layout = new QVBoxLayout(this); const int band = Theme::spacing(2);
+    layout->setContentsMargins(band, band, band, band);
+    if (content) layout->addWidget(content);
+    mark(site);
+}
+void Stub::mark(Site site) {
+    setProperty("sjRole", "stub");
+    location_ = QFileInfo(QString::fromUtf8(site.file)).fileName() + QStringLiteral(":") + QString::number(site.line);
+    setToolTip(QStringLiteral("Stub at %1. Release builds refuse to finish while it remains.").arg(location_));
+    setAccessibleDescription(QStringLiteral("Stub, development stand-in content, at ") + location_);
+}
+void Stub::paintEvent(QPaintEvent *) {
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const auto theme = currentTheme(this);
+    const QColor ground = theme.color(QStringLiteral("surface"));
+    QColor stripe = theme.color(QStringLiteral("warning")); stripe.setAlphaF(theme.dark ? 0.24 : 0.16);
+    painter.fillRect(rect(), ground);
+    painter.save();
+    painter.setClipRect(rect());
+    painter.setPen(QPen(stripe, 6, Qt::SolidLine, Qt::FlatCap));
+    for (int x = -height(); x < width() + height(); x += 16) painter.drawLine(QPointF(x, height()), QPointF(x + height(), 0));
+    painter.restore();
+    painter.setPen(QPen(theme.color(QStringLiteral("warning")), 1, Qt::DashLine));
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5));
 }
 }

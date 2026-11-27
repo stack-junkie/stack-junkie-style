@@ -303,8 +303,41 @@ private:
     bool dark_ = true;
     bool settingsFinished_ = false;
 };
+// Development stand-in content (sample text, fake data, unfinished labels). Create it only with
+// STACKJUNKIE_STUB. Development builds paint it striped; release builds fail at each remaining Stub.
+// Hint text inside an empty input is not a Stub.
+class STACKJUNKIE_EXPORT Stub : public QFrame {
+public:
+    struct Site { const char *file; int line; };
+    Stub(Site site, const QString &text, QWidget *parent = nullptr);
+    Stub(Site site, QWidget *content, QWidget *parent = nullptr);
+    QString location() const { return location_; }
+protected:
+    void paintEvent(QPaintEvent *event) override;
+private:
+    void mark(Site site);
+    QString location_;
+};
 STACKJUNKIE_EXPORT QLabel *heading(const QString &text, QWidget *parent = nullptr);
 STACKJUNKIE_EXPORT QLabel *paragraph(const QString &text, QWidget *parent = nullptr);
 STACKJUNKIE_EXPORT QWidget *row(const QList<QWidget *> &widgets, QWidget *parent = nullptr);
 STACKJUNKIE_EXPORT QWidget *wrap(const QList<QWidget *> &widgets, QWidget *parent = nullptr);
 }
+
+// STACKJUNKIE_STUB("Sample text") or STACKJUNKIE_STUB(widget, parent) returns a new StackJunkie::Stub.
+// Release builds (NDEBUG, or STACKJUNKIE_RELEASE, which the CMake package sets for Release,
+// RelWithDebInfo and MinSizeRel) refuse to compile while any remain, and the error names the file and line.
+#if defined(STACKJUNKIE_RELEASE) || defined(NDEBUG)
+#define STACKJUNKIE_STUBS_ALLOWED 0
+#else
+#define STACKJUNKIE_STUBS_ALLOWED 1
+#endif
+#define STACKJUNKIE_STUB_STRING_(value) #value
+#define STACKJUNKIE_STUB_LINE_(value) STACKJUNKIE_STUB_STRING_(value)
+#if STACKJUNKIE_STUBS_ALLOWED
+#define STACKJUNKIE_STUB(...) (new ::StackJunkie::Stub(::StackJunkie::Stub::Site{__FILE__, __LINE__}, __VA_ARGS__))
+#else
+#define STACKJUNKIE_STUB(...) ([]() -> ::StackJunkie::Stub * { \
+    static_assert(false, "Stub remains at " __FILE__ "(" STACKJUNKIE_STUB_LINE_(__LINE__) "): replace it with real content before a release build."); \
+    return nullptr; }())
+#endif

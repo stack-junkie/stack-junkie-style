@@ -60,6 +60,23 @@ Apply the theme after composing a surface, and reapply after adding custom icon 
 
 Use the themed native Qt controls for text, passwords, dates, times, numbers, sliders, checkboxes, radio choices, selects, tabs, menus, dialogs, tables, trees, lists, grids and scroll areas. This avoids replacing mature native behavior with decorative copies. The showcase contains compositions for local data filtering/sorting, editable documents, canvas selection/zoom, progress with pause/cancel, file/color selection and focused dialogs.
 
+## Stub
+
+A Stub marks development stand-in content: sample text, fake data, unfinished labels. Create one only with the macro, which records its file and line:
+
+```cpp
+layout->addWidget(STACKJUNKIE_STUB(QStringLiteral("Summary text goes here.")));
+layout->addWidget(STACKJUNKIE_STUB(new QLabel(QStringLiteral("42 open items"))));
+```
+
+- Development builds paint a Stub with diagonal warning stripes and a dashed border, in both themes. A wrapped widget gets a striped band around it. The tooltip names the location.
+- Release builds refuse to compile while any Stub remains. Each remaining Stub is a compile error at its own file and line: `main.cpp(11,23): error C2338: static_assert failed: 'Stub remains at ...main.cpp(11): ...'`.
+- The guard is on when `NDEBUG` or `STACKJUNKIE_RELEASE` is defined. `StackJunkie::Widgets` adds `STACKJUNKIE_RELEASE` to consumers in Release, RelWithDebInfo and MinSizeRel, including through the installed CMake package, so removing `NDEBUG` does not bypass it.
+- `STACKJUNKIE_STUBS_ALLOWED` is 1 when Stubs compile. The showcase uses it to add a development-only `stub` page.
+- Hint text inside an empty input (`setPlaceholderText`) is not a Stub and is unaffected.
+
+`tests/stub-guard/run.ps1` builds a small sample app against the installed package in Release, with and without its Stubs. The first build must fail and name each Stub's line; the second must pass.
+
 ## Review the showcase
 
 The rail selects families from `../shared/catalog.json`; the contextual list selects components. Each component has Example and Usage and states tabs. Edits remain while switching pages or themes. The state selector demonstrates disabled, read-only and invalid treatments; pointer hover and keyboard focus are real interactions, not painted screenshots.

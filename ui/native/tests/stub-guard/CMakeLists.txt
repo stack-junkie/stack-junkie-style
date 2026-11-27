@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.21)
+project(StubGuardSample LANGUAGES CXX)
+# A tiny app consuming the installed StackJunkie package. run.ps1 builds it in Release
+# with and without its Stubs to check the release guard.
+option(STUB_GUARD_WITH_STUB "Compile the sample's Stubs" OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+find_package(StackJunkie CONFIG REQUIRED)
+add_executable(stub_guard_sample main.cpp)
+target_link_libraries(stub_guard_sample PRIVATE StackJunkie::Widgets)
+if(STUB_GUARD_WITH_STUB)
+  target_compile_definitions(stub_guard_sample PRIVATE STUB_GUARD_WITH_STUB)
+endif()
+if(MSVC)
+  target_compile_options(stub_guard_sample PRIVATE /utf-8)
+endif()

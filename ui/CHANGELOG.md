@@ -10,6 +10,7 @@
 - Product layouts use their own `layout` icon. The workbench is the reference for many-page apps: rail, sidebar tree, one row of open documents and a bottom panel.
 - The expanded sidebar always pushes the work area and never becomes an overlay.
 - Remove the Warm editorial and Precise technical directions. Clean utility is the only direction.
+- Native: add `StackJunkie::Stub` and `STACKJUNKIE_STUB`. Stubs are striped in development builds; release builds fail to compile at each remaining Stub's file and line. Fix a debug-build assert from closable document tabs.
 
 ## 3.0.0-preview.9
 

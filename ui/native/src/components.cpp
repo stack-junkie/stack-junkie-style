@@ -375,7 +375,8 @@ void Tabs::setDocumentTabs(bool closable) {
     setTabsClosable(closable); setMovable(closable);
     for (int i = 0; i < count(); ++i) tabInserted(i);
     if (closable) {
-        connect(this, &QTabWidget::tabCloseRequested, this, [this](int index) { removeTab(index); }, Qt::UniqueConnection);
+        // Qt::UniqueConnection needs a member function; a lambda asserts in debug builds.
+        connect(this, &QTabWidget::tabCloseRequested, this, &QTabWidget::removeTab, Qt::UniqueConnection);
         auto *close = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), this, nullptr, nullptr, Qt::WidgetWithChildrenShortcut);
         connect(close, &QShortcut::activated, this, [this] { if (currentIndex() >= 0) emit tabCloseRequested(currentIndex()); });
     }

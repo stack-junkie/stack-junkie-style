@@ -68,6 +68,11 @@ target_include_directories(stackjunkie_widgets PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 target_link_libraries(stackjunkie_widgets PUBLIC Qt6::Widgets Qt6::Svg)
+# Release builds of consumers refuse to compile while any STACKJUNKIE_STUB remains, even without NDEBUG.
+# Compare $<CONFIG> by name: $<CONFIG:...> on an imported target also matches its mapped configuration,
+# which would block Stubs in a Debug app linking a Release-only package.
+target_compile_definitions(stackjunkie_widgets INTERFACE
+  $<$<OR:$<STREQUAL:$<CONFIG>,Release>,$<STREQUAL:$<CONFIG>,RelWithDebInfo>,$<STREQUAL:$<CONFIG>,MinSizeRel>>:STACKJUNKIE_RELEASE>)
 if(NOT BUILD_SHARED_LIBS)
   target_compile_definitions(stackjunkie_widgets PUBLIC STACKJUNKIE_WIDGETS_STATIC_DEFINE)
 endif()
