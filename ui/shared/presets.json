@@ -1,0 +1,40 @@
+{
+  "choices": {
+    "rail": { "label": "Rail", "description": "The narrow column of section icons on the far left.", "options": [true, false] },
+    "sidebar": { "label": "Sidebar", "description": "The pages of the current area, as a collapsible tree, a flat list or not at all.", "options": ["tree", "list", "off"] },
+    "menuBar": { "label": "Menu bar", "description": "File, Edit, View, the app's menus, then Help, along the top.", "options": [true, false] },
+    "statusBar": { "label": "Status bar", "description": "The current item's state on the left and small facts on the right, along the bottom.", "options": [true, false] },
+    "bottomPanel": { "label": "Bottom panel", "description": "A panel under the work area for output, problems or a terminal.", "options": [true, false] },
+    "documentTabs": { "label": "Document tabs", "description": "Open pages stay in one row of closable tabs.", "options": [true, false] },
+    "commandPalette": { "label": "Command palette", "description": "Control K opens a searchable list of commands.", "options": [true, false] },
+    "theme": { "label": "Default theme", "description": "The theme a new visitor sees. System follows the device setting.", "options": ["dark", "light", "system"] },
+    "density": { "label": "Density", "description": "Compact for tools, comfortable for reading.", "options": ["compact", "comfortable"] },
+    "dashboardHome": { "label": "Dashboard home", "description": "Open on a Dashboard of real numbers. Off unless the app has numbers worth showing.", "options": [true, false] }
+  },
+  "presets": [
+    {
+      "id": "web-app",
+      "label": "Web app",
+      "description": "A browser tool with a rail, a sidebar tree and a command palette.",
+      "choices": { "rail": true, "sidebar": "tree", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
+    },
+    {
+      "id": "desktop-app",
+      "label": "Desktop app",
+      "description": "A Windows tool with a rail, a sidebar list and a Status bar.",
+      "choices": { "rail": true, "sidebar": "list", "menuBar": false, "statusBar": true, "bottomPanel": false, "documentTabs": false, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
+    },
+    {
+      "id": "document-editor",
+      "label": "Document editor",
+      "description": "An editor with a Menu bar, a Status bar, a bottom panel and closable document tabs.",
+      "choices": { "rail": true, "sidebar": "tree", "menuBar": true, "statusBar": true, "bottomPanel": true, "documentTabs": true, "commandPalette": true, "theme": "dark", "density": "compact", "dashboardHome": false }
+    },
+    {
+      "id": "website",
+      "label": "Website",
+      "description": "A reading site with a header, a footer, a reading column and a theme toggle.",
+      "choices": { "rail": false, "sidebar": "off", "menuBar": false, "statusBar": false, "bottomPanel": false, "documentTabs": false, "commandPalette": false, "theme": "system", "density": "comfortable", "dashboardHome": false }
+    }
+  ]
+}

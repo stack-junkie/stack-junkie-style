@@ -52,4 +52,33 @@ export function SaveForm() {
 
 Components use native HTML controls and native dialog behavior. Their props provide normal React controlled/uncontrolled input contracts. `ThemeProvider` scopes shared semantic tokens, typography and spacing, so light and dark surfaces can coexist. Its `direction` prop accepts only `clean` and is optional. `Workspace`, `SideNavigation`, `Tabs`, `DataTable`, `Canvas` and similar components accept application-owned values and change handlers.
 
+### Presets
+
+A Preset is a named starting set of App frame choices. The four presets live in `../shared/presets.json`, the one source that web, native and the skill read:
+
+| Choice | Web app | Desktop app | Document editor | Website |
+|---|---|---|---|---|
+| `rail` | on | on | on | off |
+| `sidebar` | tree | list | tree | off |
+| `menuBar` | off | off | on | off |
+| `statusBar` | off | on | on | off |
+| `bottomPanel` | off | off | on | off |
+| `documentTabs` | off | off | on | off |
+| `commandPalette` | on | on | on | off |
+| `theme` | dark | dark | dark | system |
+| `density` | compact | compact | compact | comfortable |
+| `dashboardHome` | off | off | off | off |
+
+Pass a preset to `AppShell`, and override single choices with `choices`:
+
+```tsx
+<AppShell preset="desktop-app" choices={{ sidebar: 'tree' }} name="My app" description="What it does." version="0.1.0" sections={sections} />
+```
+
+`resolvePreset(id, overrides)` returns the full set of choices, and `presets` lists every preset with its label and description. Without `preset` or `choices`, `AppShell` keeps reading `rail`, `contextualSidebar` and `mode` from `config` as before.
+
+What the frame draws today: the rail; the sidebar as a tree, a flat list or nothing; closable document tabs (beside a sidebar); the default theme, where `system` follows the device; and compact or comfortable density. The frame does not own a command palette, so `overlays` can be a function that receives the choices, and `useShellChoices()` reads them anywhere inside the frame. The Menu bar, Status bar and bottom panel choices are accepted but drawn in a later preview. Website uses the App frame with rail and sidebar off until it gets its own layout.
+
+In the showcase, Settings > Layout holds the preset picker and every choice. Changes apply to the showcase frame at once, are saved in local storage, and Export writes them into `App.tsx`.
+
 The declarations and built library do not require the source `shared` directory in consuming applications. Keep the distributed font licenses with the package. Browser appearance and assistive-technology behavior still require owner review; a successful build alone does not establish that review.

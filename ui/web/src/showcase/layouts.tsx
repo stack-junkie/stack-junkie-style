@@ -61,9 +61,11 @@ function Publication() { const [section, setSection] = useState('principles'); r
 function GuidedWorkflow() { const [step, setStep] = useState(1); const [name, setName] = useState(''); const [format, setFormat] = useState('csv'); const [error, setError] = useState(''); const [done, setDone] = useState(false); return <UI.Stack><UI.Toolbar label="Workflow steps"><UI.Badge tone={step === 1 ? 'success' : 'neutral'}>1. Name</UI.Badge><UI.Icon name="chevron-right" /><UI.Badge tone={step === 2 ? 'success' : 'neutral'}>2. Format</UI.Badge><UI.Icon name="chevron-right" /><UI.Badge tone={step === 3 ? 'success' : 'neutral'}>3. Review</UI.Badge></UI.Toolbar><div hidden={step !== 1}><UI.TextInput label="Document name" value={name} onChange={e => setName(e.target.value)} error={error || undefined} /></div><div hidden={step !== 2}><UI.RadioGroup label="Export format" value={format} onChange={setFormat} options={[{ value: 'csv', label: 'CSV table' }, { value: 'txt', label: 'Plain text' }]} /></div><div hidden={step !== 3}><UI.Panel title="Review"><UI.Stack><p><strong>{name || 'Unnamed'}</strong></p><p>Format: {format.toUpperCase()}</p></UI.Stack></UI.Panel></div><UI.Toolbar label="Workflow actions"><UI.Button disabled={step === 1} onClick={() => { setStep(step - 1); setDone(false); }}>Back</UI.Button><UI.Button variant="primary" onClick={() => { if (step === 1 && !name.trim()) { setError('Enter a document name.'); return; } setError(''); if (step < 3) setStep(step + 1); else setDone(true); }}>{step === 3 ? 'Confirm example' : 'Continue'}</UI.Button></UI.Toolbar>{done && <UI.Alert tone="success" title="Example confirmed">{name}.{format} is ready in this local workflow specimen.</UI.Alert>}</UI.Stack>; }
 function Monitoring() { return <UI.Stack><FeedbackDemo id="progress" /><UI.Chart label="Fixed timing fixture" unit="ms" data={chartData} /><UI.Disclosure label="Sample log"><UI.CodeBlock language="Local fixture" code={'sample A   12 ms\nsample B   19 ms\nsample C   14 ms\nsample D   25 ms\nsample E   18 ms'} /></UI.Disclosure></UI.Stack>; }
 
-// The exact app frame a new project gets from Export: the imported AppShell with the configuration chosen in Settings.
-export function StarterApp({ config }: { config: UI.ShellConfig }) {
-  return <UI.AppShell key={JSON.stringify(config)} config={config} shortcuts={false} name="Sample app" description="A new project started from the exported configuration." version="1.0.0" logo={<UI.BrandMark size={20} />}
+/** The App frame chosen in Settings: a preset, the choices changed from it, and sidebar resizing and collapsing. */
+export type FrameSettings = { preset: UI.PresetId; choices: Partial<UI.PresetChoices>; config: UI.ShellConfig };
+// The exact app frame a new project gets from Export: the imported AppShell with the preset and choices chosen in Settings.
+export function StarterApp({ frame }: { frame: FrameSettings }) {
+  return <UI.AppShell key={JSON.stringify(frame)} preset={frame.preset} choices={frame.choices} config={frame.config} shortcuts={false} name="Sample app" description="A new project started from the exported configuration." version="1.0.0" logo={<UI.BrandMark size={20} />}
     sections={[
       { id: 'library', label: 'Library', icon: 'folder', pages: [{ id: 'documents', label: 'Documents', content: <CollectionDemo id="list" /> }, { id: 'table', label: 'Table', content: <CollectionDemo id="table" /> }] },
       { id: 'tools', label: 'Tools', icon: 'code', pages: [{ id: 'filter', label: 'Filter samples', content: <FocusedUtility /> }, { id: 'notes', label: 'Notes', content: <UI.TextArea label="Working notes" defaultValue="Your notes stay while you move between pages." /> }] },
@@ -75,9 +77,9 @@ export const layoutPages = [
   ...catalog.layouts.map(l => ({ id: l.id, label: l.label, description: l.description })),
   { id: 'starter', label: 'Starter app', description: 'What Export gives a new project: the imported app frame with your chosen layout settings.' },
 ];
-export function LayoutPage({ id, config }: { id: string; config: UI.ShellConfig }) {
+export function LayoutPage({ id, frame }: { id: string; frame: FrameSettings }) {
   const page = layoutPages.find(l => l.id === id)!;
-  const content: Record<string, ReactNode> = { 'focused-utility': <FocusedUtility />, 'multi-tool': <MultiTool />, embedded: <FocusedUtility embedded />, data: <CollectionDemo id="table" />, workbench: <Workbench />, publication: <Publication />, guided: <GuidedWorkflow />, monitoring: <Monitoring />, starter: <StarterApp config={config} /> };
+  const content: Record<string, ReactNode> = { 'focused-utility': <FocusedUtility />, 'multi-tool': <MultiTool />, embedded: <FocusedUtility embedded />, data: <CollectionDemo id="table" />, workbench: <Workbench />, publication: <Publication />, guided: <GuidedWorkflow />, monitoring: <Monitoring />, starter: <StarterApp frame={frame} /> };
   const full = id === 'workbench' || id === 'starter';
   return <div className="layout-page"><UI.TabBoundary><section className={`layout-frame ${full ? 'layout-frame--app' : ''}`} aria-label={page.label}>
     <header className="layout-frame-bar"><span className="layout-frame-name">{page.label}</span><UI.HelpPopover label={`About ${page.label.toLowerCase()}`}>{page.description}</UI.HelpPopover></header>
