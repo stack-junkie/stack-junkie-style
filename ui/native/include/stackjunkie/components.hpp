@@ -255,14 +255,16 @@ private:
 class STACKJUNKIE_EXPORT StatusBar : public QFrame {
 public:
     explicit StatusBar(QWidget *parent = nullptr);
-    void setState(const QString &text);
+    /** The current item's state. Until an app sets it, a Workspace shows the current page's name. */ void setState(const QString &text);
     QString state() const;
     /** Replaces the small facts on the right, such as a version or a count. */ void setFacts(const QStringList &facts);
     QStringList facts() const { return facts_; }
 private:
+    void showState(const QString &text);
     QLabel *state_;
     QHBoxLayout *factsLayout_;
     QStringList facts_;
+    friend class Workspace;
 };
 // A panel under the work area with its own tab row, such as Output and Problems. In a Workspace it sits in a vertical
 // splitter, so people drag or arrow-key its top edge to resize it.

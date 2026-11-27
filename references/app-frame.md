@@ -16,7 +16,7 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 
 **Rail.** Selects a top-level section. Icons have accessible names; add labels where an icon is ambiguous.
 
-**Sidebar.** Lists the pages of the current section: a `NavTree` of collapsible groups when there are many, a flat list when there are few. Its heading names the section (such as Actions); the selected item names the page. It is resizable across the available space with pointer and keyboard, collapses completely, and restores its width and selection. Expanded, it pushes the work area over; a narrow window or browser zoom never turns it into an overlay or changes the user's collapse choice. One toggle shows and hides it, fixed at the top of the Rail, in the same place whether the Sidebar is open or closed. Without a Rail, the toggle stays reachable in the header.
+**Sidebar.** Lists the pages of the current section: a `NavTree` of collapsible groups (no counts on group rows) when there are many, a flat list when there are few. Its heading names the section (such as Actions); the selected item names the page. It is resizable across the available space with pointer and keyboard, collapses completely, and restores its width and selection. Expanded, it pushes the work area over; a narrow window or browser zoom never turns it into an overlay or changes the user's collapse choice. One toggle with the panel icon shows and hides it, fixed at the top of the Rail, in the same place whether the Sidebar is open or closed. Without a Rail, the toggle stays reachable in the header.
 
 **Tab row.** Switches peer views of the selected page, or holds closable document tabs (separate open objects). Put it at the top of the work area, aligned with the Sidebar heading, with no page title row above it. While the Sidebar is collapsed, show a compact page name beside the tabs.
 
@@ -30,10 +30,14 @@ The App frame is `AppShell` on web and native. Apps supply sections, pages and t
 **Settings window.** `SettingsWindow`: a dialog with search and a section list, where changes apply at once. It opens from the gear fixed at the bottom of the Rail (the bottom of the Sidebar when there is no Rail) and from Control comma; with the Menu bar on, also from File. If both Rail and Sidebar are hidden, keep a route to Settings and to reopen navigation. Settings is never a page in the navigation and never in the header.
 
 - Appearance (the theme) and About are built-in sections. The app's own sections come first. Group settings by purpose. Per-run options stay beside their operation, not in Settings.
-- About leads with the app's name, description, logo and version (from the app's own version source). Beneath it sit the smaller Stack Junkie Style mark, the library version, project link and copyright. Keep the library version separate from the app's version.
+- About gives the app the spotlight: a large logo, the name with a version chip (from the app's own version source), the description and a links row (website, repository, license; each optional, hidden when not given). The Stack Junkie Style credit is small secondary text in the bottom right, with the library version from the release. Keep the library version separate from the app's version.
 - Import `AboutSection` or `ThemeSetting` only when replacing a built-in section.
 
-**Menu bar.** Document editor Preset only. File, Edit, View, the app's menus, then Help. The frame owns Settings (File), About (Help) and the View toggles for Sidebar (Control B), bottom panel (Control J), Status bar and theme. Edit holds only the app's items and is left out without them.
+**Pointer and tooltips.** Everything clickable shows the pointing hand; disabled controls keep the arrow. Tooltips sit against their element: beside Rail items, below toolbar buttons. Icon-only buttons take their tooltip from their label.
+
+**Logo slot.** The app's logo and name sit top left; clicking them goes Home.
+
+**Menu bar.** Document editor Preset only. File, Edit, View, the app's menus, then Help. The frame owns Settings (File), About (Help) and View > Appearance: the Sidebar (Control B), Status bar and Panel (Control J) toggles, Zoom in, Zoom out, Reset zoom and Dark theme. The top of View stays free for the app's own views. Native apps zoom with Control plus, minus and 0; the web leaves the browser's own zoom keys alone. Edit holds only the app's items and is left out without them.
 
 **Status bar.** A thin bottom row: the current item's state on the left, small facts (position, encoding, version) on the right. Never ads or tips.
 

@@ -477,7 +477,8 @@ StatusBar::StatusBar(QWidget *parent) : QFrame(parent) {
     factsLayout_ = new QHBoxLayout; factsLayout_->setSpacing(16);
     layout->addLayout(factsLayout_);
 }
-void StatusBar::setState(const QString &text) { state_->setText(text); state_->setToolTip(text); state_->setAccessibleName(text); }
+void StatusBar::setState(const QString &text) { setProperty("sjAppState", true); showState(text); }
+void StatusBar::showState(const QString &text) { state_->setText(text); state_->setToolTip(text); state_->setAccessibleName(text); }
 QString StatusBar::state() const { return state_->text(); }
 void StatusBar::setFacts(const QStringList &facts) {
     if (facts == facts_) return;
@@ -739,6 +740,12 @@ void Workspace::setRailVisible(bool visible) {
 int Workspace::addPage(const QString &title, QWidget *page, const QString &iconName, int section) {
     if (sectionSelections_.isEmpty()) addSection(QStringLiteral("Pages"), iconName);
     if (section < 0 || section >= sectionSelections_.size()) section = 0;
+    // A plain page widget gets the density's content padding, as pages do on web. Scroll areas and tabbed pages lay out their own.
+    if (!qobject_cast<QAbstractScrollArea *>(page) && !qobject_cast<QTabWidget *>(page) && !page->property("sjContentPadding").isValid()) {
+        const int padding = Theme::density(QStringLiteral("contentPadding"), 20);
+        page->setProperty("sjContentPadding", true);
+        if (page->layout()) page->layout()->setContentsMargins(padding, padding, padding, padding); else page->setContentsMargins(padding, padding, padding, padding);
+    }
     const int index = pages_->addWidget(page);
     pageSections_.append(section); pageTitles_.append(title);
     QLabel *contextLabel = nullptr;
@@ -929,6 +936,8 @@ void Workspace::refreshTabRow() {
 }
 void Workspace::syncNavigation() {
     const int page = pages_->currentIndex();
+    // Until the app sets its own state, the Status bar shows the current page's name, as on web.
+    if (!statusBar_->property("sjAppState").toBool()) statusBar_->showState(pageTitles_.value(page));
     const bool shown = !(choices_.documentTabs && choices_.sidebar != QStringLiteral("off") && openPages_.isEmpty());
     {
         QSignalBlocker blocker(navigation_);
@@ -1089,6 +1098,7 @@ QLabel *paragraph(const QString &text, QWidget *parent) {
     label->setWordWrap(true);
     label->setTextFormat(Qt::PlainText);
     label->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    label->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     return label;
 }
 QWidget *row(const QList<QWidget *> &widgets, QWidget *parent) {

@@ -7,7 +7,7 @@
 // node ../scripts/test-starters.mjs [--only web|native] [--qt <Qt prefix>] [--keep]
 // Prints one PASS or FAIL line per case and exits non-zero on any failure.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -174,13 +174,15 @@ if (only !== 'native') {
   const library = run('npm run build:library', [], { cwd: web, shell: true });
   if (result(library.ok, 'web library', library.ok ? 'npm run build:library passed' : tail(library.output))) for (const testCase of cases) webCase(testCase);
 }
-// Remove the node_modules links one by one first: rmdir drops a link and never touches what it points to.
+// Remove the node_modules links one by one first, never what they point to: rmdir drops a Windows junction,
+// unlink drops a symbolic link elsewhere.
+const dropLink = link => { if (lstatSync(link).isSymbolicLink() && process.platform !== 'win32') unlinkSync(link); else rmdirSync(link); };
 function clean() {
-  for (const dir of readdirSync(work).filter(d => d.startsWith('w-'))) {
+  for (const dir of readdirSync(work).filter(d => d.startsWith('w-') || d.startsWith('x-'))) {
     const modules = path.join(work, dir, 'node_modules');
     if (!existsSync(modules)) continue;
-    for (const entry of readdirSync(modules)) if (entry !== '@stack-junkie') rmdirSync(path.join(modules, entry));
-    if (existsSync(path.join(modules, '@stack-junkie/ui-web'))) rmdirSync(path.join(modules, '@stack-junkie/ui-web'));
+    for (const entry of readdirSync(modules)) if (entry !== '@stack-junkie') dropLink(path.join(modules, entry));
+    if (existsSync(path.join(modules, '@stack-junkie/ui-web'))) dropLink(path.join(modules, '@stack-junkie/ui-web'));
   }
   rmSync(work, { recursive: true, force: true });
 }

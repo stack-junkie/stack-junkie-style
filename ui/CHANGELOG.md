@@ -1,5 +1,18 @@
 # Stack Junkie UI changelog
 
+## 3.0.1
+
+Polish from the first look at exported starters, in the web and native libraries, so every starter picks it up.
+
+- About gives the app the spotlight: a large logo, the name with a version chip, the description and a links row (website, repository, license, each optional). The Stack Junkie Style credit is small grey text in the bottom right. The native About text shows proper characters.
+- Native apps use the style's fonts everywhere, including menus, dialogs and tooltips, with no extra setup.
+- Everything clickable shows the pointing hand; disabled controls keep the arrow.
+- Tooltips sit beside their element: to the right of Rail items, below toolbar buttons.
+- The Sidebar toggle is a panel icon (new `sidebar` icon), and the Settings gear matches the Rail icons.
+- The Sidebar tree is tighter, with about 30% less indent, and group rows show no counts.
+- View > Appearance holds the Sidebar, Status bar and Panel toggles, Zoom in, Zoom out, Reset zoom and Dark theme. Native apps zoom with Control plus, minus and 0. Web Menu bar entries can be submenus.
+- Native apps show the logo and name in a logo slot at the top left; clicking it goes Home.
+
 ## 3.0.0
 
 The first full release of Stack Junkie Style as its own product and repo.

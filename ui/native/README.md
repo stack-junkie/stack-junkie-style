@@ -86,6 +86,8 @@ StackJunkie::AppShell shell(QStringLiteral("My app"), QStringLiteral("What it do
 shell.setPreset(QStringLiteral("desktop-app"), {{QStringLiteral("sidebar"), QStringLiteral("tree")}});
 ```
 
+Give About the app's links with `shell.setAboutLinks({website, repository, license, licenseUrl})` (each optional) and the logo slot the app's logo with `setLogo(pixmap)`; without one it shows the interim SJ mark. Clicking the logo slot goes Home (`setHomePage` picks a page). The library registers its fonts and makes the style's UI font the application font, so menus, dialogs and tooltips match the frame with no extra setup.
+
 `Preset::resolve(id, overrides)` returns the full `PresetChoices`, `Preset::overrides(id, choices)` returns only the changed ones for saving, `Preset::all()` lists every preset with its label and description, and `Preset::choiceInfo()` lists every choice with its label, description and allowed values. Unknown ids fall back to Web app, and invalid overrides are ignored. A plain `Workspace` takes `setChoices(choices)`; without it, it keeps the rail and list sidebar it always had.
 
 What the frame draws today:
@@ -142,7 +144,7 @@ shell.statusBar()->setFacts({QStringLiteral("Ln 12, Col 4"), QStringLiteral("UTF
 shell.bottomPanel()->addTab(output, QStringLiteral("Output"));
 ```
 
-- Menu bar: a `QMenuBar` in the header beside the app's name, styled by the theme: File, Edit, View, the app's menus (`addMenu`), then Help. The frame owns Settings (File, calls the settings handler), About (Help, calls `setAboutHandler`; `AppShell` opens Settings at About) and in View the Sidebar (Control B), Bottom panel (Control J) and Status bar toggles. `AppShell` adds Dark theme. `addMenuItem` puts an app item above the frame's items; its shortcut works while the Menu bar is shown. Edit holds only app items and is hidden without them. F10 opens the first menu; arrow keys and Escape work as usual.
+- Menu bar: a `QMenuBar` in the header beside the app's name, styled by the theme: File, Edit, View, the app's menus (`addMenu`), then Help. The frame owns Settings (File, calls the settings handler), About (Help, calls `setAboutHandler`; `AppShell` opens Settings at About) and View > Appearance (`appearanceMenu()`): the Sidebar (Control B), Status bar and Panel (Control J) toggles and Zoom in, Zoom out and Reset zoom. Control plus, minus and 0 zoom the whole app with or without the Menu bar (`setZoom`, `zoom`). `AppShell` adds Dark theme to Appearance. `addMenuItem` puts an app item above the frame's items; its shortcut works while the Menu bar is shown. Edit holds only app items and is hidden without them. F10 opens the first menu; arrow keys and Escape work as usual.
 - `StatusBar`: a thin bottom row with `setState` on the left and `setFacts` on the right. Never ads or tips.
 - `BottomPanel`: a panel under the work area in a vertical splitter, with its own tab row (`addTab`) and a close control. It is drawn only once it has a tab. View > Bottom panel or `setBottomPanelShown` hides it for the session, as `setStatusBarShown` does for the Status bar.
 
