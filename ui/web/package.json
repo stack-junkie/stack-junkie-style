@@ -1,6 +1,6 @@
 {
   "name": "@stack-junkie/ui-web",
-  "version": "3.0.0-preview.10",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
   "main": "./dist-library/stack-junkie-ui.js",
@@ -30,7 +30,7 @@
     "build:library": "vite build --config vite.library.config.ts && tsc -p tsconfig.library.json && node ../scripts/finish-web-library.mjs",
     "typecheck": "tsc --noEmit",
     "pretest:stub-guard": "node ../scripts/prepare.mjs",
-    "test:stub-guard":"node tests/stub-guard/run.mjs",
+    "test:stub-guard": "node tests/stub-guard/run.mjs",
     "test:starters": "node ../scripts/test-starters.mjs",
     "pack:release": "npm run build:library && node ../scripts/pack-web.mjs",
     "test:presets": "node ../scripts/test-presets.mjs",

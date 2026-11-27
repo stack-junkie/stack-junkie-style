@@ -213,18 +213,6 @@ int main(int argc, char *argv[]) {
         }
         const int homeIndex = window.addPage(QStringLiteral("Overview"), homePage, QStringLiteral("grid"), homeSection);
         pageIds << QStringLiteral("home"); pageNames << QStringLiteral("Home"); pageFamilies << QStringLiteral("Stack Junkie UI");
-#if STACKJUNKIE_STUBS_ALLOWED
-        // Development builds only. A release build refuses to compile a Stub, so the release showcase has none.
-        auto *stubPage = new SettingsPage(QStringLiteral("Stub"));
-        stubPage->contentLayout()->addWidget(paragraph(QStringLiteral("Development stand-in content is striped. Release builds refuse to finish while any Stub remains.")));
-        stubPage->contentLayout()->addWidget(STACKJUNKIE_STUB(QStringLiteral("Release notes go here once the first release exists.")));
-        stubPage->contentLayout()->addWidget(STACKJUNKIE_STUB(new Field(QStringLiteral("Owner"), new QLineEdit(QStringLiteral("Sample owner")))));
-        auto *hinted = new QLineEdit; hinted->setPlaceholderText(QStringLiteral("e.g. Field notes"));
-        stubPage->contentLayout()->addWidget(new Field(QStringLiteral("Project name"), hinted, QStringLiteral("Hint text is not a Stub: it stays plain.")));
-        stubPage->contentLayout()->addStretch();
-        window.addPage(QStringLiteral("Stub"), stubPage, QStringLiteral("file"), homeSection);
-        pageIds << QStringLiteral("stub"); pageNames << QStringLiteral("Stub"); pageFamilies << QStringLiteral("Stack Junkie UI");
-#endif
         QObject::connect(homeButton, &QPushButton::clicked, &window, [&window, homeIndex] { window.setCurrentPage(homeIndex); });
         // Menu bar items the showcase adds: the frame already owns Settings, About and the View toggles.
         window.addMenuItem(window.editMenu(), QStringLiteral("Copy component name"), [&window, &pageNames] { QGuiApplication::clipboard()->setText(pageNames.value(window.currentPage())); });
@@ -251,9 +239,9 @@ int main(int argc, char *argv[]) {
         if (window.statusBar()->state().isEmpty()) showCurrent(homeIndex);
         if (!exporting) {
             window.restoreSettings(QStringLiteral("workspace"));
-            // The previous preview stored a family index rather than a component index.
+            // Older showcase versions stored a family index rather than a component index.
             // Retain that family, plus the existing splitter width and collapse preference.
-            // Schema 3 removed the comparison page that sat before Home, so older indexes at or past it mean Home.
+            // Schema 3 removed a page that sat before Home, so older indexes at or past it mean Home.
             const int schema = settings.value(QStringLiteral("workspace/schema"), 1).toInt();
             if (schema == 2 && settings.value(QStringLiteral("workspace/page"), 0).toInt() >= homeIndex) window.setCurrentPage(homeIndex);
             if (schema < 2) {
@@ -375,8 +363,8 @@ int main(int argc, char *argv[]) {
         };
         auto changedText = [](int count) { return count == 0 ? QStringLiteral("no changed choices") : QStringLiteral("%1 changed %2").arg(count).arg(count == 1 ? QStringLiteral("choice") : QStringLiteral("choices")); };
         // Choices drawn by later components keep their switch so the preset is complete, and the note says what is missing.
-        const QHash<QString, QString> notes{{QStringLiteral("dashboardHome"), QStringLiteral("Drawn in a later preview.")},
-            {QStringLiteral("commandPalette"), QStringLiteral("Apps read this choice; the native showcase has no command palette yet.")}};
+        const QHash<QString, QString> notes{{QStringLiteral("dashboardHome"), QStringLiteral("The App frame does not draw a Dashboard; an app that has one opens on it.")},
+            {QStringLiteral("commandPalette"), QStringLiteral("Apps read this choice; the native showcase has no command palette.")}};
         QHash<QString, QWidget *> controls;
         std::function<void(const QString &, const QVariant &)> setChoice;
         for (const auto &info : Preset::choiceInfo()) {

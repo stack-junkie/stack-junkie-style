@@ -217,6 +217,20 @@ QWidget *canvas() {
     surface->addEllipse(QStringLiteral("Circle"), QRectF(210, 70, 100, 100));
     return surface;
 }
+// The showcase is the Stub's own specimen, so it builds the Stub class directly and shows the striped
+// look in every build. Apps create Stubs only with STACKJUNKIE_STUB, which a release build refuses.
+#define SHOWCASE_SPECIMEN_STUB(...) (new Stub(Stub::Site{__FILE__, __LINE__}, __VA_ARGS__))
+QWidget *stubSample() {
+    auto *synced = row({new QLabel(QStringLiteral("Last synced by")), SHOWCASE_SPECIMEN_STUB(QStringLiteral("Sample User")), new QLabel(QStringLiteral("on")), SHOWCASE_SPECIMEN_STUB(QStringLiteral("1 January"))});
+    auto *projects = new QListWidget;
+    projects->setAccessibleName(QStringLiteral("Stand-in projects"));
+    projects->addItems({QStringLiteral("Sample project: fake data until the project scan exists"), QStringLiteral("Second sample: fake data")});
+    projects->setMinimumHeight(90); projects->setMaximumHeight(110);
+    auto *hinted = new QLineEdit; hinted->setPlaceholderText(QStringLiteral("e.g. Agent Skills"));
+    auto *code = new CodeBlock(QStringLiteral("#include <stackjunkie/components.hpp>\n\nlayout->addWidget(STACKJUNKIE_STUB(\"Project name\"));\nlayout->addWidget(STACKJUNKIE_STUB(new Field(\"Owner\", new QLineEdit), parent));\n\n// A Release build fails at each remaining Stub with its file and line."));
+    return vertical({synced, SHOWCASE_SPECIMEN_STUB(projects), new Field(QStringLiteral("Project name"), hinted, QStringLiteral("Hint text is not a Stub: it stays plain.")), code});
+}
+#undef SHOWCASE_SPECIMEN_STUB
 QWidget *component(const QString &id) {
     if (id == "colors") {
         auto *list = new QListWidget;
@@ -410,6 +424,7 @@ QWidget *component(const QString &id) {
         return vertical({mode, chart, paragraph(QStringLiteral("Local sample data. Values and units are shown on the chart."))});
     }
     if (id == "canvas") return canvas();
+    if (id == "stub") return stubSample();
     return new Notice(QStringLiteral("This catalog item has no native preview."), QStringLiteral("warning"));
 }
 }

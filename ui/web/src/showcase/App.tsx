@@ -21,7 +21,7 @@ type Entry = typeof entries[number];
 type Layout = Pick<UI.ShellConfig, 'resizableSidebar' | 'collapsibleSidebar'>;
 const defaultLayout: Layout = { resizableSidebar: true, collapsibleSidebar: true };
 // Choices drawn by later components. The switch is kept so the preset is complete, and the note says what is missing.
-const notDrawnYet: Partial<Record<UI.PresetChoice, string>> = { dashboardHome: 'Drawn in a later preview.' };
+const notDrawnYet: Partial<Record<UI.PresetChoice, string>> = { dashboardHome: 'The App frame does not draw a Dashboard; an app that has one opens on it.' };
 const optionLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 const defaultPages: Record<string, string> = { ...Object.fromEntries(families.map(f => [f.id, f.components[0].id])), layouts: 'workbench' };
 

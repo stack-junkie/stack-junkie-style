@@ -1,5 +1,20 @@
 # Stack Junkie UI changelog
 
+## 3.0.0
+
+The first full release of Stack Junkie Style as its own product and repo.
+
+- One look, Clean: True black dark mode, white light mode, thin borders for structure and a blue accent. Warm and Technical are gone.
+- One web library (React) and one native library (Qt 6 Widgets), each with a showcase. Both showcases demo every catalog entry.
+- Four Presets set the App frame: Web app, Desktop app, Document editor and Website. Every choice can be switched, saved as a custom preset, and exported or imported as a file.
+- Export writes a web starter or a native CMake starter for the chosen preset and choices, installing the library from this version's tag.
+- The App frame: Rail, Sidebar, one Tab row and a Settings window opened from the gear or Control comma. The Document editor adds the Menu bar, Status bar, bottom panel and closable document tabs. The Website preset uses its own layout.
+- Stubs mark development stand-in content. They are striped in development, and release builds fail while any remain, on web and native.
+- The first Dashboard, "Projects using Stack Junkie Style", lives in `apps/projects`.
+- The skill is rewritten around the glossary and the settled rules, with a short "no slop" content page.
+
+Since preview.10: the native showcase shows Content > Stub in every build, the web Settings window scrolls once instead of twice, and stale preview wording is gone. Details from the last preview follow.
+
 ## 3.0.0-preview.10
 
 - Custom presets on web and native: Settings > Layout saves the current preset and choices under a name, lists them in the preset picker, and can update, rename, delete, export and import them. One file format (`shared/PRESET-FILE.md`) for both, checked by `parseCustomPresetFile` on web and `CustomPreset::parse` on native; a bad file is rejected whole with a plain message. Native adds `--import-preset`, `--export-preset` and `--preset-name`, and `npm run test:presets` checks a web to native round trip and bad files on both.
@@ -7,10 +22,10 @@
 - Settings is a window (`SettingsWindow`) opened from the gear or Control comma, never a page.
 - No stacked tab rows: groups sit in one row, document tabs close immediately, and debug builds warn about a tab row inside another. `TabBoundary` marks real visual breaks.
 - Add `NavTree` for the sidebar tree and `AppShell` as the standard frame on web and native. The web showcase runs on `AppShell`.
-- Clean utility's dark mode is true black with thin borders and near-white text; light mode is one white ground with thin borders. The values now live in the shared tokens.
+- Clean's dark mode is true black with thin borders and near-white text; light mode is one white ground with thin borders. The values now live in the shared tokens.
 - Product layouts use their own `layout` icon. The workbench is the reference for many-page apps: rail, sidebar tree, one row of open documents and a bottom panel.
 - The expanded sidebar always pushes the work area and never becomes an overlay.
-- Remove the Warm editorial and Precise technical directions. Clean utility is the only direction.
+- Remove the Warm editorial and Precise technical directions. Clean is the only direction.
 - Native: add `StackJunkie::Stub` and `STACKJUNKIE_STUB`. Stubs are striped in development builds; release builds fail to compile at each remaining Stub's file and line. Fix a debug-build assert from closable document tabs.
 - Add Presets (Web app, Desktop app, Document editor, Website) in `shared/presets.json`. The web `AppShell` takes `preset` and `choices` and draws the rail, tree or list sidebar, closable document tabs, default theme (including system) and density. The showcase Settings window picks the preset and switches every choice, and Export writes them into a starter.
 - Native presets: the library embeds `shared/presets.json` and adds `PresetChoices`, `Preset::resolve` and `Preset::overrides`. `Workspace::setChoices` and `AppShell::setPreset` draw the rail, tree or list sidebar or none, closable document tabs and density; `AppShell` also applies the default theme, with `system` following the device. The comfortable density values move into the shared `density` tokens for both platforms. The native showcase Settings window gains a Layout section with the preset picker and every choice, and the CLI takes `--preset`, `--choice` and `--page settings/<section>`.

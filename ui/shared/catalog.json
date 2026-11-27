@@ -1,5 +1,5 @@
 {
-  "status": "visual-selection-pending",
+  "status": "stable",
   "families": [
     {
       "id": "foundations",
@@ -932,7 +932,7 @@
       "id": "settings/appearance",
       "label": "Appearance settings",
       "component": "SettingsWindow",
-      "usage": "A section of SettingsWindow, opened from the gear or Control comma. Theme belongs here. Showcase comparison controls are local to the showcase and excluded from library exports."
+      "usage": "A section of SettingsWindow, opened from the gear or Control comma. Theme belongs here. Showcase-only controls stay in the showcase and are not part of the library."
     },
     {
       "id": "settings/about",

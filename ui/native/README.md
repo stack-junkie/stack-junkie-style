@@ -1,6 +1,6 @@
 # Stack Junkie native widgets
 
-A Qt 6 Widgets library and a separate component showcase for Windows and Linux. Clean utility is the only design direction. It supports light and dark themes.
+A Qt 6 Widgets library and a separate component showcase for Windows and Linux. Clean is the only look. It supports light and dark themes.
 
 `StackJunkie::Widgets` is the reusable library. `StackJunkieShowcase` consumes it. The showcase does not define a second stylesheet. Ordinary Qt widgets retain their keyboard, focus, selection and platform accessibility semantics under the shared theme.
 
@@ -97,7 +97,7 @@ What the frame draws today:
 - `density`: compact or comfortable, both from the `density` tokens. `Theme::setDensityMode` holds one mode for the app; `setChoices` sets it, resizes the frame and re-applies the frame's theme. Content areas marked with the `sjContentPadding` property follow the padding.
 - `commandPalette`: the frame does not own a palette, so an app that has one reads `choices().commandPalette` or listens to `choicesChanged`.
 - `menuBar`, `statusBar`, `bottomPanel`: the Menu bar, Status bar and bottom panel (below).
-- `dashboardHome` is accepted but drawn in a later preview.
+- `dashboardHome`: the frame does not draw a Dashboard, so an app that has one reads `choices().dashboardHome` and opens on it.
 
 When the frame shows its own tab row, a page that is itself a `QTabWidget` has its tab row hidden, so tab rows never stack.
 
@@ -173,10 +173,11 @@ layout->addWidget(STACKJUNKIE_STUB(QStringLiteral("Summary text goes here.")));
 layout->addWidget(STACKJUNKIE_STUB(new QLabel(QStringLiteral("42 open items"))));
 ```
 
-- Development builds paint a Stub with diagonal warning stripes and a dashed border, in both themes. A wrapped widget gets a striped band around it. The tooltip names the location.
+- A Stub paints with diagonal warning stripes and a dashed border, in both themes. A wrapped widget gets a striped band around it. The tooltip names the location.
 - Release builds refuse to compile while any Stub remains. Each remaining Stub is a compile error at its own file and line: `main.cpp(11,23): error C2338: static_assert failed: 'Stub remains at ...main.cpp(11): ...'`.
 - The guard is on when `NDEBUG` or `STACKJUNKIE_RELEASE` is defined. `StackJunkie::Widgets` adds `STACKJUNKIE_RELEASE` to consumers in Release, RelWithDebInfo and MinSizeRel, including through the installed CMake package, so removing `NDEBUG` does not bypass it.
-- `STACKJUNKIE_STUBS_ALLOWED` is 1 when Stubs compile. The showcase uses it to add a development-only `stub` page.
+- `STACKJUNKIE_STUBS_ALLOWED` is 1 when Stubs compile.
+- The showcase's Content > Stub page (`--page content/stub`) builds the `Stub` class directly as its specimen, so it shows the striped look in a Release build too. Apps use only the macro.
 - Hint text inside an empty input (`setPlaceholderText`) is not a Stub and is unaffected.
 
 `tests/stub-guard/run.ps1` builds a small sample app against the installed package in Release, with and without its Stubs. The first build must fail and name each Stub's line; the second must pass.
@@ -187,7 +188,7 @@ The rail selects families from `../shared/catalog.json`; the contextual list sel
 
 Eight layout compositions use the same controls: focused utility, multi-tool utility, embedded utility, data application, workbench, publication/reference, guided workflow and monitoring/analysis. Local sample records, chart values and simulated progress are explicitly demonstration content. They are not live project metrics, server state or verification results.
 
-The shared catalog describes the intended component range. Preview labels and style attributes do not establish screen-reader acceptance, native runtime behavior on every platform File/color pickers, focus restoration, help behavior and display scaling still deserve review in the target product environment.
+Every catalog entry has a native example, as on web. Accessible names and style attributes do not establish screen-reader acceptance or native behavior on every platform. File and color pickers, focus restoration, help behavior and display scaling still deserve review in the target product environment.
 
 ## Export a native preview
 

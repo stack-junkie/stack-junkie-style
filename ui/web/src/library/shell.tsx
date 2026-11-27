@@ -11,7 +11,7 @@ import { BottomPanel, MenuBar, StatusBar, type MenuBarMenu, type MenuEntry, type
 // The standard application frame every Stack Junkie product imports. Products supply their sections, pages and own settings;
 // the frame owns where navigation, Settings, theme and About go, so those details never drift between apps.
 export type ShellConfig = {
-  /** Clean utility is the only direction; kept optional for compatibility. */ direction?: Direction; mode: ThemeMode;
+  /** Clean is the only direction; kept optional for compatibility. */ direction?: Direction; mode: ThemeMode;
   /** Thin icon rail of sections on the far left. */ rail: boolean;
   /** Sidebar listing the pages of the current section (or every page, grouped, when there is no rail). */ contextualSidebar: boolean;
   resizableSidebar: boolean; collapsibleSidebar: boolean;

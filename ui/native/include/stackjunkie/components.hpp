@@ -302,7 +302,7 @@ public:
         (NavTree), a list or nothing, closable document tabs and the density. Without the rail the sidebar lists every
         page; without a sidebar the pages become the one tab row. Theme and command palette belong to the app: AppShell
         applies the theme, and an app that owns a palette reads choices().commandPalette. The Menu bar, Status bar and
-        bottom panel are drawn when their choices are on. Dashboard home is accepted but not drawn yet. */
+        bottom panel are drawn when their choices are on. The frame does not draw a Dashboard; an app that has one reads choices().dashboardHome. */
     void setChoices(const PresetChoices &choices);
     PresetChoices choices() const { return choices_; }
     /** The Menu bar: File, Edit, View, the app's menus, then Help, shown when choices().menuBar is on. File holds
