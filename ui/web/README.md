@@ -101,8 +101,30 @@ Pass a preset to `AppShell`, and override single choices with `choices`:
 
 `resolvePreset(id, overrides)` returns the full set of choices, and `presets` lists every preset with its label and description. Without `preset` or `choices`, `AppShell` keeps reading `rail`, `contextualSidebar` and `mode` from `config` as before.
 
-What the frame draws today: the rail; the sidebar as a tree, a flat list or nothing; closable document tabs (beside a sidebar); the default theme, where `system` follows the device; and compact or comfortable density. The frame does not own a command palette, so `overlays` can be a function that receives the choices, and `useShellChoices()` reads them anywhere inside the frame. The Menu bar, Status bar and bottom panel choices are accepted but drawn in a later preview. Website uses the App frame with rail and sidebar off until it gets its own layout.
+What the frame draws today: the rail; the sidebar as a tree, a flat list or nothing; closable document tabs (beside a sidebar); the default theme, where `system` follows the device; and compact or comfortable density. The frame does not own a command palette, so `overlays` can be a function that receives the choices, and `useShellChoices()` reads them anywhere inside the frame. The Menu bar, Status bar and bottom panel choices are accepted but drawn in a later preview. The Website preset is not drawn by `AppShell`; use `WebsiteLayout` (below). Given `preset="website"`, `AppShell` only turns its rail and sidebar off.
 
-In the showcase, Settings > Layout holds the preset picker and every choice. Changes apply to the showcase frame at once, are saved in local storage, and Export writes them into `App.tsx`.
+In the showcase, Settings > Layout holds the preset picker and every choice. Changes apply to the showcase frame at once, are saved in local storage, and Export writes them into `App.tsx`. For the Website preset, Export writes an `App.tsx` that uses `WebsiteLayout`, and Preview the starter app shows it.
+
+### Website
+
+`WebsiteLayout` is the layout for reading sites and the one the Website preset uses. It is a separate component, not a mode of the App frame: a header with the logo, site navigation and a theme toggle, one reading-width column, and a footer with site links and a copyright line. It has no rail, sidebar or Settings window.
+
+```tsx
+import { BrandMark, Prose, WebsiteLayout, type WebsitePage } from '@stack-junkie/ui-web';
+
+const pages: WebsitePage[] = [
+  { id: 'home', label: 'Home', content: <Prose><h1>My site</h1><p>Start here.</p></Prose> },
+  { id: 'about', label: 'About', content: <Prose><h1>About</h1></Prose> },
+];
+
+<WebsiteLayout name="My site" logo={<BrandMark size={20} />} pages={pages} storageKey="my-site-theme" style={{ minHeight: '100dvh' }} />
+```
+
+- `pages` are the header navigation, in order. The current page is marked with `aria-current="page"`. A page without `href` switches in place; with one, the link is followed and `onNavigate` still reports it. `page` and `onNavigate` make the current page controlled, and `children` replace the current page's content.
+- The main column is limited to the reading measure (`readingMeasure` at the reading size) and uses the reading line height. Wrap text in `Prose` for headings, lists and quotes.
+- `theme` sets what a new visitor sees and defaults to `system`, which follows the device. The toggle switches dark and light and saves the choice under `storageKey` (default `sj-website`; an empty string keeps it for the visit only). Storage errors are ignored. `mode` and `onModeChange` make the theme controlled.
+- `density` defaults to `comfortable`. `footerLinks` replace the page links in the footer, and `copyright` replaces the default year and site name.
+- When the layout is narrower than 600 pixels, the navigation folds into a menu button and the gutters shrink to 16 pixels. It uses a container query, so it also folds inside a narrow frame.
+- The layout fills its parent and does not reset the page. Give `html` and `body` a zero margin in the site's own stylesheet.
 
 The declarations and built library do not require the source `shared` directory in consuming applications. Keep the distributed font licenses with the package. Browser appearance and assistive-technology behavior still require owner review; a successful build alone does not establish that review.

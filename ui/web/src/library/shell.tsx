@@ -65,7 +65,8 @@ export function AppShell({ name, description, version, logo, sections, config = 
   brand, sidebar: sidebarOverride, sidebarHeader, sidebarTitle, overlays, mainId, skipLabel = 'Skip to content', aboutChildren, shortcuts = true }: {
   name: string; description: string; version: string; logo?: ReactNode; sections: ShellSection[];
   /** Sidebar resizing and collapsing. Without a preset or choices, its rail, sidebar and theme also set the layout. */ config?: ShellConfig;
-  /** Starting set of App frame choices. Its rail, sidebar and theme replace the ones in config. */ preset?: PresetId;
+  /** Starting set of App frame choices. Its rail, sidebar and theme replace the ones in config.
+   * The Website preset is drawn by WebsiteLayout, not this frame; here it only turns the rail and sidebar off. */ preset?: PresetId;
   /** Individual choices that replace the preset's. Without a preset they apply to Web app. */ choices?: Partial<PresetChoices>;
   /** Product settings. Built-in Appearance and About are added after them; give a section the id 'appearance' or 'about' to replace one in place. */ settings?: SettingsWindowSection[];
   storageKey?: string; style?: CSSProperties; className?: string;

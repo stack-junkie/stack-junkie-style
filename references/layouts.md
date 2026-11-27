@@ -11,7 +11,7 @@ These eight IDs are shared catalog entries and showcase compositions, not eight 
 | `embedded` | A tool inside another product | Host navigation, dimensions and state; local actions without a competing app shell |
 | `data` | Durable areas operating on related records | Destinations, filters, collection and detail/inspector; preserved selection |
 | `workbench` | Switching among tool families, resources and open work | Section rail, collapsible sidebar tree of every page, one row of open documents, optional bottom panel with its own tabs |
-| `publication` | Browsing, searching and long reading | Site navigation, readable content and useful local contents; preserved links and reading position |
+| `publication` | Browsing, searching and long reading | Site navigation, readable content and useful local contents; preserved links and reading position. A reading site on web starts from `WebsiteLayout` (the Website preset) |
 | `guided` | Ordered steps to complete a task | Position, required inputs, consequences and safe backtracking; preserved drafts |
 | `monitoring` | Noticing changes, comparing signals and investigating | Meaningful status and exceptions, then evidence; retained filters, units and timestamps |
 

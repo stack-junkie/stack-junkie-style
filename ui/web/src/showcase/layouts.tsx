@@ -65,6 +65,8 @@ function Monitoring() { return <UI.Stack><FeedbackDemo id="progress" /><UI.Chart
 export type FrameSettings = { preset: UI.PresetId; choices: Partial<UI.PresetChoices>; config: UI.ShellConfig };
 // The exact app frame a new project gets from Export: the imported AppShell with the preset and choices chosen in Settings.
 export function StarterApp({ frame }: { frame: FrameSettings }) {
+  // The Website preset uses its own layout instead of the App frame; only its theme and density choices apply.
+  if (frame.preset === 'website') { const { theme, density } = UI.resolvePreset('website', frame.choices); return <WebsiteSpecimen key={JSON.stringify(frame)} theme={theme} density={density} />; }
   return <UI.AppShell key={JSON.stringify(frame)} preset={frame.preset} choices={frame.choices} config={frame.config} shortcuts={false} name="Sample app" description="A new project started from the exported configuration." version="1.0.0" logo={<UI.BrandMark size={20} />}
     sections={[
       { id: 'library', label: 'Library', icon: 'folder', pages: [{ id: 'documents', label: 'Documents', content: <CollectionDemo id="list" /> }, { id: 'table', label: 'Table', content: <CollectionDemo id="table" /> }] },
@@ -73,14 +75,25 @@ export function StarterApp({ frame }: { frame: FrameSettings }) {
     settings={[{ id: 'general', label: 'General', keywords: 'startup', content: <UI.SettingsSection label="General"><UI.SettingsRow label="Open last page on start" description="Return to where you left off."><UI.Switch label="Open last page on start" defaultChecked /></UI.SettingsRow></UI.SettingsSection> }]} />;
 }
 
+// The Website layout with a short sample site. The text describes the layout itself.
+const websitePages: UI.WebsitePage[] = [
+  { id: 'home', label: 'Home', content: <UI.Prose><h1>Website layout</h1><p>A header with the logo and site navigation, one reading column and a footer. The navigation marks the current page, and the toggle beside it switches dark and light.</p><p>The column stops at a comfortable line length, so long text stays easy to follow at any window width.</p><h2>At phone width</h2><p>The navigation folds into a menu button, the gutters shrink to 16 pixels and nothing scrolls sideways.</p></UI.Prose> },
+  { id: 'reading', label: 'Reading', content: <UI.Prose><h1>Reading column</h1><p>Body text uses the reading size and line height. Headings, lists and quotes come from Prose.</p><ul><li>One centered column</li><li>Comfortable density</li><li>The theme follows the device until a visitor picks one</li></ul><blockquote>A quote sits inside the same column.</blockquote></UI.Prose> },
+  { id: 'about', label: 'About', content: <UI.Prose><h1>About this specimen</h1><p>A sample site inside a frame. Its links switch pages in place; a real site gives each page an address.</p></UI.Prose> },
+];
+function WebsiteSpecimen({ theme, density }: { theme: UI.ThemeChoice; density?: UI.Density }) {
+  return <UI.WebsiteLayout name="Sample site" logo={<UI.BrandMark size={20} />} pages={websitePages} theme={theme} density={density} storageKey="" mainId="website-specimen-main" />;
+}
+
 export const layoutPages = [
   ...catalog.layouts.map(l => ({ id: l.id, label: l.label, description: l.description })),
+  { id: 'website', label: 'Website', description: 'The Website preset: a header with logo and navigation, a reading column, a footer and a theme toggle, instead of the App frame.' },
   { id: 'starter', label: 'Starter app', description: 'What Export gives a new project: the imported app frame with your chosen layout settings.' },
 ];
 export function LayoutPage({ id, frame }: { id: string; frame: FrameSettings }) {
   const page = layoutPages.find(l => l.id === id)!;
-  const content: Record<string, ReactNode> = { 'focused-utility': <FocusedUtility />, 'multi-tool': <MultiTool />, embedded: <FocusedUtility embedded />, data: <CollectionDemo id="table" />, workbench: <Workbench />, publication: <Publication />, guided: <GuidedWorkflow />, monitoring: <Monitoring />, starter: <StarterApp frame={frame} /> };
-  const full = id === 'workbench' || id === 'starter';
+  const content: Record<string, ReactNode> = { 'focused-utility': <FocusedUtility />, 'multi-tool': <MultiTool />, embedded: <FocusedUtility embedded />, data: <CollectionDemo id="table" />, workbench: <Workbench />, publication: <Publication />, guided: <GuidedWorkflow />, monitoring: <Monitoring />, website: <WebsiteSpecimen theme={frame.config.mode} />, starter: <StarterApp frame={frame} /> };
+  const full = id === 'workbench' || id === 'starter' || id === 'website';
   return <div className="layout-page"><UI.TabBoundary><section className={`layout-frame ${full ? 'layout-frame--app' : ''}`} aria-label={page.label}>
     <header className="layout-frame-bar"><span className="layout-frame-name">{page.label}</span><UI.HelpPopover label={`About ${page.label.toLowerCase()}`}>{page.description}</UI.HelpPopover></header>
     <div className="layout-frame-body">{content[id]}</div>
