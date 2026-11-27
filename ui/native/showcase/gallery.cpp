@@ -247,7 +247,7 @@ QWidget *component(const QString &id) {
         return vertical({ui, editorial, mono});
     }
     if (id == "spacing") return paragraph(QStringLiteral("Shared spacing: 4, 8, 12, 16, 24, 32, 48 px. Theme tokens set control height, radius and border width. Text remains readable when the window narrows."));
-    if (id == "icons") return row({new IconButton("search", "Search"), new IconButton("folder", "Open folder"), new IconButton("settings", "Settings"), new IconButton("help", "Help"), new IconButton("copy", "Copy"), new IconButton("check", "Confirm")});
+    if (id == "icons") return row({new IconButton("search", "Search"), new IconButton("folder", "Open folder"), new IconButton("settings", "Settings"), new IconButton("help", "Help"), new IconButton("copy", "Copy"), new IconButton("check", "Confirm"), new IconButton("sidebar", "Show or hide the sidebar")});
     if (id == "motion") {
         auto *reduced = new QCheckBox(QStringLiteral("Reduce motion"));
         auto *toggle = new Button(QStringLiteral("Toggle detail"));

@@ -35,23 +35,39 @@ export function SettingsWindow({ open, onClose, sections, section, onSectionChan
   </Dialog>;
 }
 
+/** Where the About page links: each is optional and hidden when not given. */
+export type AboutLinks = { website?: string; repository?: string; license?: string; licenseUrl?: string };
+
+// The style's credit: small secondary text, pinned to the bottom right of About, so the app keeps the spotlight.
 export function StyleAttribution() {
   return <footer className="sj-about-attribution" aria-label="UI system attribution">
-    <BrandMark size={22} /><div><p><strong>{attribution.name}</strong> · {systemVersion}</p>
-      <p><a href={attribution.website}>{attribution.projectLine}</a></p>
-      <p>© {new Date().getFullYear()} {attribution.copyrightHolder}</p>
-    </div>
+    <p>Built with <a href={attribution.website}>{attribution.name}</a> {systemVersion} · {attribution.projectLine} · © {new Date().getFullYear()} {attribution.copyrightHolder}</p>
   </footer>;
 }
 
-export function AboutPage({ name, description, version, logo, children }: { name: string; description: string; version?: string; logo?: ReactNode; children?: ReactNode }) {
-  return <SettingsPage title="About"><AboutContent name={name} description={description} version={version} logo={logo}>{children}</AboutContent></SettingsPage>;
+type AboutProps = { name: string; description: string; version?: string; logo?: ReactNode; links?: AboutLinks; children?: ReactNode };
+export function AboutPage(props: AboutProps) {
+  return <SettingsPage title="About"><AboutContent {...props} /></SettingsPage>;
 }
-export function AboutSection({ name, description, version, logo, children }: { name: string; description: string; version?: string; logo?: ReactNode; children?: ReactNode }) {
-  return <SettingsSection label="About"><AboutContent name={name} description={description} version={version} logo={logo}>{children}</AboutContent></SettingsSection>;
+export function AboutSection(props: AboutProps) {
+  return <SettingsSection label="About"><AboutContent {...props} /></SettingsSection>;
 }
-function AboutContent({ name, description, version, logo, children }: { name: string; description: string; version?: string; logo?: ReactNode; children?: ReactNode }) {
-  return <><div className="sj-about-product"><div className="sj-about-product-name">{logo}<h2>{name}</h2></div>
-    <p>{description}</p>{version && <p className="sj-muted">Version {version}</p>}{children}
-  </div><StyleAttribution /></>;
+function AboutContent({ name, description, version, logo, links = {}, children }: AboutProps) {
+  const linkRow = [
+    links.website && <a key="website" href={links.website}>Website</a>,
+    links.repository && <a key="repository" href={links.repository}>Repository</a>,
+    links.license && (links.licenseUrl ? <a key="license" href={links.licenseUrl}>{links.license} license</a> : <span key="license">{links.license} license</span>),
+  ].filter(Boolean);
+  return <div className="sj-about">
+    <div className="sj-about-product">
+      {logo && <div className="sj-about-logo">{logo}</div>}
+      <div className="sj-about-text">
+        <div className="sj-about-title"><h2>{name}</h2>{version && <span className="sj-about-version">Version {version}</span>}</div>
+        <p>{description}</p>
+        {linkRow.length > 0 && <p className="sj-about-links">{linkRow}</p>}
+        {children}
+      </div>
+    </div>
+    <StyleAttribution />
+  </div>;
 }

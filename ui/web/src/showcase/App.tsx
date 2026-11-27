@@ -99,6 +99,7 @@ export default function App() {
   ];
 
   return <UI.AppShell name="Stack Junkie UI" description="A living collection of reusable interface components, layouts and interactions." version={UI.systemVersion} logo={<UI.BrandMark size={44} />}
+    links={{ website: 'https://style.stack-junkie.com', repository: 'https://github.com/stack-junkie/stack-junkie-style', license: 'MIT', licenseUrl: 'https://github.com/stack-junkie/stack-junkie-style/blob/main/ui/LICENSE' }}
     className="showcase" preset={preset} choices={overrides} config={shellConfig} sections={sections} storageKey={`${prefix}-shell`} mainId="catalog-main" skipLabel="Skip to component examples"
     location={{ section, page: section === 'home' ? 'overview' : pages[section] }} onNavigate={navigate}
     mode={mode} onModeChange={setMode} settingsState={settings} onSettingsChange={setSettings}

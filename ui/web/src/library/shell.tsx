@@ -3,8 +3,10 @@ import { ThemeProvider, type Direction, type ThemeMode } from './theme';
 import { SettingsRow, Workspace } from './layout';
 import { NavTree, SideNavigation, Tabs } from './navigation';
 import { IconButton, type IconName } from './core';
+import { tipProps } from './tips';
+import { readZoom, stepZoom, defaultZoom } from './zoom';
 import { Select } from './inputs';
-import { AboutSection, SettingsSection, SettingsWindow, type SettingsWindowSection } from './settings';
+import { AboutSection, SettingsSection, SettingsWindow, type AboutLinks, type SettingsWindowSection } from './settings';
 import { resolvePreset, type PresetChoices, type PresetId } from './presets';
 import { BottomPanel, MenuBar, StatusBar, type MenuBarMenu, type MenuEntry, type PanelTab } from './bars';
 
@@ -66,8 +68,9 @@ export function ThemeSetting({ mode, onChange }: { mode: ThemeMode; onChange: (m
 export function AppShell({ name, description, version, logo, sections, config = defaultShellConfig, preset, choices: overrides, settings = [], storageKey, style, className = '',
   location: controlledLocation, onNavigate, mode: controlledMode, onModeChange, settingsState, onSettingsChange,
   brand, sidebar: sidebarOverride, sidebarHeader, sidebarTitle, overlays, mainId, skipLabel = 'Skip to content', aboutChildren, shortcuts = true,
-  menus = [], menuItems = {}, status, panels = [] }: {
+  menus = [], menuItems = {}, status, panels = [], zoom: controlledZoom, onZoomChange, links }: {
   name: string; description: string; version: string; logo?: ReactNode; sections: ShellSection[];
+  /** The app's website, repository and license, linked from About. Each is optional. */ links?: AboutLinks;
   /** Sidebar resizing and collapsing. Without a preset or choices, its rail, sidebar and theme also set the layout. */ config?: ShellConfig;
   /** Starting set of App frame choices. Its rail, sidebar and theme replace the ones in config.
    * The Website preset is drawn by WebsiteLayout, not this frame; here it only turns the rail and sidebar off. */ preset?: PresetId;
@@ -92,6 +95,8 @@ export function AppShell({ name, description, version, logo, sections, config = 
    * Without a state the left side shows the current page's name. */
   status?: { state?: ReactNode; facts?: ReactNode[] };
   /** Bottom panel tabs, such as Output and Problems, when the Bottom panel choice is on. Without tabs no panel is drawn. */ panels?: PanelTab[];
+  /** Controlled zoom percentage of the whole frame, set by View > Appearance. Without it the frame remembers it itself.
+   * The browser's own zoom keys are left alone. */ zoom?: number; onZoomChange?: (zoom: number) => void;
 }) {
   const choices = preset !== undefined || overrides !== undefined ? resolvePreset(preset ?? 'web-app', overrides) : configChoices(config);
   const systemMode = useSystemTheme();
@@ -122,6 +127,10 @@ export function AppShell({ name, description, version, logo, sections, config = 
   // The View menu hides and shows the sidebar, Status bar and bottom panel for this session; the choices decide whether they exist.
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => { try { return !!storageKey && localStorage.getItem(`${storageKey}:collapsed`) === 'true'; } catch { return false; } });
   const [statusShown, setStatusShown] = useState(true);
+  const [ownZoom, setOwnZoom] = useState(() => { try { return readZoom(storageKey ? localStorage.getItem(`${storageKey}:zoom`) : null); } catch { return defaultZoom; } });
+  const zoom = controlledZoom ?? ownZoom;
+  const setZoom = (z: number) => { if (controlledZoom === undefined) setOwnZoom(z); onZoomChange?.(z); };
+  useEffect(() => { if (storageKey) try { localStorage.setItem(`${storageKey}:zoom`, String(ownZoom)); } catch { /* Optional storage. */ } }, [storageKey, ownZoom]);
   const [panelShown, setPanelShown] = useState(true);
   const [panelHeight, setPanelHeight] = useState(() => { try { const value = Number(storageKey ? localStorage.getItem(`${storageKey}:panel`) : NaN); return Number.isFinite(value) && value > 0 ? value : 160; } catch { return 160; } });
   useEffect(() => { if (storageKey) try { localStorage.setItem(`${storageKey}:panel`, String(panelHeight)); } catch { /* Optional storage. */ } }, [storageKey, panelHeight]);
@@ -186,7 +195,7 @@ export function AppShell({ name, description, version, logo, sections, config = 
 
   const builtIn: SettingsWindowSection[] = [
     { id: 'appearance', label: 'Appearance', keywords: 'theme dark light mode color', content: <SettingsSection label="Appearance"><ThemeSetting mode={mode} onChange={setMode} /></SettingsSection> },
-    { id: 'about', label: 'About', keywords: 'version copyright', content: <AboutSection name={name} description={description} version={version} logo={logo}>{aboutChildren}</AboutSection> },
+    { id: 'about', label: 'About', keywords: 'version copyright', content: <AboutSection name={name} description={description} version={version} logo={logo} links={links}>{aboutChildren}</AboutSection> },
   ];
   const settingsSections = [...settings, ...builtIn.filter(b => !settings.some(s => s.id === b.id))];
 
@@ -194,11 +203,16 @@ export function AppShell({ name, description, version, logo, sections, config = 
   const menuBar = choices.menuBar ? <MenuBar label={`${name} menu bar`} menus={[
     { id: 'file', label: 'File', items: [...(menuItems.file ?? []), { id: 'frame-file', separator: true }, { id: 'settings', label: 'Settings…', shortcut: 'Ctrl+,', run: () => setSettings({ ...settingsNow, open: true }) }] },
     { id: 'edit', label: 'Edit', items: menuItems.edit ?? [] },
-    { id: 'view', label: 'View', items: [...(menuItems.view ?? []), { id: 'frame-view', separator: true },
+    // The top of View is the app's own views; the frame's toggles, zoom and theme sit in View > Appearance.
+    { id: 'view', label: 'View', items: [...(menuItems.view ?? []), { id: 'frame-view', separator: true }, { id: 'appearance', label: 'Appearance', items: [
       ...(canCollapse ? [{ id: 'sidebar', label: 'Sidebar', shortcut: 'Ctrl+B', checked: !sidebarCollapsed, run: () => setSidebarCollapsed(!sidebarCollapsed) }] : []),
-      ...(panelOn ? [{ id: 'bottom-panel', label: 'Bottom panel', shortcut: 'Ctrl+J', checked: panelShown, run: () => setPanelShown(!panelShown) }] : []),
       ...(choices.statusBar ? [{ id: 'status-bar', label: 'Status bar', checked: statusShown, run: () => setStatusShown(!statusShown) }] : []),
-      { id: 'frame-theme', separator: true }, { id: 'dark-theme', label: 'Dark theme', checked: mode === 'dark', run: () => setMode(mode === 'dark' ? 'light' : 'dark') }] },
+      ...(panelOn ? [{ id: 'bottom-panel', label: 'Panel', shortcut: 'Ctrl+J', checked: panelShown, run: () => setPanelShown(!panelShown) }] : []),
+      { id: 'frame-zoom', separator: true },
+      { id: 'zoom-in', label: 'Zoom in', disabled: zoom >= 200, run: () => setZoom(stepZoom(zoom, 1)) },
+      { id: 'zoom-out', label: 'Zoom out', disabled: zoom <= 50, run: () => setZoom(stepZoom(zoom, -1)) },
+      { id: 'zoom-reset', label: `Reset zoom (${zoom}%)`, disabled: zoom === defaultZoom, run: () => setZoom(defaultZoom) },
+      { id: 'frame-theme', separator: true }, { id: 'dark-theme', label: 'Dark theme', checked: mode === 'dark', run: () => setMode(mode === 'dark' ? 'light' : 'dark') }] }] },
     ...menus,
     { id: 'help', label: 'Help', items: [...(menuItems.help ?? []), { id: 'frame-help', separator: true }, { id: 'about', label: `About ${name}`, run: () => setSettings({ open: true, section: 'about' }) }] },
   ]} /> : null;
@@ -207,12 +221,12 @@ export function AppShell({ name, description, version, logo, sections, config = 
     ? <div className="sj-shell-work"><div className="sj-shell-work-main">{body(sidebarCollapsed)}</div><BottomPanel tabs={panels} height={panelHeight} onHeightChange={setPanelHeight} onClose={() => setPanelShown(false)} /></div>
     : body(sidebarCollapsed);
 
-  const gear = <IconButton icon="settings" label="Settings" variant="quiet" aria-haspopup="dialog" aria-expanded={settingsNow.open} onClick={() => setSettings({ ...settingsNow, open: true })} />;
-  const home = brand ?? <button type="button" className="sj-button sj-button--quiet sj-shell-home" aria-label={`${name} home`} title="Home" onClick={() => navigate(visible[0]?.id ?? '')}>{logo}<strong>{name}</strong></button>;
+  const gear = <IconButton icon="settings" label="Settings" variant="quiet" tooltipSide={choices.rail ? 'right' : 'below'} aria-haspopup="dialog" aria-expanded={settingsNow.open} onClick={() => setSettings({ ...settingsNow, open: true })} />;
+  const home = brand ?? <button type="button" className="sj-button sj-button--quiet sj-shell-home" aria-label={`${name} home`} {...tipProps('Home')} onClick={() => navigate(visible[0]?.id ?? '')}>{logo}<strong>{name}</strong></button>;
 
   return <ShellChoices.Provider value={choices}><ThemeProvider direction={config.direction} mode={mode} density={choices.density} className={`sj-shell ${className}`} style={style}>
     {mainId && <a className="sj-skip-link" href={`#${mainId}`}>{skipLabel}</a>}
-    <Workspace contentOwnsHeader mainId={mainId} storageKey={storageKey} sidebarTitle={title} rail={rail} sidebar={sidebar} resizable={config.resizableSidebar} collapsible={config.collapsibleSidebar}
+    <Workspace zoom={zoom} contentOwnsHeader mainId={mainId} storageKey={storageKey} sidebarTitle={title} rail={rail} sidebar={sidebar} resizable={config.resizableSidebar} collapsible={config.collapsibleSidebar}
       sidebarCollapsed={sidebarCollapsed} onSidebarCollapsedChange={setSidebarCollapsed}
       header={menuBar ? <div className="sj-shell-title">{home}{menuBar}</div> : home} navigationFooter={gear} footer={statusBar}>
       {({ sidebarCollapsed }) => work(sidebarCollapsed)}

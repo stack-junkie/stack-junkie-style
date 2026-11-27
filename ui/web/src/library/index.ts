@@ -13,4 +13,6 @@ export * from './settings';
 export * from './shell';
 export * from './bars';
 export * from './presets';
+export { tipProps, type TipSide } from './tips';
+export { zoomSteps, stepZoom } from './zoom';
 export * from './website';

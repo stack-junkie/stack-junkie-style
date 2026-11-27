@@ -1,5 +1,6 @@
 import { createContext, useContext, type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 import tokens from '../../../shared/tokens.json';
+import { TipLayer, TipLayerScope, useTipLayered } from './tips';
 
 export type Direction = 'clean';
 export type ThemeMode = 'light' | 'dark';
@@ -26,5 +27,7 @@ export function ThemeProvider({ direction = 'clean', mode = 'light', density = '
   vars['--sj-normal'] = `${tokens.motion.normal}ms`;
   tokens.spacing.forEach((value, index) => { vars[`--sj-space-${index + 1}`] = `${value}px`; });
   for (const [key, value] of Object.entries(tokens.typeScale)) vars[`--sj-type-${key}`] = `${value}px`;
-  return <ThemeContext.Provider value={{ direction, mode }}><div {...props} className={`sj-theme ${className}`} data-direction={direction} data-mode={mode} data-density={density} style={{ ...vars, colorScheme: mode, ...style } as CSSProperties}>{children}</div></ThemeContext.Provider>;
+  // The outermost theme draws the tooltips for everything inside it.
+  const layered = useTipLayered();
+  return <ThemeContext.Provider value={{ direction, mode }}><TipLayerScope value><div {...props} className={`sj-theme ${className}`} data-direction={direction} data-mode={mode} data-density={density} style={{ ...vars, colorScheme: mode, ...style } as CSSProperties}>{!layered && <TipLayer />}{children}</div></TipLayerScope></ThemeContext.Provider>;
 }

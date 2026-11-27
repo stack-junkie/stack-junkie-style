@@ -444,7 +444,7 @@
           "usage": "File, Edit, View, the app's menus, then Help. Settings sits under File and About under Help."
         }
       ],
-      "icon": "menu"
+      "icon": "sidebar"
     },
     {
       "id": "containers",

@@ -1,16 +1,18 @@
 import { useState, type ButtonHTMLAttributes, type HTMLAttributes, type ReactNode } from 'react';
 import sprite from '../../../shared/icons.svg?raw';
+import { tipProps, type TipSide } from './tips';
 
 // Inline the bundled, source-owned symbols. Library builds inline URL imports as
 // data URLs, which SVG <use> does not support in current browsers.
 const symbols = Object.fromEntries([...sprite.matchAll(/<symbol\s+id="([^"]+)"[^>]*>([\s\S]*?)<\/symbol>/g)].map(match => [match[1], match[2]]));
 
-export type IconName = 'search' | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'close' | 'menu' | 'sun' | 'moon' | 'check' | 'plus' | 'help' | 'settings' | 'grid' | 'code' | 'copy' | 'folder' | 'file' | 'alert' | 'play' | 'pause' | 'layout';
+export type IconName = 'search' | 'chevron-left' | 'chevron-right' | 'chevron-down' | 'close' | 'menu' | 'sun' | 'moon' | 'check' | 'plus' | 'help' | 'settings' | 'grid' | 'code' | 'copy' | 'folder' | 'file' | 'alert' | 'play' | 'pause' | 'layout' | 'sidebar';
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><g dangerouslySetInnerHTML={{ __html: symbols[name] || '' }} /></svg>; }
 export function Button({ variant = 'secondary', busy = false, children, className = '', disabled, type = 'button', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'quiet' | 'danger'; busy?: boolean }) {
   return <button {...props} type={type} disabled={disabled || busy} aria-busy={busy || undefined} className={`sj-button sj-button--${variant} ${className}`}>{busy && <Spinner label="Working" />}{children}</button>;
 }
-export function IconButton({ icon, label, ...props }: Omit<Parameters<typeof Button>[0], 'children'> & { icon: IconName; label: string }) { return <Button {...props} aria-label={label} title={label} className={`sj-icon-button ${props.className || ''}`}><Icon name={icon} /></Button>; }
+/** An icon-only button. Its label is its accessible name and its tooltip, shown below it or, with tooltipSide="right", beside it. */
+export function IconButton({ icon, label, tooltipSide = 'below', ...props }: Omit<Parameters<typeof Button>[0], 'children'> & { icon: IconName; label: string; tooltipSide?: TipSide }) { return <Button {...props} aria-label={label} {...tipProps(label, tooltipSide)} className={`sj-icon-button ${props.className || ''}`}><Icon name={icon} /></Button>; }
 export function ToggleButton({ pressed, onPressedChange, children, ...props }: Omit<Parameters<typeof Button>[0], 'onClick'> & { pressed: boolean; onPressedChange: (pressed: boolean) => void }) { return <Button {...props} aria-pressed={pressed} onClick={() => onPressedChange(!pressed)}>{children}</Button>; }
 export function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'success' | 'warning' | 'danger'; children: ReactNode }) { return <span className={`sj-badge sj-tone-${tone}`}>{children}</span>; }
 export function Alert({ tone = 'info', title, children, action }: { tone?: 'info' | 'success' | 'warning' | 'danger'; title: string; children?: ReactNode; action?: ReactNode }) { return <div className={`sj-alert sj-tone-${tone}`} role={tone === 'danger' ? 'alert' : 'status'}><Icon name={tone === 'success' ? 'check' : 'alert'} /><div><strong>{title}</strong>{children && <div>{children}</div>}</div>{action}</div>; }

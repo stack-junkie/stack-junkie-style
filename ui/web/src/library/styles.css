@@ -97,3 +97,26 @@
 .sj-bottom-panel-close{position:absolute;top:2px;right:4px;min-height:26px;width:26px;padding:4px}
 .sj-bottom-panel-close svg{width:14px;height:14px}
 @media(forced-colors:active){.sj-menubar-popup{border:1px solid CanvasText}.sj-menubar-item:focus-visible{outline:2px solid Highlight}}
+/* 3.0.1: tooltips beside their element, the pointing hand on everything clickable, a tighter sidebar tree. */
+.sj-tip-layer{position:fixed;top:0;left:0;width:0;height:0;z-index:200;background:transparent!important;pointer-events:none}
+.sj-tip{position:fixed;width:max-content;max-width:260px;padding:3px 8px;border:var(--sj-borderWidth) solid var(--sj-border);border-radius:var(--sj-radius);background:var(--sj-surface);color:var(--sj-text);font-size:var(--sj-type-caption);line-height:1.4;box-shadow:0 4px 14px #0003;white-space:normal}
+.sj-theme a[href],.sj-theme [role=tab],.sj-theme [role=menuitem],.sj-theme [role=menuitemcheckbox],.sj-theme label.sj-check,.sj-theme label.sj-switch,.sj-theme select{cursor:pointer}
+.sj-theme button:disabled,.sj-theme input:disabled,.sj-theme select:disabled,.sj-theme textarea:disabled,.sj-theme [aria-disabled=true]{cursor:default}
+.sj-nav-group{gap:0}.sj-nav-group>.sj-side-nav{padding-left:7px;gap:1px}
+.sj-menubar-sub{position:relative}.sj-menubar-sub>.sj-menubar-item{grid-template-columns:16px minmax(0,1fr) auto}.sj-menubar-sub>.sj-menubar-item>svg{color:var(--sj-muted)}
+.sj-menubar-sub>.sj-menubar-item[aria-expanded=true]{background:var(--sj-selection)}
+.sj-menubar-subpopup{top:-5px;left:calc(100% + 2px)}
+/* About: the app's logo, name, version, description and links first; the style's credit small in the bottom right. */
+.sj-settings-window-body>div:has(>.sj-settings-section>.sj-about){min-height:100%;display:flex;flex-direction:column}
+.sj-settings-section:has(>.sj-about){flex:1;max-width:none;display:flex;flex-direction:column}
+.sj-settings-page-inner:has(>.sj-about){min-height:100%}
+.sj-about{flex:1;display:flex;flex-direction:column;gap:var(--sj-space-6);padding-top:var(--sj-space-4)}
+.sj-about-product{display:flex;align-items:flex-start;gap:var(--sj-space-5);max-width:640px}
+.sj-about-logo{flex:none;display:flex;align-items:center;justify-content:center;width:72px;height:72px;border:var(--sj-borderWidth) solid var(--sj-border);border-radius:calc(var(--sj-radius) * 2);background:var(--sj-canvas)}
+.sj-about-logo>svg,.sj-about-logo>img{width:52px!important;height:52px!important}
+.sj-about-text{display:grid;gap:var(--sj-space-3);min-width:0}
+.sj-about-title{display:flex;align-items:center;flex-wrap:wrap;gap:var(--sj-space-3)}.sj-about-title>h2{font-size:var(--sj-type-heading);line-height:1.25;font-weight:var(--sj-strongWeight)}
+.sj-about-version{display:inline-flex;align-items:center;padding:1px 8px;border:var(--sj-borderWidth) solid var(--sj-border);border-radius:999px;background:var(--sj-raised);color:var(--sj-muted);font-size:var(--sj-type-caption);font-variant-numeric:tabular-nums}
+.sj-about-text>p{max-width:60ch}.sj-about-links{display:flex;flex-wrap:wrap;gap:var(--sj-space-2) var(--sj-space-5);font-size:var(--sj-type-label)}.sj-about-links>span{color:var(--sj-muted)}
+.sj-theme .sj-about-attribution{margin-top:auto;align-self:flex-end;border:0;padding:0;display:block;text-align:right;font-size:var(--sj-type-caption);color:var(--sj-muted)}.sj-about-attribution p{margin:0}.sj-theme .sj-about-attribution a{color:inherit;text-decoration:underline;text-decoration-color:var(--sj-border)}
+@media(max-width:640px){.sj-about-product{flex-direction:column}}

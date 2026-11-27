@@ -9,14 +9,21 @@ import { Tabs } from './navigation';
  * Give `checked` for an on or off item, which shows a check mark. */
 export type MenuItem = { id: string; label: string; run: () => void; shortcut?: string; disabled?: boolean; checked?: boolean };
 export type MenuSeparator = { id: string; separator: true };
-export type MenuEntry = MenuItem | MenuSeparator;
+/** A submenu, such as View > Appearance. It opens to the right on hover, Enter or the right arrow key. One level deep. */
+export type MenuSubmenu = { id: string; label: string; items: (MenuItem | MenuSeparator)[]; disabled?: boolean };
+export type MenuEntry = MenuItem | MenuSeparator | MenuSubmenu;
 export type MenuBarMenu = { id: string; label: string; items: MenuEntry[] };
 const isSeparator = (entry: MenuEntry): entry is MenuSeparator => 'separator' in entry;
+const isSubmenu = (entry: MenuEntry): entry is MenuSubmenu => 'items' in entry;
 
 /** Drops separators at either end and next to each other, so menus built from optional groups stay tidy. */
 export function tidyMenu(items: MenuEntry[]): MenuEntry[] {
   const result: MenuEntry[] = [];
-  for (const item of items) if (!isSeparator(item) || (result.length && !isSeparator(result[result.length - 1]))) result.push(item);
+  for (const entry of items) {
+    const item = isSubmenu(entry) ? { ...entry, items: tidyMenu(entry.items) as MenuSubmenu['items'] } : entry;
+    if (isSubmenu(item) && !item.items.length) continue;
+    if (!isSeparator(item) || (result.length && !isSeparator(result[result.length - 1]))) result.push(item);
+  }
   while (result.length && isSeparator(result[result.length - 1])) result.pop();
   return result;
 }
@@ -28,15 +35,25 @@ export function MenuBar({ menus, label = 'Menu bar' }: { menus: MenuBarMenu[]; l
   const [current, setCurrent] = useState(0);
   // Which item to focus once a menu opens: the first, the last, or none when it was opened by pointer.
   const [focusAt, setFocusAt] = useState<'first' | 'last' | null>(null);
+  // The open submenu inside the open menu, and whether to focus its first item once it opens.
+  const [sub, setSub] = useState<string | null>(null);
+  const [subFocus, setSubFocus] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   const popup = useRef<HTMLDivElement>(null);
-  const items = () => [...(popup.current?.querySelectorAll<HTMLButtonElement>('[role^=menuitem]:not(:disabled)') ?? [])];
+  // The enabled items of one menu, leaving out the items of a submenu inside it.
+  const itemsIn = (menu: Element | null | undefined) => [...(menu?.querySelectorAll<HTMLButtonElement>(':scope > [role^=menuitem]:not(:disabled), :scope > .sj-menubar-sub > [role^=menuitem]:not(:disabled)') ?? [])];
+  const items = () => itemsIn(popup.current);
 
   useEffect(() => {
     if (open === null || !focusAt) return;
     const list = items(); (focusAt === 'first' ? list[0] : list[list.length - 1])?.focus(); setFocusAt(null);
   }, [open, focusAt]);
+  useEffect(() => { setSub(null); }, [open]);
+  useEffect(() => {
+    if (!sub || !subFocus) return;
+    itemsIn(popup.current?.querySelector(`[data-submenu="${sub}"]`))[0]?.focus(); setSubFocus(false);
+  }, [sub, subFocus]);
   useEffect(() => {
     if (open === null) return;
     const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(null); };
@@ -58,7 +75,18 @@ export function MenuBar({ menus, label = 'Menu bar' }: { menus: MenuBarMenu[]; l
     else if (e.key === 'Escape' && open !== null) { e.preventDefault(); close(true); }
   }
   function menuKey(e: ReactKeyboardEvent) {
-    const list = items(); const index = list.indexOf(document.activeElement as HTMLButtonElement);
+    const active = document.activeElement as HTMLButtonElement | null;
+    const container = active?.closest('[role=menu]');
+    // Inside a submenu: the arrow keys move within it, and the left arrow or Escape returns to its parent item.
+    if (container && container !== popup.current) {
+      const parent = container.parentElement?.querySelector<HTMLButtonElement>(':scope > [aria-haspopup=menu]');
+      if (e.key === 'ArrowLeft' || e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); setSub(null); parent?.focus(); return; }
+      if (e.key === 'ArrowRight' && open !== null) { e.preventDefault(); openMenu(at(open + 1), 'first'); return; }
+    }
+    if (active?.getAttribute('aria-haspopup') === 'menu' && container === popup.current && (e.key === 'ArrowRight' || e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault(); setSub(active.dataset.opens ?? null); setSubFocus(true); return;
+    }
+    const list = container && container !== popup.current ? itemsIn(container) : items(); const index = list.indexOf(active as HTMLButtonElement);
     const focus = (to: number) => { e.preventDefault(); list[(to + list.length) % list.length]?.focus(); };
     if (e.key === 'ArrowDown') focus(index + 1);
     else if (e.key === 'ArrowUp') focus(index < 0 ? list.length - 1 : index - 1);
@@ -70,17 +98,27 @@ export function MenuBar({ menus, label = 'Menu bar' }: { menus: MenuBarMenu[]; l
     else if (e.key === 'Tab') close(false);
   }
 
+  function renderItem(item: MenuItem | MenuSeparator) {
+    return isSeparator(item) ? <div key={item.id} role="separator" className="sj-menubar-separator" />
+      : <button key={item.id} type="button" tabIndex={-1} role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'} aria-checked={item.checked} disabled={item.disabled}
+        aria-keyshortcuts={item.shortcut?.replace(/Ctrl/g, 'Control')} className="sj-menubar-item" onClick={() => { setOpen(null); item.run(); }}>
+        <span className="sj-menubar-check">{item.checked && <Icon name="check" size={14} />}</span><span>{item.label}</span>{item.shortcut && <kbd className="sj-menubar-shortcut">{item.shortcut}</kbd>}
+      </button>;
+  }
+
   return <div ref={root} className="sj-menubar" role="menubar" aria-label={label}>
     {shown.map((menu, index) => <div key={menu.id} className="sj-menubar-menu">
       <button ref={node => { buttons.current[index] = node; }} type="button" role="menuitem" aria-haspopup="menu" aria-expanded={open === index} tabIndex={index === current ? 0 : -1}
         className="sj-menubar-button" onClick={() => open === index ? close(false) : openMenu(index, null)} onKeyDown={e => barKey(e, index)}
         onPointerEnter={() => { if (open !== null && open !== index) openMenu(index, null); }}>{menu.label}</button>
       {open === index && <div ref={popup} role="menu" aria-label={menu.label} className="sj-menubar-popup" onKeyDown={menuKey}>
-        {menu.items.map(item => isSeparator(item) ? <div key={item.id} role="separator" className="sj-menubar-separator" />
-          : <button key={item.id} type="button" tabIndex={-1} role={item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'} aria-checked={item.checked} disabled={item.disabled}
-            aria-keyshortcuts={item.shortcut?.replace(/Ctrl/g, 'Control')} className="sj-menubar-item" onClick={() => { setOpen(null); item.run(); }}>
-            <span className="sj-menubar-check">{item.checked && <Icon name="check" size={14} />}</span><span>{item.label}</span>{item.shortcut && <kbd className="sj-menubar-shortcut">{item.shortcut}</kbd>}
-          </button>)}
+        {menu.items.map(item => isSubmenu(item)
+          ? <div key={item.id} className="sj-menubar-sub" onPointerEnter={() => setSub(item.id)} onPointerLeave={() => setSub(s => s === item.id ? null : s)}>
+            <button type="button" tabIndex={-1} role="menuitem" aria-haspopup="menu" aria-expanded={sub === item.id} data-opens={item.id} disabled={item.disabled} className="sj-menubar-item"
+              onClick={() => { setSub(item.id); setSubFocus(true); }}><span className="sj-menubar-check" /><span>{item.label}</span><Icon name="chevron-right" size={14} /></button>
+            {sub === item.id && <div role="menu" aria-label={item.label} data-submenu={item.id} className="sj-menubar-popup sj-menubar-subpopup">{item.items.map(renderItem)}</div>}
+          </div>
+          : renderItem(item))}
       </div>}
     </div>)}
   </div>;
