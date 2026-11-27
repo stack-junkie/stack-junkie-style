@@ -1,6 +1,6 @@
 ---
 name: stack-junkie-style
-description: Chris's design system for every front end (web apps, desktop apps, document editors, websites). Use when planning, building, editing or reviewing any interface, unless Chris names another design system or the app is a Look-alike app.
+description: A design system for web apps, desktop apps, document editors and websites, with React and Qt libraries, Presets and starters. Use when planning, building, editing or reviewing an interface that uses Stack Junkie Style, or when the user asks for it. Not for a Look-alike app.
 ---
 
 # Stack Junkie Style
@@ -8,8 +8,6 @@ description: Chris's design system for every front end (web apps, desktop apps, 
 Terms follow [GLOSSARY.md](GLOSSARY.md). Decisions behind them are in [docs/adr](docs/adr/).
 
 ## When it applies
-
-Every project with a front end uses this skill unless Chris says otherwise. When planning front-end work, say so in one line: "Using the stack-junkie-style skill, since you haven't said otherwise."
 
 A **Look-alike app** (built to imitate an existing app, like SJ Paint imitating Microsoft Paint) follows the imitated app's look and layout. It may still use library components where they fit. Keep it out of the App frame ([ADR 0002](docs/adr/0002-look-alike-apps-exempt.md)).
 
@@ -42,7 +40,7 @@ Details for each rule: [App frame](references/app-frame.md).
 
 ## Verify
 
-Look at screenshots of every changed page in dark and light before calling visual work done. A hex value, a token diff or a passing build is not a look. Take the screenshots in your own isolated preview (the built-in browser pane for web, the native showcase's offscreen `--export-preview`). Driving Chris's desktop needs his yes first. Report what you looked at and what you did not check. Fix what you see; add no validators, compliance reports or audit loops.
+Look at screenshots of every changed page in dark and light before calling visual work done. A hex value, a token diff or a passing build is not a look. Take the screenshots in your own isolated preview (the built-in browser pane for web, the native showcase's offscreen `--export-preview`). Driving the user's desktop needs their yes first. Report what you looked at and what you did not check. Fix what you see; add no validators, compliance reports or audit loops.
 
 ## References
 

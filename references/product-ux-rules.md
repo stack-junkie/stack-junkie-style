@@ -4,8 +4,8 @@ Structure comes from the [App frame](app-frame.md); text follows [no slop](no-sl
 
 ## Build what was asked
 
-- Build exactly the requested result: add nothing, remove nothing. Propose anything extra and wait for Chris's yes.
-- Before a material redesign, show something Chris can look at (a coded mockup or the change in the real app) and wait for approval. Match the approved mockup, including placement and state behavior.
+- Build exactly the requested result: add nothing, remove nothing. Propose anything extra and wait for the user's yes.
+- Before a material redesign, show something the user can look at (a coded mockup or the change in the real app) and wait for approval. Match the approved mockup, including placement and state behavior.
 - Never regress. Simplifying keeps every existing operation, control and fixed behavior. A change on one platform stays on that platform.
 - A prototype, an app and a packaged release are different requests; deliver the one asked for.
 

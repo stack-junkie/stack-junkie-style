@@ -1,6 +1,6 @@
 # App repo delivery
 
-Defaults for an app repository's README, versions and releases. They apply when the task touches those; a planning-only request authorizes none of this work. The repo's own conventions and Chris's named reference project come first.
+Defaults for an app repository's README, versions and releases. They apply when the task touches those; a planning-only request authorizes none of this work. The repo's own conventions and any reference project the user names come first.
 
 ## README
 
@@ -14,5 +14,5 @@ Defaults for an app repository's README, versions and releases. They apply when 
 - One version file is the only source. App, About and package metadata read or sync from it; the version is never hardcoded.
 - For a new app without its own rules: semantic versions, matching `vX.Y.Z` tags for approved releases, and a dated Keep a Changelog history of user-visible changes. Record only checks actually performed.
 - Bump the version for a delivered release, not for each prompt or planning edit. Ask before choosing a version that was not specified.
-- Keep build and version commands small and CI proportionate. Hooks, policy engines and release machinery come only when Chris asks.
-- Keep user data, credentials, local settings and build output out of the repo. Get Chris's approval before any public publication.
+- Keep build and version commands small and CI proportionate. Hooks, policy engines and release machinery come only when the user asks.
+- Keep user data, credentials, local settings and build output out of the repo. Get the user's approval before any public publication.
