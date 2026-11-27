@@ -1,5 +1,6 @@
 #include "gallery.hpp"
 #include "starter.hpp"
+#include "builder.hpp"
 #include <stackjunkie/components.hpp>
 #include <stackjunkie/version.hpp>
 #include <QApplication>
@@ -106,6 +107,10 @@ int main(int argc, char *argv[]) {
     parser.addOption({QStringLiteral("import-preset"), QStringLiteral("Import a custom preset file and use it, the same way Settings > Layout > Import file does. Not with --preset."), QStringLiteral("file")});
     parser.addOption({QStringLiteral("export-preset"), QStringLiteral("Write the current preset and choices as a custom preset file, then exit."), QStringLiteral("file")});
     parser.addOption({QStringLiteral("preset-name"), QStringLiteral("Name for --export-preset. Defaults to the imported or selected custom preset's name, else Custom preset."), QStringLiteral("name")});
+    parser.addOption({QStringLiteral("builder-help"), QStringLiteral("With --page builder: show one choice's help card in the export."), QStringLiteral("choice")});
+    parser.addOption({QStringLiteral("builder-logo"), QStringLiteral("With --page builder: use this image in the logo slot."), QStringLiteral("file")});
+    parser.addOption({QStringLiteral("builder-export"), QStringLiteral("With --page builder: show Export in the export.")});
+    parser.addOption({QStringLiteral("print-command"), QStringLiteral("Print the new command for --starter, --preset, --choice and --logo, as the Builder copies it, then exit.")});
     parser.addOption({QStringLiteral("width"), QStringLiteral("Export width, at least 480 pixels."), QStringLiteral("pixels"), QStringLiteral("1440")});
     parser.addOption({QStringLiteral("height"), QStringLiteral("Export height, at least 460 pixels."), QStringLiteral("pixels"), QStringLiteral("1000")});
     parser.process(app);
@@ -117,6 +122,15 @@ int main(int argc, char *argv[]) {
         if (parser.isSet(QStringLiteral("import-preset"))) {
             const QString error = readPresetFile(parser.value(QStringLiteral("import-preset")), &imported);
             if (!error.isEmpty()) { std::fprintf(stderr, "Preset file not imported: %s\n", qPrintable(error)); return 2; }
+        }
+        if (parser.isSet(QStringLiteral("print-command"))) {
+            const QString id = parser.isSet(QStringLiteral("preset")) ? parser.value(QStringLiteral("preset")) : QStringLiteral("web-app");
+            if (!Preset::exists(id)) { std::fprintf(stderr, "Unknown preset\n"); return 2; }
+            auto choices = Preset::resolve(id);
+            for (const auto &assignment : parser.values(QStringLiteral("choice")))
+                if (!choices.setValue(assignment.section(QLatin1Char('='), 0, 0), assignment.section(QLatin1Char('='), 1))) { std::fprintf(stderr, "Unknown choice or value\n"); return 2; }
+            std::printf("%s\n", qPrintable(starterCommand(parser.value(QStringLiteral("starter")), id, Preset::overrides(id, choices), QFileInfo(parser.value(QStringLiteral("logo"))).fileName())));
+            return 0;
         }
         if (parser.isSet(QStringLiteral("export-starter")) || parser.isSet(QStringLiteral("export-preset"))) {
             // The same files Settings > Layout writes: an imported preset, --preset alone, or the saved preset and choices, then each --choice.
@@ -149,6 +163,9 @@ int main(int argc, char *argv[]) {
         window.setWindowTitle(QStringLiteral("Stack Junkie Components %1").arg(QStringLiteral(STACKJUNKIE_VERSION)));
         window.setHeader(QStringLiteral("Stack Junkie UI"));
         window.setMergedTitleBar(true);
+        // The Builder fills the window in place of the showcase; Back returns.
+        Builder builder;
+        builder.resize(1280, 900);
         window.resize(1280, 900);
         window.setMinimumSize(480, 460);
         QSettings settings;
@@ -202,6 +219,9 @@ int main(int argc, char *argv[]) {
         window.setSectionVisible(homeSection, false);
         auto *homePage = new SettingsPage(QStringLiteral("Stack Junkie UI"));
         homePage->contentLayout()->addWidget(paragraph(QStringLiteral("Explore the shared components, layouts and foundations.")));
+        auto *buildApp = new Button(QStringLiteral("Build an app"), ButtonVariant::Primary);
+        homePage->contentLayout()->addWidget(row({buildApp}));
+        homePage->contentLayout()->addWidget(paragraph(QStringLiteral("Pick a Preset, switch its choices on a blank App frame, and export exactly what you see.")));
         for (int familyIndex = 0; familyIndex < families.size(); ++familyIndex) {
             auto *openFamily = new Button(families[familyIndex].toObject().value(QStringLiteral("label")).toString());
             homePage->contentLayout()->addWidget(openFamily);
@@ -209,8 +229,14 @@ int main(int argc, char *argv[]) {
         }
         const int homeIndex = window.addPage(QStringLiteral("Overview"), homePage, QStringLiteral("grid"), homeSection);
         pageIds << QStringLiteral("home"); pageNames << QStringLiteral("Home"); pageFamilies << QStringLiteral("Stack Junkie UI");
+        // The Rail's "Build an app" opens the Builder; its page only stands in while it opens.
+        const int builderSection = window.addSection(QStringLiteral("Build an app"), QStringLiteral("plus"));
+        const int builderIndex = window.addPage(QStringLiteral("Build an app"), paragraph(QStringLiteral("The Builder opens in place of the showcase.")), QStringLiteral("plus"), builderSection);
+        pageIds << QStringLiteral("builder"); pageNames << QStringLiteral("Build an app"); pageFamilies << QStringLiteral("Stack Junkie UI");
         window.setHomePage(homeIndex);
         // Menu bar items the showcase adds: the frame already owns Settings, About and the View toggles.
+        std::function<void()> openBuilder;
+        window.addMenuItem(window.fileMenu(), QStringLiteral("Export..."), [&openBuilder] { if (openBuilder) openBuilder(); });
         window.addMenuItem(window.editMenu(), QStringLiteral("Copy component name"), [&window, &pageNames] { QGuiApplication::clipboard()->setText(pageNames.value(window.currentPage())); });
         auto *libraryMenu = window.addMenu(QStringLiteral("Library"));
         for (int familyIndex = 0; familyIndex < families.size(); ++familyIndex)
@@ -302,6 +328,7 @@ int main(int argc, char *argv[]) {
         auto apply = [&] {
             const auto theme = Theme::load(QStringLiteral("clean"), mode->currentIndex() == 1);
             theme.apply(&window);
+            builder.applyShowcaseTheme(theme);
             window.setWindowIcon(QIcon(brandMark(theme, brandSize)));
             for (auto *colors : window.findChildren<QListWidget *>(QStringLiteral("semantic-colors"))) {
                 colors->clear();
@@ -315,7 +342,9 @@ int main(int argc, char *argv[]) {
         apply();
 
         // Settings > Layout: the preset picker and one control per choice, generated from presets.json and applied at once.
-        layoutPage->contentLayout()->addWidget(new Notice(QStringLiteral("Showcase only. A preset sets the App frame for a new project; change any choice and the frame follows.")));
+        layoutPage->contentLayout()->addWidget(new Notice(QStringLiteral("Showcase only. A preset sets the App frame for a new project; change any choice and the frame follows. The Builder shows it on a blank App frame and exports it.")));
+        auto *openBuilderButton = new Button(QStringLiteral("Open the Builder"), ButtonVariant::Primary);
+        layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Builder"), QStringLiteral("Presets, choices and Export on a full-window blank App frame."), openBuilderButton));
         auto *presetBox = new QComboBox; presetBox->setMinimumWidth(180);
         auto fillPresetBox = [&] {
             QSignalBlocker blocker(presetBox);
@@ -381,16 +410,6 @@ int main(int argc, char *argv[]) {
         }
         auto *reset = new Button(QString());
         layoutPage->contentLayout()->addWidget(row({reset}));
-        // Export writes a starter project for this preset and these choices into a folder the user picks.
-        auto *starterBox = new QComboBox; starterBox->setMinimumWidth(180);
-        for (const auto &platform : {QStringLiteral("web"), QStringLiteral("native")}) starterBox->addItem(starterLabel(platform), platform);
-        QLabel *exportHelp = nullptr;
-        const QString exportDescription = QStringLiteral("Write a starter project that installs the library at this version and uses this preset and these choices.");
-        layoutPage->contentLayout()->addWidget(settingsRow(QStringLiteral("Export"), exportDescription, starterBox, &exportHelp));
-        auto *exportButton = new Button(QStringLiteral("Export starter..."), ButtonVariant::Primary);
-        auto *exportResult = new QLabel; exportResult->setProperty("sjRole", "muted"); exportResult->setWordWrap(true); exportResult->setVisible(false);
-        layoutPage->contentLayout()->addWidget(row({exportButton}));
-        layoutPage->contentLayout()->addWidget(exportResult);
         auto syncLayout = [&] {
             const auto choices = Preset::resolve(presetId, overrides);
             const int custom = findCustom(customName);
@@ -410,9 +429,8 @@ int main(int argc, char *argv[]) {
             }
             reset->setText(QStringLiteral("Reset to ") + (custom >= 0 ? customName : Preset::find(presetId).label));
             reset->setVisible(custom >= 0 ? modified : !overrides.isEmpty());
-            const QString unsupported = generateStarter(starterBox->currentData().toString(), presetId, overrides).unsupported;
-            exportHelp->setText(unsupported.isEmpty() ? exportDescription : unsupported);
-            exportButton->setEnabled(unsupported.isEmpty());
+            QStringList names; for (const auto &c : customs) names << c.name;
+            builder.setState(presetId, overrides, names, custom >= 0 ? customName : QString());
         };
         auto applyLayout = [&] {
             window.setChoices(Preset::resolve(presetId, overrides));
@@ -501,20 +519,22 @@ int main(int argc, char *argv[]) {
             showMessage((replaced ? QStringLiteral("Replaced ") : QStringLiteral("Imported ")) + preset.name + QStringLiteral("."), false);
         });
         if (!startMessage.isEmpty()) showMessage(startMessage, false);
-        QObject::connect(starterBox, &QComboBox::currentIndexChanged, &window, [&](int) { syncLayout(); exportResult->setVisible(false); });
-        QObject::connect(exportButton, &QPushButton::clicked, &window, [&] {
-            const QString platform = starterBox->currentData().toString();
-            const auto starter = generateStarter(platform, presetId, overrides);
-            if (!starter.error.isEmpty() || !starter.unsupported.isEmpty()) return;
-            const QString folder = QFileDialog::getExistingDirectory(settingsWindow, QStringLiteral("Export %1 to a folder").arg(starterLabel(platform).toLower()));
-            if (folder.isEmpty()) return;
-            QStringList existing;
-            for (const auto &file : starter.files) if (QFileInfo::exists(QDir(folder).filePath(file.path))) existing << file.path;
-            if (!existing.isEmpty() && QMessageBox::question(settingsWindow, QStringLiteral("Replace files?"), QStringLiteral("The folder already has %1. Replace them?").arg(existing.join(QStringLiteral(", ")))) != QMessageBox::Yes) return;
-            const QString error = writeStarter(starter, folder);
-            exportResult->setText(error.isEmpty() ? QStringLiteral("Wrote %1 files to %2.").arg(starter.files.size()).arg(QDir::toNativeSeparators(folder)) : error);
-            exportResult->setVisible(true);
-        });
+        // The Builder works on the same preset and choices as Settings > Layout.
+        QObject::connect(&builder, &Builder::presetChosen, &window, [&](const QString &id) { choosePreset(id); });
+        QObject::connect(&builder, &Builder::customChosen, &window, [&](const QString &name) { chooseCustom(name); });
+        QObject::connect(&builder, &Builder::choiceChanged, &window, [&](const QString &id, const QVariant &value) { setChoice(id, value); });
+        QObject::connect(&builder, &Builder::customPresetsRequested, &window, [&] { settingsWindow->showSection(1); settingsWindow->show(); settingsWindow->raise(); });
+        QObject::connect(&builder, &Builder::backRequested, &window, [&] { window.setGeometry(builder.geometry()); window.show(); builder.hide(); });
+        int pageBeforeBuilder = homeIndex;
+        openBuilder = [&] {
+            syncLayout();
+            if (window.isVisible()) builder.setGeometry(window.geometry());
+            builder.show(); builder.raise(); window.hide(); settingsWindow->hide();
+            if (window.currentPage() == builderIndex) window.setCurrentPage(pageBeforeBuilder);
+        };
+        QObject::connect(buildApp, &QPushButton::clicked, &window, [&] { openBuilder(); });
+        QObject::connect(openBuilderButton, &QPushButton::clicked, &window, [&] { openBuilder(); });
+        QObject::connect(&window, &Workspace::currentChanged, &window, [&](int index) { if (index == builderIndex && !exporting) openBuilder(); else if (index != builderIndex) pageBeforeBuilder = index; });
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         QObject::connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, &window, [&] { if (Preset::resolve(presetId, overrides).theme == QStringLiteral("system")) showTheme(QStringLiteral("system")); });
 #endif
@@ -534,6 +554,25 @@ int main(int argc, char *argv[]) {
             const int imageHeight = parser.value(QStringLiteral("height")).toInt(&heightOk);
             if (!widthOk || !heightOk || imageWidth < 480 || imageHeight < 460 || imageWidth > 8192 || imageHeight > 8192) { std::fprintf(stderr, "Invalid export dimensions\n"); return 2; }
             window.resize(imageWidth, imageHeight);
+            const bool exportBuilder = requestedPage == QStringLiteral("builder");
+            if (exportBuilder) {
+                builder.resize(imageWidth, imageHeight); syncLayout(); builder.show();
+                if (parser.isSet(QStringLiteral("builder-logo"))) builder.setLogoPath(parser.value(QStringLiteral("builder-logo")));
+                QTimer::singleShot(150, &builder, [&builder, &parser] {
+                    if (parser.isSet(QStringLiteral("builder-help"))) builder.showHelp(parser.value(QStringLiteral("builder-help")));
+                    if (parser.isSet(QStringLiteral("builder-export"))) builder.showExport();
+                });
+                QTimer::singleShot(600, &builder, [&builder, destination, &app] {
+                    QPixmap image = builder.grab();
+                    QPainter painter(&image);
+                    for (auto *top : QApplication::topLevelWidgets())
+                        if (top != &builder && top->isVisible() && (top->property("sjRole") == QStringLiteral("help") || qobject_cast<QDialog *>(top)))
+                            painter.drawPixmap(top->mapToGlobal(QPoint(0, 0)) - builder.mapToGlobal(QPoint(0, 0)), top->grab());
+                    painter.end();
+                    app.exit(image.save(destination, "PNG") ? 0 : 3);
+                });
+                return app.exec();
+            }
             window.show();
             if (exportSettings) {
                 // A named section gets the export height, so a long section such as Layout fits.

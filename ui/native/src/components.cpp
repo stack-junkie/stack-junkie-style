@@ -709,6 +709,10 @@ Workspace::Workspace(QWidget *parent) : QWidget(parent) {
     connect(pageTabs_, &QTabBar::tabCloseRequested, this, [this](int tab) { closeDocument(pageTabs_->tabData(tab).toInt()); });
     auto *closeTab = new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_W), pageTabs_, nullptr, nullptr, Qt::WidgetShortcut);
     connect(closeTab, &QShortcut::activated, this, [this] { if (pageTabs_->tabsClosable() && pageTabs_->currentIndex() >= 0) closeDocument(pageTabs_->tabData(pageTabs_->currentIndex()).toInt()); });
+    // Names for the frame's parts, so tools such as the showcase's Builder can find and outline them.
+    toolbar_->setObjectName(QStringLiteral("sjHeader")); home_->setObjectName(QStringLiteral("sjHome")); menuBar_->setObjectName(QStringLiteral("sjMenuBar"));
+    railContainer_->setObjectName(QStringLiteral("sjRail")); sidebar_->setObjectName(QStringLiteral("sjSidebar")); tabRow_->setObjectName(QStringLiteral("sjTabRow"));
+    pages_->setObjectName(QStringLiteral("sjPages")); statusBar_->setObjectName(QStringLiteral("sjStatusBar")); bottomPanel_->setObjectName(QStringLiteral("sjBottomPanel"));
     updateBars();
     // Control and the wheel zoom, and outside Windows the merged title bar moves and resizes the window.
     qApp->installEventFilter(this);

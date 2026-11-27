@@ -43,6 +43,24 @@ static QString sectionsCode(bool web, const QJsonObject &structure) {
     return lines.join(QLatin1Char('\n'));
 }
 
+QJsonObject starterManifest() { return manifest(); }
+
+QString starterCommand(const QString &platform, const QString &presetId, const QVariantMap &overrides, const QString &logoName, const QString &folder) {
+    const Preset preset = Preset::find(presetId);
+    QString repo = manifest().value(QStringLiteral("repository")).toString();
+    repo.remove(QRegularExpression(QStringLiteral("^https://github\\.com/")));
+    QStringList parts{QStringLiteral("npx github:%1#v%2 new %3").arg(repo, QStringLiteral(STACKJUNKIE_VERSION), folder), QStringLiteral("--platform ") + platform, QStringLiteral("--preset ") + preset.id};
+    for (const auto &info : Preset::choiceInfo()) {
+        if (!overrides.contains(info.id)) continue;
+        PresetChoices candidate = preset.choices;
+        if (!candidate.setValue(info.id, overrides.value(info.id)) || candidate.value(info.id) == preset.choices.value(info.id)) continue;
+        const QVariant value = candidate.value(info.id);
+        parts << QStringLiteral("--choice %1=%2").arg(info.id, info.isSwitch() ? (value.toBool() ? QStringLiteral("true") : QStringLiteral("false")) : value.toString());
+    }
+    if (!logoName.isEmpty()) parts << QStringLiteral("--logo ") + (logoName.contains(QRegularExpression(QStringLiteral("\\s"))) ? QStringLiteral("\"%1\"").arg(logoName) : logoName);
+    return parts.join(QLatin1Char(' '));
+}
+
 QString starterLabel(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("label")).toString(); }
 QString starterDescription(const QString &platform) { return manifest().value(platform).toObject().value(QStringLiteral("description")).toString(); }
 

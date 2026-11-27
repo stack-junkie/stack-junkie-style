@@ -1,6 +1,7 @@
 #pragma once
 #include <QList>
 #include <QString>
+#include <QJsonObject>
 #include <QVariantMap>
 
 // Showcase only: Export's starter generator. It fills the shared templates in ui/shared/starters
@@ -19,6 +20,10 @@ Starter generateStarter(const QString &platform, const QString &presetId, const 
 QString logoFileName(const QString &name, QString *error = nullptr);
 /** Writes every file under directory, creating folders. Returns an error message, or an empty string on success. */
 QString writeStarter(const Starter &starter, const QString &directory);
+/** The `new` command that writes the same starter, pinned to this version's tag, exactly as starters.mjs writes it. */
+QString starterCommand(const QString &platform, const QString &presetId, const QVariantMap &overrides, const QString &logoName = {}, const QString &folder = QStringLiteral("my-app"));
+/** The starter structure from starters.json: areas with their pages, the bottom panel's tabs, the Website's articles. */
+QJsonObject starterManifest();
 /** The button label and short description of a platform's starter, from starters.json. */
 QString starterLabel(const QString &platform);
 QString starterDescription(const QString &platform);

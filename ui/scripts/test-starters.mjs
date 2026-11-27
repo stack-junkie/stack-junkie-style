@@ -13,7 +13,7 @@ import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmdirSync,
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { generateStarter } from '../shared/starters/starters.mjs';
+import { generateStarter, starterCommand } from '../shared/starters/starters.mjs';
 
 const ui = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const web = path.join(ui, 'web');
@@ -66,6 +66,10 @@ function compareWithShowcase(label, platform, testCase, files) {
   const expected = files.map(f => f.path).sort();
   const differing = expected.filter(p => { const f = files.find(x => x.path === p); return !written.includes(p) || !readFileSync(path.join(out, p)).equals(Buffer.from(f.data ?? f.text)); });
   result(JSON.stringify(written) === JSON.stringify(expected) && !differing.length, `${label}: native showcase writes the same files`, differing.length ? `differs in ${differing.join(', ')}` : '');
+  // The native Builder copies the same command the web Builder does.
+  const printed = run(showcase, ['--print-command', '--starter', platform, '--preset', testCase.preset, ...choiceArgs, ...(testCase.logo ? ['--logo', logoPath] : [])], { env: qtEnv });
+  const wanted = starterCommand({ platform, preset: testCase.preset, overrides: testCase.overrides, version, logoName: testCase.logo ? path.basename(logoPath) : undefined }, { manifest, presets });
+  result(printed.ok && printed.output.trim().split(/\r?\n/).pop() === wanted, `${label}: native Builder copies the same command`, printed.ok ? '' : tail(printed.output));
 }
 
 // What an app does with its Stubs: swap each for its own text. Here, the text inside it.

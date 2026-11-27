@@ -223,6 +223,7 @@ QToolButton[sjRole="railToggle"] { padding: 0; min-width: 0; min-height: @contex
 QPushButton:hover, QToolButton:hover { background: @raised; border-color: @accent; }
 QPushButton:pressed, QToolButton:pressed, QToolButton:checked { background: @selection; }
 QPushButton:focus, QToolButton:focus, QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QDateEdit:focus, QTimeEdit:focus, QTextEdit:focus, QPlainTextEdit:focus { border: 2px solid @focus; }
+QPushButton:checked { background: @selection; border-color: @accent; color: @accent; }
 QPushButton[sjVariant="primary"] { color: @onAccent; background: @accent; border-color: @accent; font-weight: @mediumWeight; }
 QPushButton[sjVariant="primary"]:hover { background: @accentHover; }
 QPushButton[sjVariant="danger"] { color: @danger; border-color: @danger; }
