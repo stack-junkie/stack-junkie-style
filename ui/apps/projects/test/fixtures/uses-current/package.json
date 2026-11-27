@@ -1,0 +1,8 @@
+{
+  "name": "uses-current",
+  "private": true,
+  "dependencies": {
+    "@stack-junkie/ui-web": "github:stack-junkie/stack-junkie-style#v3.0.0-preview.10",
+    "react": "^19.2.0"
+  }
+}

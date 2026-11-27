@@ -1,0 +1,8 @@
+{
+  "name": "not-using",
+  "private": true,
+  "dependencies": {
+    "react": "^19.2.0",
+    "vite": "^7.2.0"
+  }
+}
