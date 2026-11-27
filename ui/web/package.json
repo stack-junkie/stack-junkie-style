@@ -11,6 +11,10 @@
       "import": "./dist-library/stack-junkie-ui.js"
     },
     "./styles.css": "./dist-library/styles.css",
+    "./vite": {
+      "types": "./dist-types/web/src/library/vite.d.ts",
+      "import": "./dist-library/vite.js"
+    },
     "./source": "./src/library/index.ts"
   },
   "files": [
@@ -25,6 +29,8 @@
     "prebuild:library": "node ../scripts/prepare.mjs",
     "build:library": "vite build --config vite.library.config.ts && tsc -p tsconfig.library.json && node ../scripts/finish-web-library.mjs",
     "typecheck": "tsc --noEmit",
+    "pretest:stub-guard": "node ../scripts/prepare.mjs",
+    "test:stub-guard":"node tests/stub-guard/run.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "devDependencies": {

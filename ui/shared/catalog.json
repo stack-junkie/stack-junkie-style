@@ -802,6 +802,19 @@
             "default"
           ],
           "usage": "Keep selection and zoom while the inspector changes details."
+        },
+        {
+          "id": "stub",
+          "label": "Stub",
+          "variants": [
+            "inline",
+            "block",
+            "value"
+          ],
+          "states": [
+            "development"
+          ],
+          "usage": "Mark development stand-in content as a Stub. It is striped, and release builds fail until each one is replaced. Hint text inside inputs is not a Stub."
         }
       ],
       "icon": "file"

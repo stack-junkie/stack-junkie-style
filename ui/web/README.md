@@ -52,6 +52,30 @@ export function SaveForm() {
 
 Components use native HTML controls and native dialog behavior. Their props provide normal React controlled/uncontrolled input contracts. `ThemeProvider` scopes shared semantic tokens, typography and spacing, so light and dark surfaces can coexist. Its `direction` prop accepts only `clean` and is optional. `Workspace`, `SideNavigation`, `Tabs`, `DataTable`, `Canvas` and similar components accept application-owned values and change handlers.
 
+### Stubs
+
+A Stub is development stand-in content: sample text, fake data or an unfinished label. Wrap it in `Stub` and it renders striped, so it is easy to spot. Use `block` around larger content. For a value that cannot show stripes (attribute text, fake data), wrap it in `stub()`:
+
+```tsx
+import { Stub, stub } from '@stack-junkie/ui-web';
+
+<h1><Stub>Project name</Stub></h1>
+<Stub block><ProjectList projects={stub(sampleProjects)} /></Stub>
+<Button aria-label={stub('Open project')}>Open</Button>
+```
+
+Add the release guard to the application's Vite config. `vite build` then stops while any `Stub` or `stub` remains in the application and lists each one by file, line and column. `vite dev` is unaffected.
+
+```ts
+import { stackJunkieStubGuard } from '@stack-junkie/ui-web/vite';
+
+export default defineConfig({ plugins: [react(), stackJunkieStubGuard()] });
+```
+
+The guard reads application modules only, so the library itself and `node_modules` are never reported. It counts named, renamed and namespace imports (`UI.Stub`) from `@stack-junkie/ui-web` or a relative path into the library. The showcase does not use the guard, so its Stub page can show real Stubs. Hint text (an input's `placeholder`) is not a Stub and is never reported.
+
+`npm run test:stub-guard` builds a small sample app in `tests/stub-guard` with a Stub (it must fail and name each location) and without one (it must pass), against the source and, after `npm run build:library`, the built package.
+
 ### Presets
 
 A Preset is a named starting set of App frame choices. The four presets live in `../shared/presets.json`, the one source that web, native and the skill read:

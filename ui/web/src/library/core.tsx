@@ -18,6 +18,10 @@ export function Spinner({ label = 'Loading' }: { label?: string }) { return <spa
 export function Progress({ value, label }: { value?: number; label: string }) { return <label className="sj-progress"><span>{label}{value !== undefined && <span className="sj-mono">{Math.round(Math.max(0, Math.min(100, value)))}%</span>}</span><progress max={100} value={value} /></label>; }
 export function Skeleton({ lines = 3, label = 'Loading content' }: { lines?: number; label?: string }) { return <div className="sj-skeleton" role="status" aria-label={label}>{Array.from({ length: lines }, (_, i) => <span key={i} style={{ width: `${100 - (i % 3) * 14}%` }} />)}</div>; }
 export function Toast({ children, onDismiss }: { children: ReactNode; onDismiss: () => void }) { return <div className="sj-toast" role="status"><Icon name="check" /><span>{children}</span><IconButton icon="close" label="Dismiss notification" onClick={onDismiss} variant="quiet" /></div>; }
+// A Stub is development stand-in content. It renders striped, and the release guard (`stackJunkieStubGuard` in `@stack-junkie/ui-web/vite`) stops a build while any remain.
+export function Stub({ block = false, children, className = '', ...props }: HTMLAttributes<HTMLElement> & { block?: boolean }) { const Tag = block ? 'div' : 'span'; return <Tag title="Stub: replace before release" {...props} data-sj-stub="" className={`sj-stub${block ? ' sj-stub--block' : ''} ${className}`}>{children}</Tag>; }
+// Marks a plain value (attribute text or fake data) as a Stub, for places that cannot show stripes. The release guard finds it the same way.
+export function stub<T>(value: T): T { return value; }
 export function Separator() { return <hr className="sj-separator" />; }
 export function Avatar({ name, size = 'regular' }: { name: string; size?: 'small' | 'regular' }) { return <span className={`sj-avatar sj-avatar--${size}`} aria-label={name} title={name}>{name.split(/\s+/).slice(0, 2).map(x => x[0]).join('')}</span>; }
 export function Prose({ children, className = '', ...props }: HTMLAttributes<HTMLElement>) { return <article {...props} className={`sj-prose ${className}`}>{children}</article>; }

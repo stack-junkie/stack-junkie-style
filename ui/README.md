@@ -67,7 +67,7 @@ Pages supply content, state and actions. Shared components own repeated behavior
 The shared inputs are:
 
 - `shared/tokens.json`: semantic design values and the Clean utility direction.
-- `shared/catalog.json`: 51 component entries, applicable variants/states and eight product layouts.
+- `shared/catalog.json`: 52 component entries, applicable variants/states and eight product layouts.
 - `shared/fonts` and `shared/icons.svg`: local assets for both implementations, with font licenses.
 - `../VERSION`: the only authored release version.
 
