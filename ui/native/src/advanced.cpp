@@ -96,6 +96,8 @@ void NavTree::setCurrentId(const QString &id) {
 }
 SettingsWindow::SettingsWindow(QWidget *parent): QDialog(parent), search_(new SearchField(QStringLiteral("Search settings"))), list_(new QListWidget), pages_(new QStackedWidget) {
     setWindowTitle(QStringLiteral("Settings")); setModal(true); resize(760, 520);
+    // Settings is a window of its own, so it stays on the black ground like the app; small dialogs are elevated.
+    setProperty("sjRole", "window");
     auto *layout = new QHBoxLayout(this); layout->setContentsMargins(0, 0, 0, 0); layout->setSpacing(0);
     auto *nav = new QFrame; nav->setProperty("sjRole", "settingsNav"); nav->setFixedWidth(200);
     auto *navLayout = new QVBoxLayout(nav); navLayout->setContentsMargins(Theme::spacing(1), Theme::spacing(1), Theme::spacing(1), Theme::spacing(1));
@@ -124,7 +126,8 @@ void SettingsWindow::filter(const QString &text) {
     if (list_->currentItem() && list_->currentItem()->isHidden() && first >= 0) list_->setCurrentRow(first);
 }
 Drawer::Drawer(QWidget *host, const QString &title, QWidget *content, Edge edge) : QFrame(host), edge_(edge) {
-    setProperty("sjRole", "panel");
+    // A drawer floats over the page, so it sits on the elevated color like menus and popovers.
+    setProperty("sjRole", "drawer");
     setAccessibleName(title);
     setFocusPolicy(Qt::StrongFocus);
     setAutoFillBackground(true);

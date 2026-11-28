@@ -147,11 +147,30 @@
 .sj-theme .sj-about-attribution{margin-top:auto;align-self:flex-end;border:0;padding:0;display:block;text-align:right;font-size:var(--sj-type-caption);color:var(--sj-muted)}.sj-about-attribution p{margin:0}.sj-theme .sj-about-attribution a{color:inherit;text-decoration:underline;text-decoration-color:var(--sj-border)}
 @media(max-width:640px){.sj-about-product{flex-direction:column}}
 .sj-bottom-panel-zoom{flex:1;min-height:0;display:flex;flex-direction:column}.sj-bottom-panel-zoom>.sj-tabs{flex:1;min-height:0;display:flex;flex-direction:column}.sj-bottom-panel-zoom>.sj-tabs>.sj-tab-panel{flex:1;min-height:0;overflow:auto;padding:8px 12px}
-/* True black: the page is black, floating layers are not. Menus, dialogs, popovers, tooltips and toasts sit on the
-   elevated color with a stronger edge, because a shadow cannot show on black (Apple's base and elevated
-   backgrounds, X's Lights out). In light mode elevated is white, so nothing changes there. */
+/* True black: the page is black, small floating layers are not. Menus, popovers, tooltips, toasts and small dialogs
+   sit on the elevated color with a stronger edge, because a shadow cannot show on black (Apple's base and elevated
+   backgrounds). Large dialogs such as Settings stay on black with the stronger edge: they are pages, not pop-ups.
+   Inside an elevated layer, hover and dividers use their own steps so they still show on the lighter fill. */
 .sj-dialog,.sj-menu-content,.sj-menubar-popup,.sj-help-content,.sj-tip,.sj-tooltip>[role=tooltip],.sj-toast{background:var(--sj-elevated);border-color:var(--sj-borderStrong)}
+.sj-dialog--large{background:var(--sj-surface)}
 .sj-dialog>header,.sj-dialog>footer{border-color:var(--sj-borderStrong)}
+.sj-dialog:not(.sj-dialog--large),.sj-menu-content,.sj-menubar-popup,.sj-help-content,.sj-toast{--sj-raised:var(--sj-raisedOnElevated);--sj-border:var(--sj-borderStrong)}
+/* Menus highlight the item under the pointer or keyboard with the selection color: that is the menu convention, and
+   a menu has no persistent selection to confuse it with. */
 .sj-menubar-item:hover:not(:disabled),.sj-menubar-item:focus-visible,.sj-menubar-sub>.sj-menubar-item[aria-expanded=true]{background:var(--sj-selection)}
-/* Light text on black renders heavier with subpixel smoothing; grayscale smoothing keeps its weight (macOS browsers). */
+/* Controls: the border that shows where a text box, select or menu button is meets 3:1 (WCAG 1.4.11). Divider lines keep the quieter border. */
+.sj-input,.sj-theme select,.sj-menu>summary,.sj-switch-track{border-color:var(--sj-controlBorder)}
+.sj-input:hover:not(:disabled),.sj-menu>summary:hover{border-color:var(--sj-muted)}
+/* Persistent selection always carries an accent edge or accent text, not only the faint fill (WCAG 1.4.11). */
+.sj-list li>button[aria-pressed=true]{box-shadow:inset 3px 0 0 var(--sj-accent)}.sj-table tr[data-selected=true]>td:first-child,.sj-table tr[data-selected=true]>th:first-child{box-shadow:inset 3px 0 0 var(--sj-accent)}
+.sj-theme ::selection{background:var(--sj-textSelection);color:var(--sj-text)}
+.sj-theme{scrollbar-color:var(--sj-borderStrong) transparent}
+/* A danger item in a menu is danger-colored text, not a filled block, so it is never the brightest thing on screen. */
+.sj-menu-content .sj-button--danger{background:transparent;border-color:transparent;color:var(--sj-danger)!important}.sj-menu-content .sj-button--danger:hover:not(:disabled){background:color-mix(in srgb,var(--sj-danger) 14%,var(--sj-elevated));filter:none}
+/* Disabled controls keep their outline and fade their text, instead of fading the whole control into the ground. */
+.sj-theme .sj-button:disabled,.sj-theme .sj-input:disabled,.sj-theme select:disabled,.sj-theme textarea:disabled{opacity:1;color:var(--sj-disabledText)!important;background:transparent;border-color:var(--sj-border);filter:none}
+.sj-theme .sj-button--primary:disabled,.sj-theme .sj-button--danger:disabled{background:var(--sj-raised);border-color:var(--sj-border)}.sj-theme .sj-button--quiet:disabled{border-color:transparent}
+/* Scrolling content stays mostly on black: table headers and stripes use the stripe step (black in dark mode). */
+.sj-table th{background:var(--sj-stripe)}
+/* macOS browsers only: grayscale smoothing draws light-on-dark text closer to its light-mode weight. Windows ClearType is not affected by these properties. */
 .sj-theme[data-mode=dark]{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.sj-theme[data-mode=light]{-webkit-font-smoothing:auto;-moz-osx-font-smoothing:auto}

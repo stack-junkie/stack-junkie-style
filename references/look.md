@@ -9,19 +9,18 @@ Exact values live in [tokens.json](../ui/shared/tokens.json): colors under `dire
 
 ## True black done well
 
-Pure black is kept (it is the look, and it saves power on OLED screens), with the fixes from the products that ship it well, Apple's dark mode and X's Lights out:
+Pure black is kept, with the fixes from the products that ship it well (Apple's base and elevated backgrounds, X's Lights out) and the WCAG contrast rules. Every value is a token in `tokens.json`; never hand-pick a gray.
 
-- **Black is the ground, not every layer.** The page, Rail, Sidebar and work area are `canvas`/`surface` (#000). Floating layers (menus, dialogs, popovers, tooltips, toasts, the command palette) use `elevated` with a `borderStrong` edge. A shadow cannot show on black, so the lift comes from the lighter fill and the edge.
-- **Borders carry the structure, so they must show.** `border` is at least 1.5:1 against black; `borderStrong` is at least 1.5:1 against `elevated`.
-- **Hover and selection never look alike.** Hover is a neutral lift (`raised`). Selection is tinted with the accent (`selection`) and keeps the accent text or edge. Two near-identical grays are a bug.
-- **Text is off-white, not #fff.** Pure white on black glows at the edges (halation). `text` stays about 17:1, `muted` above 4.5:1 on black and on `elevated`.
-- **Type renders heavier on black.** Web uses grayscale font smoothing in dark mode; do not add weight for emphasis that spacing or position already gives.
-- **Long scrolling content stays on black.** Filled dark cards scrolling over black smear on OLED screens as their pixels switch on. Separate scrolling items with borders; keep fills for fixed chrome and floating layers.
-- **The accent is lighter in dark mode** (`accent` is a light blue), so it holds contrast on black and on `selection`.
-- Check dark mode on an OLED phone or laptop while scrolling, not only in screenshots.
-- A theme the user picked is kept. A new user gets the Preset's default theme; `system` follows the device.
-- Use semantic roles (surface, text, border, focus, selection, action, status). Success, warning, danger and chart series keep their own meanings, distinct from the accent. State never rides on color alone.
-- No gradients, glows, heavy shadows or decorative pills. Cards, sidebars and tabs are fine where the task needs them.
+- **Black is the ground.** The page, Rail, Sidebar, work area and large windows such as Settings are `canvas`/`surface` (#000). Small floating layers (menus, popovers, tooltips, toasts, small dialogs, the command palette, drawers) use `elevated` with a `borderStrong` edge: a shadow cannot show on black, so the lift comes from the fill and the edge. A large dialog or separate window stays black with the `borderStrong` edge.
+- **Inside an elevated layer, steps move up with it.** Hover uses `raisedOnElevated` and dividers use `borderStrong`, so they still show on the lighter fill. The library sets this; do not override it.
+- **Controls meet 3:1.** The border that shows where a text box, select, menu button or switch is uses `controlBorder` (at least 3:1 against black and against `elevated`, WCAG 1.4.11). `border` is for divider lines only and stays quiet.
+- **Selection is never carried by the fill alone.** Persistent selection (nav rows, list rows, table rows, toggles) uses the accent-tinted `selection` fill plus accent text or an accent edge. Menus highlight the item under the pointer or keyboard with `selection`; that is the menu convention and a menu has no persistent selection. Hover is the neutral `raised`.
+- **Text is off-white, not #fff**, which glows at the edges on black. Selected text uses `textSelection`.
+- **Disabled controls keep their outline** (`border`) and fade their text (`disabledText`); they are not faded as a whole, which makes them vanish on black.
+- **Danger in a menu is danger-colored text**, never a filled block.
+- **Prefer borders to fills in long scrolling content.** Fills that scroll over black can smear on some OLED screens (user reports, mostly phones, panel-dependent). Table headers and row stripes use `stripe`, which is black in dark mode.
+- **Font rendering:** web dark mode uses grayscale smoothing, which only macOS browsers apply. Windows ClearType is not affected and needs nothing. Keep body weight at 400 and muted text at 12 pixels or more.
+- Check dark mode by eye, and on an OLED screen while scrolling where you can. Screenshots and contrast numbers are not the whole look.
 
 ## Fonts
 
