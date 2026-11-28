@@ -242,8 +242,8 @@ QLabel { background: transparent; }
 QLabel[sjRole="heading"] { font-size: @sectionpx; font-weight: @strongWeight; }
 QTextBrowser[sjRole="readingSurface"] { border: 0; padding: 0; background: @surface; }
 QLabel[sjRole="shellTitle"] { font-size: @labelSizepx; font-weight: @mediumWeight; }
-QLabel[sjRole="contextTitle"] { background: @surface; font-size: @labelSizepx; font-weight: @strongWeight; padding: @controlPaddingYpx @controlPaddingXpx; border-bottom: @metricBorderWidthpx solid @border; }
-QWidget[sjRole="shellHeader"] { background: @surface; border-bottom: @metricBorderWidthpx solid @border; }
+QLabel[sjRole="contextTitle"] { background: @canvas; font-size: @labelSizepx; font-weight: @strongWeight; padding: @controlPaddingYpx @controlPaddingXpx; border-bottom: @metricBorderWidthpx solid @border; }
+QWidget[sjRole="shellHeader"] { background: @canvas; border-bottom: @metricBorderWidthpx solid @border; }
 QWidget[sjRole="shellHeader"] QComboBox, QWidget[sjRole="shellHeader"] QPushButton, QWidget[sjRole="shellHeader"] QLabel[sjRole="muted"] { font-size: @chromepx; }
 QLabel[sjRole="muted"] { color: @muted; }
 QLabel[sjRole="attribution"] { color: @muted; font-size: @captionpx; }
@@ -322,6 +322,9 @@ QDialog { background: @elevated; }
 QDialog QScrollArea, QDialog QScrollArea > QWidget, QDialog QScrollArea > QWidget > QWidget, QDialog QStackedWidget { background: @elevated; }
 QDialog QPushButton:hover, QDialog QToolButton:hover { background: @raisedOnElevated; }
 QDialog QFrame[sjRole="separator"] { background: @borderStrong; }
+QStackedWidget#sjPages { background: @canvas; }
+QStackedWidget#sjPages > QWidget { background: @surface; }
+QWidget[sjRole="ground"], QScrollArea[sjRole="ground"] > QWidget > QWidget { background: @ground; }
 QDialog[sjRole="window"] { background: @surface; border: @metricBorderWidthpx solid @borderStrong; }
 QDialog[sjRole="window"] QScrollArea, QDialog[sjRole="window"] QScrollArea > QWidget, QDialog[sjRole="window"] QScrollArea > QWidget > QWidget, QDialog[sjRole="window"] QStackedWidget { background: @surface; }
 QDialog[sjRole="window"] QPushButton:hover, QDialog[sjRole="window"] QToolButton:hover { background: @raised; }

@@ -22,6 +22,16 @@ Pure black is kept, with the fixes from the products that ship it well (Apple's 
 - **Font rendering:** web dark mode uses grayscale smoothing, which only macOS browsers apply. Windows ClearType is not affected and needs nothing. Keep body weight at 400 and muted text at 12 pixels or more.
 - Check dark mode by eye, and on an OLED screen while scrolling where you can. Screenshots and contrast numbers are not the whole look.
 
+## Light mode done well
+
+Pure white everywhere glares the same way pure black does. Light mode is layered instead, like most desktop apps:
+
+- **The frame is a soft gray, the content is white.** The title bar, Rail, Sidebar, tab rows, toolbars and status bar use `canvas` (light gray). Pages, panels, tables, inputs, menus and dialogs use `surface`/`elevated` (white). The selected tab turns white and joins its page.
+- **Dashboards use ground.** Where white panels, cards and tables sit side by side, put them on `ground` (a step darker than the frame) with the `sj-ground` class on web or `sjRole="ground"` on native. In dark mode `ground` is black, so nothing changes there.
+- **Hover is darker than the frame.** `raised` is a step darker than `canvas`, so hover shows on the frame and inside white content alike. Table headers and stripes use `stripe`.
+- **Text stays off-black** (`text`), with `muted` for secondary text; both meet 4.5:1 on every light layer. Control borders (`controlBorder`) meet 3:1 on the gray frame as well as on white.
+- Never pick a gray by hand; the layers are tokens so dark mode stays true black.
+
 ## Fonts
 
 - UI text uses the platform font (`system-ui`): Segoe UI Variable Text or Segoe UI on Windows. Manrope is bundled as the fallback. Fira Code is for code, logs and aligned values.
