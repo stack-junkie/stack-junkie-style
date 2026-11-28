@@ -6,6 +6,19 @@ Exact values live in [tokens.json](../ui/shared/tokens.json): colors under `dire
 
 - Dark mode is True black: a pure black ground, structure from thin borders, near-white text, blue accent. Gray fills used as structure belong to neither mode.
 - Light mode is one white ground with thin borders and the same blue accent.
+
+## True black done well
+
+Pure black is kept (it is the look, and it saves power on OLED screens), with the fixes from the products that ship it well, Apple's dark mode and X's Lights out:
+
+- **Black is the ground, not every layer.** The page, Rail, Sidebar and work area are `canvas`/`surface` (#000). Floating layers (menus, dialogs, popovers, tooltips, toasts, the command palette) use `elevated` with a `borderStrong` edge. A shadow cannot show on black, so the lift comes from the lighter fill and the edge.
+- **Borders carry the structure, so they must show.** `border` is at least 1.5:1 against black; `borderStrong` is at least 1.5:1 against `elevated`.
+- **Hover and selection never look alike.** Hover is a neutral lift (`raised`). Selection is tinted with the accent (`selection`) and keeps the accent text or edge. Two near-identical grays are a bug.
+- **Text is off-white, not #fff.** Pure white on black glows at the edges (halation). `text` stays about 17:1, `muted` above 4.5:1 on black and on `elevated`.
+- **Type renders heavier on black.** Web uses grayscale font smoothing in dark mode; do not add weight for emphasis that spacing or position already gives.
+- **Long scrolling content stays on black.** Filled dark cards scrolling over black smear on OLED screens as their pixels switch on. Separate scrolling items with borders; keep fills for fixed chrome and floating layers.
+- **The accent is lighter in dark mode** (`accent` is a light blue), so it holds contrast on black and on `selection`.
+- Check dark mode on an OLED phone or laptop while scrolling, not only in screenshots.
 - A theme the user picked is kept. A new user gets the Preset's default theme; `system` follows the device.
 - Use semantic roles (surface, text, border, focus, selection, action, status). Success, warning, danger and chart series keep their own meanings, distinct from the accent. State never rides on color alone.
 - No gradients, glows, heavy shadows or decorative pills. Cards, sidebars and tabs are fine where the task needs them.

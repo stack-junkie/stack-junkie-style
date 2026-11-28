@@ -147,3 +147,11 @@
 .sj-theme .sj-about-attribution{margin-top:auto;align-self:flex-end;border:0;padding:0;display:block;text-align:right;font-size:var(--sj-type-caption);color:var(--sj-muted)}.sj-about-attribution p{margin:0}.sj-theme .sj-about-attribution a{color:inherit;text-decoration:underline;text-decoration-color:var(--sj-border)}
 @media(max-width:640px){.sj-about-product{flex-direction:column}}
 .sj-bottom-panel-zoom{flex:1;min-height:0;display:flex;flex-direction:column}.sj-bottom-panel-zoom>.sj-tabs{flex:1;min-height:0;display:flex;flex-direction:column}.sj-bottom-panel-zoom>.sj-tabs>.sj-tab-panel{flex:1;min-height:0;overflow:auto;padding:8px 12px}
+/* True black: the page is black, floating layers are not. Menus, dialogs, popovers, tooltips and toasts sit on the
+   elevated color with a stronger edge, because a shadow cannot show on black (Apple's base and elevated
+   backgrounds, X's Lights out). In light mode elevated is white, so nothing changes there. */
+.sj-dialog,.sj-menu-content,.sj-menubar-popup,.sj-help-content,.sj-tip,.sj-tooltip>[role=tooltip],.sj-toast{background:var(--sj-elevated);border-color:var(--sj-borderStrong)}
+.sj-dialog>header,.sj-dialog>footer{border-color:var(--sj-borderStrong)}
+.sj-menubar-item:hover:not(:disabled),.sj-menubar-item:focus-visible,.sj-menubar-sub>.sj-menubar-item[aria-expanded=true]{background:var(--sj-selection)}
+/* Light text on black renders heavier with subpixel smoothing; grayscale smoothing keeps its weight (macOS browsers). */
+.sj-theme[data-mode=dark]{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.sj-theme[data-mode=light]{-webkit-font-smoothing:auto;-moz-osx-font-smoothing:auto}

@@ -11,7 +11,7 @@ The single visual direction of the system: true black dark mode, a white light m
 _Avoid_: Clean utility, theme, direction
 
 **True black**:
-Dark mode whose ground is pure black, with structure drawn by thin borders rather than gray fills.
+Dark mode whose ground is pure black, with structure drawn by thin borders rather than gray fills. Floating layers (menus, dialogs, tooltips) sit on a slightly lighter elevated color with a stronger edge, because shadows cannot show on black.
 _Avoid_: Near black, dark gray
 
 ### Configuration
